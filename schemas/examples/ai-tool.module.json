@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.example.hrv-explain",
+  "name": "HRV Explain",
+  "description": "Explain HRV trends in plain language using the configured LLM.",
+  "version": "0.3.1",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "ai-tool",
+  "author": { "name": "example", "url": "https://example.com" },
+  "license": "MIT",
+  "repository": "https://github.com/example/hrv-explain",
+  "permissions": ["records:read", "llm"],
+  "entry": { "python": "src/tool.py", "factory": "create_module" },
+  "contributes": {
+    "tools": [
+      {
+        "id": "hrv.explain",
+        "name": "Explain HRV",
+        "description": "Summarize the last 30 days of HRV measurements and explain possible factors.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": { "type": "integer", "minimum": 1, "maximum": 365, "default": 30 },
+            "locale": { "type": "string", "default": "zh-CN" }
+          },
+          "additionalProperties": false
+        },
+        "longRunning": false
+      }
+    ]
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "beta",
+  "i18n": { "zh-CN": "ui/zh-CN.json" }
+}

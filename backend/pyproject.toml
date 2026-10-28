@@ -1,0 +1,51 @@
+[project]
+name = "eclipse-health-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "qiumuhan", email = "qiumuhan10@qq.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.0",
+    "httpx>=0.28.1",
+    "litellm>=1.106.5",
+    "neurokit2>=0.2.13",
+    "numpy>=2.5.4",
+    "onnxruntime>=1.31.1",
+    "orjson>=3.13.0",
+    "pandas>=2.3.3",
+    "pydantic-ai>=2.31.1",
+    "pydantic-settings>=2.16.2",
+    "python-multipart>=0.0.32",
+    "pywavelets>=1.10.0",
+    "scipy>=1.18.1",
+    "sqlmodel>=0.0.48",
+    "uvicorn[standard]>=0.54.0",
+    "wfdb>=4.3.1",
+]
+
+[project.scripts]
+eclipse-health-backend = "eclipse_health_backend:main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.22.3",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]

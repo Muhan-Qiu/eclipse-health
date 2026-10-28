@@ -1,0 +1,8 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "README.md": "d2817aa35f8367b42a6faac8b8510a2cb83b715d78eaf20a77533e6a778d70c4",
+    "module.json": "4bc1741368ddd39f4d35dc55c182cd59f601b39e88be12d5ad8d84dac4c6a8e8",
+    "src/main.py": "686de88c5a8d7d9fd6dde6beace83c184acaf1a21b9511de4062f9a3d6b044a3"
+  }
+}

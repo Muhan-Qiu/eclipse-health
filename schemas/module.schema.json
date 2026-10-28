@@ -1,0 +1,578 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eclipse.health/schemas/module.schema.json",
+  "title": "eclipse health module manifest",
+  "description": "Manifest (module.json) of an .ehmod package. JSON Schema is the source of truth (Q14).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "description",
+    "version",
+    "apiVersion",
+    "engines",
+    "type",
+    "author",
+    "license",
+    "permissions",
+    "entry"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Manifest structure version."
+    },
+    "id": {
+      "$ref": "#/$defs/moduleId"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "version": {
+      "$ref": "#/$defs/semver"
+    },
+    "apiVersion": {
+      "$ref": "#/$defs/apiVersion"
+    },
+    "engines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eclipse"],
+      "properties": {
+        "eclipse": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^\\s*(?:(?:>=|<=|>|<|=|\\^|~)?\\s*[0-9]+\\.[0-9]+(?:\\.[0-9]+)?\\s*)+$"
+        }
+      }
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "device-adapter",
+        "signal-engine",
+        "analysis-model",
+        "health-domain",
+        "dashboard-widget",
+        "exporter",
+        "ai-tool",
+        "theme",
+        "locale",
+        "data-source"
+      ]
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "email": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "SPDX license identifier."
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "permissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/permission" }
+    },
+    "allowedHosts": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "maxLength": 253,
+        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+      },
+      "description": "Required when the network permission is requested."
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "factory"],
+      "properties": {
+        "python": {
+          "$ref": "#/$defs/relativePath",
+          "pattern": "^(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\\.py$"
+        },
+        "factory": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+        }
+      }
+    },
+    "contributes": {
+      "$ref": "#/$defs/contributes"
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "memoryMb": { "type": "integer", "minimum": 32, "maximum": 32768 },
+        "cpu": { "type": "number", "minimum": 0.1, "maximum": 16 },
+        "startupTimeoutMs": { "type": "integer", "minimum": 500, "maximum": 120000 }
+      }
+    },
+    "updateChannel": {
+      "type": "string",
+      "enum": ["stable", "beta"]
+    },
+    "i18n": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/jsonRelativePath"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "const": "device-adapter" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["importFormats"],
+            "properties": { "importFormats": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "signal-engine" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["pipelines"],
+            "properties": { "pipelines": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "analysis-model" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["models"],
+            "properties": { "models": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "health-domain" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "anyOf": [
+              { "required": ["recordTypes"] },
+              { "required": ["ui"] }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "dashboard-widget" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["ui"],
+            "properties": {
+              "ui": {
+                "required": ["widgets"],
+                "properties": { "widgets": { "minItems": 1 } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "exporter" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["exporters"],
+            "properties": { "exporters": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "ai-tool" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["tools"],
+            "properties": { "tools": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "theme" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["themes"],
+            "properties": { "themes": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "locale" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["locales"],
+            "properties": { "locales": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "data-source" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["sources"],
+            "properties": { "sources": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "permissions": { "contains": { "const": "network" } } },
+        "required": ["permissions"]
+      },
+      "then": {
+        "required": ["allowedHosts"],
+        "properties": { "allowedHosts": { "minItems": 1 } }
+      }
+    }
+  ],
+  "$defs": {
+    "moduleId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^(?:org\\.eclipsehealth|io\\.github\\.[a-z0-9][a-z0-9-]*)(?:\\.[a-z0-9][a-z0-9-]*)+$",
+      "description": "Reverse-domain id. Official: org.eclipsehealth.*, community: io.github.<owner>.<name>."
+    },
+    "semver": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?$"
+    },
+    "apiVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Module contract version, major.minor."
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "not": {
+        "pattern": "(^|/)\\.\\.(/|$)|^/|^[A-Za-z]:|\\\\|//"
+      }
+    },
+    "jsonRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\\.json$",
+      "not": {
+        "pattern": "(^|/)\\.\\.(/|$)|^/|^[A-Za-z]:|\\\\|//"
+      }
+    },
+    "permission": {
+      "type": "string",
+      "enum": [
+        "records:read",
+        "records:write",
+        "records:delete",
+        "files:user-selected",
+        "files:export",
+        "network",
+        "llm",
+        "models:download",
+        "ui:custom",
+        "system:notify",
+        "system:background"
+      ]
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "importFormats": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/importFormat" }
+        },
+        "pipelines": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/pipeline" }
+        },
+        "models": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/model" }
+        },
+        "recordTypes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/recordType" }
+        },
+        "ui": { "$ref": "#/$defs/ui" },
+        "exporters": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/exporter" }
+        },
+        "tools": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/tool" }
+        },
+        "themes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/theme" }
+        },
+        "locales": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/locale" }
+        },
+        "sources": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/source" }
+        }
+      }
+    },
+    "importFormat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ext", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "ext": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9]+$" },
+          "description": "Extensions without the leading dot."
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "name", "task", "format", "modelCard"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "task": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "format": { "type": "string", "enum": ["onnx", "safetensors", "remote"] },
+        "files": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/modelFile" }
+        },
+        "endpoint": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "input": { "type": "object" },
+        "output": { "type": "object" },
+        "preprocess": { "type": "object" },
+        "runtime": { "type": "object" },
+        "modelCard": { "type": "object" }
+      }
+    },
+    "modelFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+      }
+    },
+    "recordType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "schema"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "schema": { "type": "object" },
+        "indexes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "display": { "type": "object" }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "widgets": { "type": "array", "maxItems": 64, "items": { "type": "object" } },
+        "pages": { "type": "array", "maxItems": 64, "items": { "type": "object" } },
+        "commands": { "type": "array", "maxItems": 64, "items": { "type": "object" } },
+        "settings": { "type": "array", "maxItems": 64, "items": { "type": "object" } }
+      }
+    },
+    "exporter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "format"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "format": { "type": "string", "enum": ["pdf", "png", "csv", "svg", "fhir-json"] },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "inputSchema": { "type": "object" },
+        "outputSchema": { "type": "object" },
+        "longRunning": { "type": "boolean" }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "path"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "preview": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "locale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "path"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "path": { "$ref": "#/$defs/jsonRelativePath" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "localId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    }
+  }
+}

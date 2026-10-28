@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "id": "org.eclipsehealth.samsung",
+  "name": "Samsung Health ECG",
+  "description": "Import Samsung Health ECG exports into eclipse health.",
+  "version": "1.0.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "device-adapter",
+  "author": { "name": "eclipse health", "url": "https://example.com/eclipse-health" },
+  "license": "GPL-3.0-only",
+  "homepage": "https://example.com/eclipse-health/modules/samsung",
+  "repository": "https://github.com/example/eclipse-health-samsung",
+  "permissions": ["files:user-selected", "records:write"],
+  "entry": { "python": "src/adapter.py", "factory": "create_module" },
+  "contributes": {
+    "importFormats": [
+      {
+        "id": "samsung.csv",
+        "ext": ["csv"],
+        "label": "Samsung Health CSV",
+        "description": "ECG export from the Samsung Health app."
+      }
+    ]
+  },
+  "resources": { "memoryMb": 512, "cpu": 1, "startupTimeoutMs": 10000 },
+  "updateChannel": "stable",
+  "i18n": { "zh-CN": "ui/zh-CN.json", "en-US": "ui/en-US.json" }
+}

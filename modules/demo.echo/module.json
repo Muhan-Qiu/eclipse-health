@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "id": "org.eclipsehealth.demo.echo",
+  "name": "Echo Demo",
+  "description": "Minimal stdio JSON-RPC module used by the module kernel self-test.",
+  "version": "1.0.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "ai-tool",
+  "author": { "name": "eclipse health" },
+  "license": "GPL-3.0-only",
+  "permissions": ["files:user-selected"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "tools": [
+      {
+        "id": "demo.echo",
+        "name": "Echo",
+        "description": "Echo text back; used to verify the module host end to end.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "text": { "type": "string" } },
+          "required": ["text"]
+        }
+      }
+    ]
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}
