@@ -17,7 +17,7 @@
 - 模型：`backend/resources/models/cardia/`（ONNX + TorchScript + `preprocess.json`）。
 - 样本：`backend/resources/samples/`（MIT-BIH 100/200/208）。
 - 上一版代码可参考：`..\v1\`（`feature_extract.py` / `ecg_tools.py` / `cardia_classifier.py`）与 `..\V2\发布预权重与评分信息\推理代码\`（`inference.py` / `feature_extract.py`）。**只读，不复制仓库结构。**
-- 当前不是 git 仓库。不要运行任何 `git` 命令。
+- 仓库已初始化（私有本地仓库，无 remote，baseline `12f4dae`）。**不要 commit / push / 改历史**；只读的 `git status` / `git diff` 可以用于自查。
 
 ## 3. 工具链（重要）
 

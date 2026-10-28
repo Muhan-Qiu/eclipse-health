@@ -21,7 +21,7 @@
 | 文档 | 生态、模块契约、注册表、UI 规范、数据 Schema、功能清单、IDEAS 均已成稿（v1 草案） |
 | 工具链 | `uv` 不在 PATH；用 `backend\.venv\Scripts\python.exe -m ...` 直接运行 |
 | 基线 | `npm run build` 当前失败：TS5101（`baseUrl` 在 TS 6 弃用），由 B1-UI 修复 |
-| 版本控制 | 当前不是 git 仓库（建议 Agent 跑完后 `git init` 建基线，便于回滚与审查） |
+| 版本控制 | 已初始化**私有本地仓库**（无 remote），baseline `12f4dae`；`uploads/`、`.venv`、`node_modules`、`.data`、本地 Claude 配置等已忽略 |
 
 ## 2. 路线图
 

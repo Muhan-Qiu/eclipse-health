@@ -13,7 +13,7 @@
 
 ## 2. 必须先知道
 
-- 当前不是 git 仓库；不要提交。
+- 仓库已初始化（私有本地，无 remote）；不要 commit/push，只读的 `git status` / `git diff` 可用。
 - `uv` 不在 PATH；后端用 `backend\.venv\Scripts\python.exe -m uvicorn ...`。
 - Tauri 1.x→2 的托盘 API 在 `tauri::tray`；窗口状态/单实例用官方插件。
 - 首次 `cargo build` 可能 10 分钟以上，属正常；不要反复全量构建。
