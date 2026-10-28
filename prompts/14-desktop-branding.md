@@ -23,6 +23,7 @@
 
 1. **Logo（品牌核心）**
    - 设计方向：深墨圆盘 + 一圈低饱和暖金/深青日冕光；16px 仍能识别「圆盘 + 环」。
+   - **颜色必须走 `--eh-accent` / `--eh-signal` 等令牌**（或由令牌派生的 CSS 变量），不要写死 A/B/C 的具体色值；用户最终定配色后只换令牌。
    - 四版本：亮色、暗色、单色、favicon；SVG 源文件放 `public/brand/`；React 组件 `src/branding/Logo.tsx`（尺寸/变体 props）。
    - 用 1024×1024 PNG 跑 `npm run tauri icon <png>` 生成 `src-tauri/icons/*`；保留新 PNG 源。
    - 更新 `index.html` 的 title/favicon（你拥有该文件）。
