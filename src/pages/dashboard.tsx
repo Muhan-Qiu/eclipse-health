@@ -1,13 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
   ArrowRight,
   BookOpen,
   FilePlus2,
   FlaskConical,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,34 +26,49 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DemoBadge } from "@/components/common/demo-badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { RecordListSkeleton } from "@/components/common/loading";
 import { Sparkline } from "@/components/common/sparkline";
-import { WaveThumbnail } from "@/components/common/wave-thumbnail";
+import { WaveformViewer } from "@/components/records/waveform-viewer";
 import { RecordRow } from "@/components/records/record-row";
-import { api } from "@/lib/api/client";
+import { useImport } from "@/components/import/import-provider";
+import { measurementsByCode } from "@/components/records/measurement-list";
 import {
-  formatFullDate,
-  formatNumber,
-  greetingKey,
-} from "@/lib/format";
+  useAnalysis,
+  useRecentAnalyses,
+  useRecords,
+} from "@/lib/api/queries";
+import type { AnalysisResult, RecordSummary } from "@/lib/api/types";
+import { formatFullDate, formatNumber, greetingKey } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
 
-/** 界面演示用合成指标，非真实记录、非诊断结论。 */
-const DEMO_METRICS = {
-  heartRateBpm: 62,
-  hrvRmssdMs: 42,
-  abnormalBeatRatio: 0.004,
-  heartRateSeries: [58, 61, 60, 63, 59, 62, 62],
-};
-
 const FORMAT_GROUPS = [
-  { key: "standard", items: ["wfdb", "csv", "float32"] },
-  { key: "wearable", items: ["apple", "samsung", "huawei"] },
-  { key: "hospital", items: ["scp"] },
+  {
+    key: "standard",
+    items: [
+      { id: "wfdb", status: "supported" },
+      { id: "csv", status: "supported" },
+      { id: "float32", status: "supported" },
+    ],
+  },
+  {
+    key: "wearable",
+    items: [
+      { id: "apple", status: "pending" },
+      { id: "samsung", status: "pending" },
+      { id: "huawei", status: "pending" },
+    ],
+  },
+  { key: "hospital", items: [{ id: "scp", status: "planned" }] },
 ] as const;
+
+interface Candidate {
+  record: RecordSummary;
+  analysis: AnalysisResult;
+}
 
 function GuideCard({
   icon: Icon,
@@ -76,9 +90,7 @@ function GuideCard({
         <Icon className="size-4" />
       </div>
       <h2 className="eh-h3 mt-4">{title}</h2>
-      <p className="eh-small mt-1.5 flex-1 text-muted-foreground">
-        {description}
-      </p>
+      <p className="eh-small mt-1.5 flex-1 text-muted-foreground">{description}</p>
       <div className="mt-4">{children}</div>
     </Card>
   );
@@ -111,20 +123,30 @@ function MetricRow({
 
 function RecentRecords() {
   const { t } = useTranslation();
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["records", "recent"],
-    queryFn: () => api.records.list({ limit: 3 }),
+  const { openPicker } = useImport();
+  const query = useRecords({
+    limit: 3,
+    recordType: "org.eclipsehealth.ecg",
   });
 
-  if (isLoading) return <RecordListSkeleton rows={3} />;
-  if (isError) {
+  if (query.isLoading) return <RecordListSkeleton rows={3} />;
+  if (query.isError) {
     return (
-      <p className="eh-small px-5 py-8 text-center text-muted-foreground">
-        {t("common.loadError")}
-      </p>
+      <EmptyState
+        icon={RefreshCw}
+        title={t("common.loadError")}
+        description={t("dashboard.recent.errorDesc")}
+        className="border-0 bg-transparent py-6"
+      >
+        <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
+          <RefreshCw data-icon="inline-start" />
+          {t("common.retry")}
+        </Button>
+      </EmptyState>
     );
   }
-  if (!data || data.length === 0) {
+  const records = query.data?.items ?? [];
+  if (records.length === 0) {
     return (
       <div className="px-5 py-6">
         <EmptyState
@@ -133,10 +155,7 @@ function RecentRecords() {
           description={t("dashboard.recent.emptyDesc")}
           className="border-0 bg-transparent py-6"
         >
-          <Button
-            size="sm"
-            onClick={() => toast(t("dashboard.guide.importPending"))}
-          >
+          <Button size="sm" onClick={openPicker}>
             {t("dashboard.recent.emptyAction")}
           </Button>
         </EmptyState>
@@ -146,21 +165,202 @@ function RecentRecords() {
 
   return (
     <div className="divide-y divide-border">
-      {data.map((record) => (
+      {records.map((record) => (
         <RecordRow key={record.id} record={record} />
       ))}
     </div>
   );
 }
 
+function MetricsCard({
+  candidates,
+  loading,
+  hasRecords,
+  latestRecord,
+  openPicker,
+}: {
+  candidates: Candidate[];
+  loading: boolean;
+  hasRecords: boolean;
+  latestRecord: RecordSummary | undefined;
+  openPicker: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const locale = intlLocale(i18n.language);
+
+  const selected = useMemo(() => {
+    return [...candidates].sort((a, b) => {
+      const left = a.analysis.completedAt ?? a.analysis.startedAt ?? "";
+      const right = b.analysis.completedAt ?? b.analysis.startedAt ?? "";
+      return new Date(right).getTime() - new Date(left).getTime();
+    })[0];
+  }, [candidates]);
+
+  const detailQuery = useAnalysis(selected?.analysis.id, Boolean(selected));
+  const analysis = detailQuery.data ?? selected?.analysis ?? null;
+  const measurements = analysis?.measurements ?? [];
+  const byCode = measurementsByCode(measurements);
+  const heartRate = byCode.get("heart_rate_mean")?.value ?? null;
+  const rmssd = byCode.get("rmssd")?.value ?? null;
+  const abnormal =
+    (byCode.get("svb_ratio")?.value ?? 0) +
+    (byCode.get("veb_ratio")?.value ?? 0) +
+    (byCode.get("f_ratio")?.value ?? 0);
+  const quality = analysis?.quality.score ?? null;
+
+  const series = useMemo(() => {
+    const ordered = [...candidates].sort(
+      (a, b) =>
+        new Date(a.record.recordedAt).getTime() -
+        new Date(b.record.recordedAt).getTime(),
+    );
+    return ordered
+      .map((item) => {
+        const value = measurementsByCode(item.analysis.measurements)
+          .get("heart_rate_mean")
+          ?.value;
+        return typeof value === "number" ? value : null;
+      })
+      .filter((value): value is number => value !== null);
+  }, [candidates]);
+
+  return (
+    <Card className="desk:col-span-3 xl:col-span-5">
+      <CardHeader>
+        <CardTitle className="eh-h3">{t("dashboard.metrics.title")}</CardTitle>
+        <CardDescription>
+          {analysis
+            ? t("dashboard.metrics.fromAnalysis", {
+                date: analysis.completedAt
+                  ? new Intl.DateTimeFormat(locale, {
+                      dateStyle: "medium",
+                    }).format(new Date(analysis.completedAt))
+                  : "—",
+              })
+            : t("dashboard.metrics.description")}
+        </CardDescription>
+        <CardAction>
+          {selected?.record.isDemo ? <DemoBadge /> : null}
+        </CardAction>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <div className="space-y-3" aria-hidden="true">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </div>
+        ) : !analysis ? (
+          <EmptyState
+            icon={FlaskConical}
+            title={t("dashboard.metrics.emptyTitle")}
+            description={
+              hasRecords
+                ? t("dashboard.metrics.emptyDesc")
+                : t("dashboard.metrics.emptyNoRecords")
+            }
+            className="border-0 bg-transparent px-2 py-4"
+          >
+            {hasRecords && latestRecord ? (
+              <Button size="sm" asChild>
+                <Link to={`/records/${latestRecord.id}`}>
+                  {t("dashboard.metrics.openLatest")}
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            ) : (
+              <Button size="sm" onClick={openPicker}>
+                {t("dashboard.recent.emptyAction")}
+              </Button>
+            )}
+          </EmptyState>
+        ) : (
+          <>
+            <MetricRow
+              label={t("dashboard.metrics.heartRate")}
+              value={
+                heartRate === null
+                  ? "—"
+                  : formatNumber(heartRate, locale, { maximumFractionDigits: 0 })
+              }
+              unit={t("dashboard.metrics.bpm")}
+            >
+              {series.length >= 2 ? (
+                <Sparkline
+                  values={series}
+                  ariaLabel={t("dashboard.metrics.sparklineAria")}
+                />
+              ) : null}
+            </MetricRow>
+            <MetricRow
+              label={t("dashboard.metrics.hrv")}
+              value={
+                rmssd === null
+                  ? "—"
+                  : formatNumber(rmssd, locale, { maximumFractionDigits: 1 })
+              }
+              unit={t("dashboard.metrics.ms")}
+            />
+            <MetricRow
+              label={t("dashboard.metrics.abnormal")}
+              value={formatNumber(abnormal, locale, { maximumFractionDigits: 1 })}
+              unit={t("dashboard.metrics.percent")}
+            />
+            <MetricRow
+              label={t("dashboard.metrics.quality")}
+              value={
+                quality === null
+                  ? "—"
+                  : formatNumber(quality * 100, locale, {
+                      maximumFractionDigits: 0,
+                    })
+              }
+              unit={t("dashboard.metrics.percent")}
+            />
+            <p className="eh-caption text-muted-foreground">
+              {t("dashboard.metrics.note")}
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
+  const { openPicker } = useImport();
   const [formatsOpen, setFormatsOpen] = useState(false);
   const now = new Date();
 
-  const notifyImportPending = () =>
-    toast(t("dashboard.guide.importPending"));
+  const recentQuery = useRecords({
+    limit: 5,
+    recordType: "org.eclipsehealth.ecg",
+  });
+  const recent = recentQuery.data?.items ?? [];
+  const analysesQueries = useRecentAnalyses(recent);
+
+  const candidates = useMemo<Candidate[]>(() => {
+    const found: Candidate[] = [];
+    analysesQueries.forEach((query, index) => {
+      const record = recent[index];
+      if (!record || !query.data) return;
+      for (const analysis of query.data.items) {
+        if (analysis.status === "completed") found.push({ record, analysis });
+      }
+    });
+    return found;
+  }, [analysesQueries, recent]);
+
+  const latestRecord = recent[0];
+  const latestCompleted = useMemo(() => {
+    if (!latestRecord) return null;
+    return (
+      candidates.find((candidate) => candidate.record.id === latestRecord.id)
+        ?.analysis ?? null
+    );
+  }, [candidates, latestRecord]);
 
   return (
     <>
@@ -175,16 +375,13 @@ export function DashboardPage() {
         }
       />
 
-      <section
-        className="grid gap-4 md:grid-cols-3"
-        aria-label={t("dashboard.eyebrow")}
-      >
+      <section className="grid gap-4 md:grid-cols-3" aria-label={t("dashboard.eyebrow")}>
         <GuideCard
           icon={FilePlus2}
           title={t("dashboard.guide.importTitle")}
           description={t("dashboard.guide.importDesc")}
         >
-          <Button size="sm" onClick={notifyImportPending}>
+          <Button size="sm" onClick={openPicker}>
             {t("dashboard.guide.importAction")}
             <ArrowRight data-icon="inline-end" />
           </Button>
@@ -223,12 +420,8 @@ export function DashboardPage() {
       <div className="eh-grid mt-6">
         <Card className="desk:col-span-5 xl:col-span-7">
           <CardHeader>
-            <CardTitle className="eh-h3">
-              {t("dashboard.recent.title")}
-            </CardTitle>
-            <CardDescription>
-              {t("dashboard.recent.description")}
-            </CardDescription>
+            <CardTitle className="eh-h3">{t("dashboard.recent.title")}</CardTitle>
+            <CardDescription>{t("dashboard.recent.description")}</CardDescription>
             <CardAction>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/records">
@@ -243,62 +436,62 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="desk:col-span-3 xl:col-span-5">
-          <CardHeader>
-            <CardTitle className="eh-h3">
-              {t("dashboard.metrics.title")}
-            </CardTitle>
-            <CardDescription>{t("dashboard.metrics.range")}</CardDescription>
-            <CardAction>
-              <DemoBadge />
-            </CardAction>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <MetricRow
-              label={t("dashboard.metrics.heartRate")}
-              value={formatNumber(DEMO_METRICS.heartRateBpm, locale)}
-              unit={t("dashboard.metrics.bpm")}
-            >
-              <Sparkline
-                values={DEMO_METRICS.heartRateSeries}
-                ariaLabel={t("common.demoNote")}
-              />
-            </MetricRow>
-            <MetricRow
-              label={t("dashboard.metrics.hrv")}
-              value={formatNumber(DEMO_METRICS.hrvRmssdMs, locale)}
-              unit={t("dashboard.metrics.ms")}
-            />
-            <MetricRow
-              label={t("dashboard.metrics.abnormal")}
-              value={formatNumber(DEMO_METRICS.abnormalBeatRatio * 100, locale, {
-                maximumFractionDigits: 1,
-              })}
-              unit={t("dashboard.metrics.percent")}
-            />
-            <p className="eh-caption text-muted-foreground">
-              {t("dashboard.metrics.note")}
-            </p>
-          </CardContent>
-        </Card>
+        <MetricsCard
+          candidates={candidates}
+          loading={
+            recentQuery.isLoading ||
+            analysesQueries.some((query) => query.isLoading)
+          }
+          hasRecords={recent.length > 0}
+          latestRecord={latestRecord}
+          openPicker={openPicker}
+        />
 
         <Card className="desk:col-span-8 xl:col-span-12">
           <CardHeader>
-            <CardTitle className="eh-h3">
-              {t("dashboard.waveform.title")}
-            </CardTitle>
+            <CardTitle className="eh-h3">{t("dashboard.waveform.title")}</CardTitle>
             <CardDescription>
-              {t("dashboard.waveform.subtitle")}
+              {latestRecord
+                ? t("dashboard.waveform.latest", {
+                    device: latestRecord.device.model || t("records.localFile"),
+                  })
+                : t("dashboard.waveform.emptyDesc")}
             </CardDescription>
             <CardAction>
-              <DemoBadge />
+              <div className="flex items-center gap-2">
+                {latestRecord?.isDemo ? <DemoBadge /> : null}
+                {latestRecord ? (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={`/records/${latestRecord.id}`}>
+                      {t("dashboard.waveform.open")}
+                      <ArrowRight data-icon="inline-end" />
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
             </CardAction>
           </CardHeader>
           <CardContent>
-            <WaveThumbnail
-              ariaLabel={t("dashboard.waveform.aria")}
-              className="h-40"
-            />
+            {latestRecord ? (
+              <WaveformViewer
+                recordId={latestRecord.id}
+                leads={latestRecord.leads}
+                analysis={latestCompleted}
+                height={160}
+                compact
+              />
+            ) : (
+              <EmptyState
+                icon={FilePlus2}
+                title={t("dashboard.waveform.emptyTitle")}
+                description={t("dashboard.waveform.emptyDesc")}
+                className="border-0 bg-transparent py-4"
+              >
+                <Button size="sm" onClick={openPicker}>
+                  {t("dashboard.recent.emptyAction")}
+                </Button>
+              </EmptyState>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -307,9 +500,7 @@ export function DashboardPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("dashboard.formats.title")}</DialogTitle>
-            <DialogDescription>
-              {t("dashboard.formats.description")}
-            </DialogDescription>
+            <DialogDescription>{t("dashboard.formats.description")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {FORMAT_GROUPS.map((group) => (
@@ -320,15 +511,19 @@ export function DashboardPage() {
                 <ul className="space-y-1.5">
                   {group.items.map((item) => (
                     <li
-                      key={item}
+                      key={item.id}
                       className="flex items-center justify-between gap-3 text-sm"
                     >
-                      <span>{t(`dashboard.formats.items.${item}`)}</span>
+                      <span>{t(`dashboard.formats.items.${item.id}`)}</span>
                       <Badge
-                        variant="outline"
-                        className="shrink-0 font-normal text-muted-foreground"
+                        variant={item.status === "supported" ? "secondary" : "outline"}
+                        className={
+                          item.status === "supported"
+                            ? "shrink-0 font-normal"
+                            : "shrink-0 font-normal text-muted-foreground"
+                        }
                       >
-                        {t("common.planned")}
+                        {t(`dashboard.formats.status.${item.status}`)}
                       </Badge>
                     </li>
                   ))}

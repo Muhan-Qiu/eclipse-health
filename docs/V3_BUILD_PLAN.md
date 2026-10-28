@@ -1,6 +1,6 @@
 # eclipse health v3 · 总控计划
 
-> 更新：2026-10-28 · 指挥官文件 · B1 完成 / B2 准备中
+> 更新：2026-10-29 · 指挥官文件 · B2 完成 / B3 准备中
 > 本文件只记录「谁在什么时候做什么、边界在哪、怎么验收」。细节看各 Agent 提示词。
 
 ## 0. 指挥官工作方式
@@ -158,3 +158,61 @@
 - Samsung / 华为 / Apple 手表导出 → `uploads/samples/<厂商>/`
 - SCP-ECG 医院样本 → `uploads/samples/scp-ecg/`
 - 真实 30 秒手表 ECG（用于验证短记录 + Cardia 可靠性）
+
+## 13. B2 验收结果（2026-10-29）
+
+**结论：通过，第一条端到端链路成立。**
+
+| 项 | 结果 |
+|---|---|
+| 后端测试 | 275 passed（含 1 条真实 ONNX 慢测试） |
+| ruff | `All checks passed!` |
+| 前端构建 | `npm run build` 通过（766 kB / gzip 247 kB，>500 kB 提示） |
+| 端到端 | 导入 MIT-BIH 100 → 分析 2270 搏 / 15 测量值 → 详情波形/单搏概率/质量/警告 → 重启后仍在 |
+| 桌面 | `tauri dev` 启动、单实例、托盘、关闭到托盘、窗口记忆（退出后恢复待人工确认）均验证 |
+| 品牌 | 日食启动动画亮/暗、logo 四版本、Tauri 图标完成；无白闪 |
+| 验收修复 | 导入测试重复挂载路由的 warning；记录详情在仅有 summary 时的 `beats/measurements` 运行时崩溃 |
+
+**关键进展：ONNX 根因已定位。** 动态形状子图导致 24,330 节点、会话初始化 ~150s；onnxsim 固定形状后 11,491 节点、**1.51s**，logits 最大差 1.9e-6（softmax 5e-7，远低于 1e-4 阈值）。本批先用后台预热绕过，**B3 批准采用简化模型**。
+
+**B2 遗留决策（已定）：**
+
+- 批准 onnxsim 产物作为 Cardia 模块自带权重；原模型保留回退；必须重跑 B1-03 对齐。
+- `too_few_beats` 异步失败保持 POST 202 + 轮询 failed；UI 已处理。
+- CSV 无单位必须确认 `unit`；非 360Hz 必须确认采样率（符合 G2 参数校正）。
+- `.atr` 只存数量，不存位置；参考 R 峰不写入 metadata。
+- 记录列表增加 `latestAnalysisStatus`（B3-02），避免前端 N+1。
+- 长记录默认前 12 秒 + 一键全览；节律条 Overview 列 B3-02 的可选项，不强制。
+- 关闭窗口默认收起到托盘；设置页开关与启动动画开关列 B4。
+- 配色仍待用户定稿；logo/启动动画已走令牌，换色不改资产。
+
+## 14. B3 任务表（功能与智能）
+
+| 编号 | 任务 | 难度 | 建议思考强度 | 主要产出 |
+|---|---|---|---|---|
+| B3-01 | Cardia 简化模型 + 模块自带权重 + 启动 ≤3s | 中等偏难 3/4 | **high** | onnxsim 权重、模块打包、对齐复测、`/engine` 更新 |
+| B3-02 | 趋势 + 记录状态 + 两条记录对比 | 困难 3/4 | **high** | `/trends` API、列表状态、趋势页、对比页 |
+| B3-03 | 报告 PDF/PNG + 模板 + 历史 | 困难 3/4 | **high** | 报告生成/存储/下载、简洁/详细/医生版、脱敏水印 |
+| B3-04 | LLM 助手 + 工具调用可视化 | 极难 4/4 | **max** | 多厂商/Ollama、流式、工具追踪、透明面板、会话历史 |
+
+**B3 完成定义：**
+
+> 应用里能看到趋势曲线；能把两条记录并排比较；能为一条记录生成 PDF 与 PNG 分享卡并再次下载；能配置一个 LLM（或 Ollama）就自己的记录提问，并看到每次工具调用的参数与“发送了什么”。
+
+## 15. B3 接口与所有权
+
+- B3-01：`modules/official/cardia/**`、`scripts/pack_cardia.py`、`analysis/model.py`（仅模型选择）、`backend/resources/models/cardia/`（新增简化权重）、`backend/tests/analysis/**`。
+- B3-02 是**前端共享层所有者**：`src/App.tsx`、`src/lib/api/{client,types,queries,adapters}.ts`、`src/lib/i18n/*`、记录列表/趋势/对比页面与组件；后端 `trends/`、`api/trends.py`、`api/records.py`（加字段）。
+- B3-03：后端 `reports/`（生成/存储/下载）、`api/reports.py`、测试；前端 `src/pages/reports.tsx`、`src/features/reports/**`（含 feature-local i18n bundle），不改共享 i18n。
+- B3-04：后端 `llm/`、`api/assistant.py`、`db/assistant_repo.py`、测试；前端 `src/pages/assistant.tsx`、`src/features/assistant/**`（含 feature-local i18n bundle）。
+- 共享文件冲突用「feature-local i18n bundle + feature-local API 文件」解决；不要改别人的页面/组件。
+
+## 16. B3 风险
+
+| 风险 | 应对 |
+|---|---|
+| PDF 中文字体/排版 | 选无原生 GTK 依赖的方案（ReportLab / 前端 react-pdf 二选一）；先做 1 页样张再扩展 |
+| LLM Key 安全 | Windows 凭据管理器（`keyring`）；无 Key 时用本地 mock/Ollama 演示 |
+| 报告与趋势数据口径 | 统一取 `measurements` 的 code；缺值显示「无数据」而不是 0 |
+| 两个 UI Agent 冲突 | B3-02 独占共享层；B3-03/04 只加 feature 目录与 feature-local i18n |
+| 简化模型数值漂移 | 对齐测试 + 原模型回退开关；差异 >1e-4 立即回退 |

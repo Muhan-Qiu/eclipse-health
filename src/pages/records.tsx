@@ -1,8 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { FilePlus2, FileSearch } from "lucide-react";
+import { FilePlus2, FileSearch, RefreshCw } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,11 +15,14 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { RecordListSkeleton } from "@/components/common/loading";
 import { RecordRow } from "@/components/records/record-row";
-import { api } from "@/lib/api/client";
+import { useImport } from "@/components/import/import-provider";
+import { useRecords } from "@/lib/api/queries";
 import { useTagLabel } from "@/lib/tags";
 
 type TimeFilter = "all" | "7d" | "30d";
 type DeviceFilter = "all" | "apple" | "samsung" | "huawei";
+
+const PAGE_SIZE = 20;
 
 function filterChipClass(active: boolean) {
   return cn(
@@ -35,39 +36,49 @@ function filterChipClass(active: boolean) {
 export function RecordsPage() {
   const { t } = useTranslation();
   const tagLabel = useTagLabel();
+  const { openPicker } = useImport();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [deviceFilter, setDeviceFilter] = useState<DeviceFilter>("all");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["records"],
-    queryFn: () => api.records.list({ limit: 50 }),
+  const capturedFrom = useMemo(() => {
+    if (timeFilter === "7d") return new Date(Date.now() - 7 * 86_400_000).toISOString();
+    if (timeFilter === "30d") return new Date(Date.now() - 30 * 86_400_000).toISOString();
+    return undefined;
+  }, [timeFilter]);
+
+  const query = useRecords({
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+    capturedFrom,
+    recordType: "org.eclipsehealth.ecg",
   });
 
-  const records = useMemo(() => data ?? [], [data]);
+  const records = query.data?.items ?? [];
+  const total = query.data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  useEffect(() => {
+    if (page > 0 && page >= pageCount) setPage(pageCount - 1);
+  }, [page, pageCount]);
 
   const tags = useMemo(
     () => [...new Set(records.flatMap((record) => record.tags))],
     [records],
   );
 
-  const filtered = useMemo(() => {
-    const now = Date.now();
-    const windowMs =
-      timeFilter === "7d" ? 7 * 86_400_000 : timeFilter === "30d" ? 30 * 86_400_000 : null;
-
-    return records.filter((record) => {
-      if (deviceFilter !== "all" && record.device.vendor !== deviceFilter) {
-        return false;
-      }
-      if (tagFilter && !record.tags.includes(tagFilter)) return false;
-      if (windowMs !== null) {
-        const recorded = new Date(record.recordedAt).getTime();
-        if (Number.isNaN(recorded) || now - recorded > windowMs) return false;
-      }
-      return true;
-    });
-  }, [records, timeFilter, deviceFilter, tagFilter]);
+  const filtered = useMemo(
+    () =>
+      records.filter((record) => {
+        if (deviceFilter !== "all" && record.device.vendor !== deviceFilter) {
+          return false;
+        }
+        if (tagFilter && !record.tags.includes(tagFilter)) return false;
+        return true;
+      }),
+    [records, deviceFilter, tagFilter],
+  );
 
   const hasFilters =
     timeFilter !== "all" || deviceFilter !== "all" || tagFilter !== null;
@@ -75,6 +86,7 @@ export function RecordsPage() {
     setTimeFilter("all");
     setDeviceFilter("all");
     setTagFilter(null);
+    setPage(0);
   };
 
   return (
@@ -84,10 +96,7 @@ export function RecordsPage() {
         title={t("records.title")}
         description={t("records.description")}
         actions={
-          <Button
-            size="sm"
-            onClick={() => toast(t("dashboard.guide.importPending"))}
-          >
+          <Button size="sm" onClick={openPicker}>
             <FilePlus2 data-icon="inline-start" />
             {t("records.emptyAction")}
           </Button>
@@ -103,7 +112,10 @@ export function RecordsPage() {
               </span>
               <Select
                 value={timeFilter}
-                onValueChange={(value) => setTimeFilter(value as TimeFilter)}
+                onValueChange={(value) => {
+                  setTimeFilter(value as TimeFilter);
+                  setPage(0);
+                }}
               >
                 <SelectTrigger
                   size="sm"
@@ -113,15 +125,9 @@ export function RecordsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">
-                    {t("records.filters.allTime")}
-                  </SelectItem>
-                  <SelectItem value="7d">
-                    {t("records.filters.last7")}
-                  </SelectItem>
-                  <SelectItem value="30d">
-                    {t("records.filters.last30")}
-                  </SelectItem>
+                  <SelectItem value="all">{t("records.filters.allTime")}</SelectItem>
+                  <SelectItem value="7d">{t("records.filters.last7")}</SelectItem>
+                  <SelectItem value="30d">{t("records.filters.last30")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -132,9 +138,7 @@ export function RecordsPage() {
               </span>
               <Select
                 value={deviceFilter}
-                onValueChange={(value) =>
-                  setDeviceFilter(value as DeviceFilter)
-                }
+                onValueChange={(value) => setDeviceFilter(value as DeviceFilter)}
               >
                 <SelectTrigger
                   size="sm"
@@ -144,9 +148,7 @@ export function RecordsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">
-                    {t("records.filters.allDevices")}
-                  </SelectItem>
+                  <SelectItem value="all">{t("records.filters.allDevices")}</SelectItem>
                   <SelectItem value="apple">Apple</SelectItem>
                   <SelectItem value="samsung">Samsung</SelectItem>
                   <SelectItem value="huawei">Huawei</SelectItem>
@@ -184,19 +186,32 @@ export function RecordsPage() {
             </div>
 
             <span className="eh-caption ml-auto text-muted-foreground">
-              {filtered.length} / {records.length}
+              {t("records.count", {
+                shown: filtered.length,
+                total: query.data ? total : "—",
+              })}
             </span>
           </div>
 
-          {isLoading ? <RecordListSkeleton rows={3} /> : null}
+          {query.isLoading ? <RecordListSkeleton rows={4} /> : null}
 
-          {isError ? (
-            <p className="eh-small px-5 py-8 text-center text-muted-foreground">
-              {t("common.loadError")}
-            </p>
+          {query.isError ? (
+            <div className="px-5 py-8">
+              <EmptyState
+                icon={RefreshCw}
+                title={t("common.loadError")}
+                description={t("records.errorDesc")}
+                className="border-0 bg-transparent py-6"
+              >
+                <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
+                  <RefreshCw data-icon="inline-start" />
+                  {t("common.retry")}
+                </Button>
+              </EmptyState>
+            </div>
           ) : null}
 
-          {!isLoading && !isError && records.length === 0 ? (
+          {!query.isLoading && !query.isError && total === 0 ? (
             <div className="px-5 py-6">
               <EmptyState
                 icon={FilePlus2}
@@ -204,19 +219,16 @@ export function RecordsPage() {
                 description={t("records.emptyDesc")}
                 className="border-0 bg-transparent"
               >
-                <Button
-                  size="sm"
-                  onClick={() => toast(t("dashboard.guide.importPending"))}
-                >
+                <Button size="sm" onClick={openPicker}>
                   {t("records.emptyAction")}
                 </Button>
               </EmptyState>
             </div>
           ) : null}
 
-          {!isLoading &&
-          !isError &&
-          records.length > 0 &&
+          {!query.isLoading &&
+          !query.isError &&
+          total > 0 &&
           filtered.length === 0 ? (
             <div className="px-5 py-6">
               <EmptyState
@@ -240,13 +252,38 @@ export function RecordsPage() {
             </div>
           ) : null}
 
-          {hasFilters && filtered.length > 0 ? (
-            <div className="flex justify-end border-t border-border px-5 py-2">
-              <Button variant="ghost" size="xs" onClick={clearFilters}>
-                {t("records.clearFilters")}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-2">
+            <div className="flex items-center gap-2">
+              {hasFilters ? (
+                <Button variant="ghost" size="xs" onClick={clearFilters}>
+                  {t("records.clearFilters")}
+                </Button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                disabled={page === 0 || query.isFetching}
+              >
+                {t("records.previous")}
+              </Button>
+              <span className="eh-caption text-muted-foreground">
+                {t("records.page", { page: page + 1, pages: pageCount })}
+              </span>
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() =>
+                  setPage((current) => Math.min(pageCount - 1, current + 1))
+                }
+                disabled={page + 1 >= pageCount || query.isFetching}
+              >
+                {t("records.next")}
               </Button>
             </div>
-          ) : null}
+          </div>
         </CardContent>
       </Card>
     </>

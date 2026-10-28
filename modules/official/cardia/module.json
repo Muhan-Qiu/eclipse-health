@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0",
+  "id": "org.eclipsehealth.cardia",
+  "name": "Cardia 2.0 · ECG 心搏分类",
+  "description": "Single-lead ECG beat classification (N/SVEB/VEB/F) with the Cardia 2.0 ONNX model, using the 104-dimensional feature pipeline.",
+  "version": "1.0.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "eclipse health" },
+  "license": "GPL-3.0-only",
+  "permissions": ["files:user-selected"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "cardia-2.0",
+        "name": "Cardia 2.0",
+        "task": "beat-classification",
+        "format": "onnx",
+        "input": {
+          "leads": ["MLII"],
+          "fs": 360,
+          "windowSamples": 180,
+          "beatsPerWindow": 64,
+          "features": "cardia-104d"
+        },
+        "output": { "classes": ["N", "SVEB", "VEB", "F"] },
+        "preprocess": { "pipeline": "mondejar-104-v1", "version": "2.0" },
+        "runtime": { "device": "cpu", "memoryMb": 1024 },
+        "modelCard": {
+          "parameters": 722327,
+          "trainingData": "MIT-BIH Arrhythmia Database (MLII)",
+          "metrics": { "composite": 74.0 },
+          "limitations": [
+            "Single lead (MLII) only",
+            "Trained and evaluated at 360 Hz",
+            "No waveform delineation (QRS/PR/QT unavailable)",
+            "Research/education use; not a medical device"
+          ],
+          "license": "GPL-3.0-only",
+          "nonDiagnostic": true,
+          "evaluation": "MIT-BIH 100/200/208 alignment vs V2 prediction (max |Δp| 6.2e-7)"
+        }
+      }
+    ]
+  },
+  "resources": { "memoryMb": 1024, "cpu": 1, "startupTimeoutMs": 10000 },
+  "updateChannel": "stable"
+}

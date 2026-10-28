@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,17 @@ from .types import (
 
 _SESSION_LOCK = threading.Lock()
 _SESSIONS: dict[str, Any] = {}
+# 每个模型文件的 ONNX 会话初始化耗时（秒），供 /engine 与报告使用。
+_SESSION_INIT_SECONDS: dict[str, float] = {}
+
+_OPT_LEVELS = {
+    "all": "ORT_ENABLE_ALL",
+    "basic": "ORT_ENABLE_BASIC",
+    "extended": "ORT_ENABLE_EXTENDED",
+    "disabled": "ORT_DISABLE_ALL",
+    "disable": "ORT_DISABLE_ALL",
+    "off": "ORT_DISABLE_ALL",
+}
 
 
 @dataclass(frozen=True)
@@ -56,6 +69,27 @@ def read_preprocess(model_dir: str | Path | None = None) -> dict[str, Any]:
         raise ModelLoadError(f"preprocess.json 解析失败：{exc}") from exc
 
 
+def _session_options(ort: Any) -> Any:
+    """会话参数可用环境变量微调（数值不受影响；见 reports/B2-01-ort-spike.md）。
+
+    - ``EH_ORT_OPT_LEVEL``：all|extended|basic|disabled，默认 all；
+    - ``EH_ORT_INTRA_THREADS`` / ``EH_ORT_INTER_THREADS``：默认交给 ORT。
+    实测本机 24k 节点模型初始化 140–200 秒，与优化级别/线程数无关。
+    """
+    options = ort.SessionOptions()
+    level = _OPT_LEVELS.get(os.environ.get("EH_ORT_OPT_LEVEL", "all").strip().lower(), "ORT_ENABLE_ALL")
+    options.graph_optimization_level = getattr(ort.GraphOptimizationLevel, level)
+    for env_name, attr in (
+        ("EH_ORT_INTRA_THREADS", "intra_op_num_threads"),
+        ("EH_ORT_INTER_THREADS", "inter_op_num_threads"),
+    ):
+        raw = os.environ.get(env_name)
+        if raw and raw.strip().isdigit():
+            setattr(options, attr, max(1, int(raw)))
+    options.log_severity_level = 3
+    return options
+
+
 def _get_session(model_path: Path, model_sha256: str, blob: bytes) -> Any:
     """进程级缓存；ORT 会话初始化很慢，绝不重复建。"""
     with _SESSION_LOCK:
@@ -67,9 +101,8 @@ def _get_session(model_path: Path, model_sha256: str, blob: bytes) -> Any:
         except ImportError as exc:
             raise ModelLoadError("缺少 onnxruntime 依赖") from exc
 
-        options = ort.SessionOptions()
-        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        options.log_severity_level = 3
+        options = _session_options(ort)
+        started = time.perf_counter()
         try:
             session = ort.InferenceSession(
                 blob,
@@ -78,6 +111,7 @@ def _get_session(model_path: Path, model_sha256: str, blob: bytes) -> Any:
             )
         except Exception as exc:
             raise ModelLoadError(f"ONNX 会话初始化失败：{exc}") from exc
+        _SESSION_INIT_SECONDS[model_sha256] = time.perf_counter() - started
         _SESSIONS[model_sha256] = session
         return session
 
@@ -230,3 +264,28 @@ class CardiaModel:
             probs[n - tail : n] = chunk_probs[-1][-tail:]
             covered[n - tail : n] = True
         return probs, covered
+
+
+def session_init_seconds(model_sha256: str) -> float | None:
+    """该模型文件在本进程的 ONNX 会话初始化耗时（秒）；未初始化返回 None。"""
+    return _SESSION_INIT_SECONDS.get(model_sha256)
+
+
+def prewarm(model_dir: str | Path | None = None) -> dict[str, Any]:
+    """预热 ONNX 会话（首次会阻塞到初始化完成），返回模型标识与耗时。
+
+    不跑推理、不改任何数值；供后台预热线程与 ``GET /engine`` 使用。
+    """
+    started = time.perf_counter()
+    known_before = set(_SESSIONS)
+    model = CardiaModel(model_dir)
+    sha = model.info.model_sha256
+    init_seconds = _SESSION_INIT_SECONDS.get(sha)
+    return {
+        "modelId": "cardia-2.0",
+        "modelSha256": sha,
+        "sequenceLength": model.sequence_length,
+        "sessionInitSeconds": round(init_seconds, 3) if init_seconds is not None else None,
+        "callSeconds": round(time.perf_counter() - started, 3),
+        "cached": sha in known_before,
+    }

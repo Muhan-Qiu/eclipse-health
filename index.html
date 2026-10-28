@@ -5,11 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content="eclipse health · 本地优先的心电记录与分析" />
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0C0F'/%3E%3Ccircle cx='16' cy='16' r='10.5' fill='none' stroke='%23D8A657' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='16' r='6.5' fill='%23101519'/%3E%3C/svg%3E"
-    />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F7F5F1" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A0C0F" />
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
+    <link rel="apple-touch-icon" href="/brand/icon-1024.png" />
+    <!-- 首帧先铺近黑底：启动动画从黑开始，避免 WebView 在 CSS 加载前闪白 -->
+    <style>
+      html {
+        background-color: #0a0c0f;
+      }
+    </style>
     <title>eclipse health</title>
     <script>
       // 在首帧前应用主题与配色，避免亮暗切换时的闪烁。

@@ -121,6 +121,8 @@ def test_permissions_gate_core_calls(manager, demo_package: Path) -> None:
 
 
 def test_crash_is_detected_and_restarted_once(manager, demo_package: Path) -> None:
+    # 默认崩溃预算已改为 3 次（契约 §5，B2-01）；本测试只验证「重启一次后不再重启」的机制。
+    manager.max_restarts = 1
     _install_enabled(manager, demo_package)
     manager.start(DEMO_ID)
     with pytest.raises(ModuleError) as info:

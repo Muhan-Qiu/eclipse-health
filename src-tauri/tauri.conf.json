@@ -12,12 +12,15 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "eclipse health",
         "width": 1360,
         "height": 860,
         "minWidth": 1080,
         "minHeight": 700,
-        "center": true
+        "center": true,
+        "visible": false,
+        "backgroundColor": "#0A0C0F"
       }
     ],
     "security": {

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "./command-palette";
+import { ImportProvider } from "@/components/import/import-provider";
 import { findNavItem } from "@/lib/nav";
 
 const NAV_STORAGE_KEY = "eh-nav-collapsed";
@@ -50,7 +51,8 @@ export function AppShell() {
   }, [location.pathname, t]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <ImportProvider>
+      <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <a
         href="#main"
         onClick={(event) => {
@@ -80,6 +82,7 @@ export function AppShell() {
       </div>
 
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-    </div>
+      </div>
+    </ImportProvider>
   );
 }

@@ -42,3 +42,4 @@ backend/dist/
 # Local agent config / generated analysis output
 .claude/settings.local.json
 reports/analysis-*.json
+.playwright-mcp/

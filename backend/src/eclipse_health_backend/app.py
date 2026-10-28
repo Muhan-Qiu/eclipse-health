@@ -37,12 +37,14 @@ EXPOSED_HEADERS = [
 ]
 
 API_DESCRIPTION = """
-本地优先的健康数据服务：成员、健康记录、波形文件。
+本地优先的健康数据服务：成员、健康记录、波形文件、分析结果。
 
 - 分页：`limit` + `offset`，按 `capturedAt` 倒序。
 - 软删除：`DELETE /records/{id}` 只标记 `deletedAt`，默认查询不再返回。
 - 波形：`POST /records` 可内联 float32 数组或引用 `imports/` 下的文件；
   `GET /records/{id}/signal` 返回 `application/octet-stream` 小端 float32。
+- 分析：`POST /records/{id}/analyses` 返回 202，轮询 `GET /analyses/{id}`；
+  引擎就绪状态见 `GET /engine`（`warming|ready|error`）。
 - 错误：所有业务错误返回 `{code, message, details}`。
 """
 
@@ -63,7 +65,60 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         ensure_default_member(session)
     app.state.started_at = utc_now()
     logger.info("backend ready db=%s data=%s", settings.db_path, settings.data_dir)
-    yield
+    _start_module_system()
+    _start_analysis_service()
+    try:
+        yield
+    finally:
+        _stop_analysis_service()
+        _stop_module_system()
+
+
+def _start_module_system() -> None:
+    try:
+        from .modules.api import init_module_system
+    except Exception:  # noqa: BLE001
+        logger.info("module system not available; module APIs disabled")
+        return
+    try:
+        init_module_system()
+    except Exception:
+        logger.exception("module system initialization failed")
+
+
+def _stop_module_system() -> None:
+    try:
+        from .modules.api import shutdown_module_system
+    except Exception:  # noqa: BLE001
+        return
+    try:
+        shutdown_module_system()
+    except Exception:
+        logger.exception("module system shutdown failed")
+
+
+def _start_analysis_service() -> None:
+    """只装配服务；Cardia 预热在后台线程里进行，不阻塞 HTTP 就绪。"""
+    try:
+        from .analysis_service import init_analysis_service
+    except Exception:  # noqa: BLE001
+        logger.info("analysis service not available; analysis APIs disabled")
+        return
+    try:
+        init_analysis_service()
+    except Exception:
+        logger.exception("analysis service initialization failed")
+
+
+def _stop_analysis_service() -> None:
+    try:
+        from .analysis_service import shutdown_analysis_service
+    except Exception:  # noqa: BLE001
+        return
+    try:
+        shutdown_analysis_service()
+    except Exception:
+        logger.exception("analysis service shutdown failed")
 
 
 def _mount_modules_router(app: FastAPI) -> None:

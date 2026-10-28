@@ -1,0 +1,300 @@
+/* ------------------------------------------------------------------
+ * eclipse health · 品牌层（logo / 字标 / 日食启动动画）
+ * 只作用于 .eh-brand-* 类；颜色全部由 --eh-* 设计令牌派生，不改全局令牌。
+ * ------------------------------------------------------------------ */
+
+.eh-brand-logo {
+  --eh-brand-disk: var(--eh-logo-disk, #14181c);
+  --eh-brand-ring: var(--eh-logo-ring, var(--eh-accent, #d8a657));
+  display: block;
+  flex: none;
+}
+
+/* 固定在亮色背景上：把品牌色压深，保证对比度 */
+.eh-brand-logo--light {
+  --eh-brand-ring: color-mix(in srgb, var(--eh-accent) 58%, var(--eh-logo-disk, #14181c));
+}
+
+/* 固定在暗色背景上：直接用亮色主题的品牌色 */
+.eh-brand-logo--dark {
+  --eh-brand-ring: var(--eh-logo-ring, var(--eh-accent));
+}
+
+/* 单色：全部跟随 currentColor，靠圆盘与环之间的留白分层 */
+.eh-brand-logo--mono {
+  --eh-brand-disk: currentColor;
+  --eh-brand-ring: currentColor;
+}
+
+.eh-brand-wordmark {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.eh-brand-wordmark__name {
+  font-family: var(--eh-font-display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: var(--eh-text);
+}
+
+.eh-brand-wordmark__sub {
+  font-family: var(--eh-font-body);
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: 0.28em;
+  /* 字距会在末尾多出一格，用等量缩进把文本视觉居中 */
+  text-indent: 0.28em;
+  color: var(--eh-text-muted);
+}
+
+/* ------------------------------------------------------------------
+ * 日食启动遮罩
+ * 暗色：近黑底，光环 40%→100%，字标淡入，最后整体淡出。
+ * 亮色：从黑开始，黑盘缩小淡出，背景过渡到暖白，字标转墨色。
+ * 总时长 1600ms（SplashScreen.tsx 常量需同步）。
+ * ------------------------------------------------------------------ */
+
+.eh-brand-splash {
+  --eh-brand-splash-ring: var(--eh-logo-ring, var(--eh-accent));
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 44px;
+  background-color: #0a0c0f;
+  color: var(--eh-text);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: eh-brand-splash-out 360ms var(--eh-ease-out) 1240ms both;
+}
+
+.eh-brand-splash[data-mode="light"] {
+  /* 亮色主题的品牌色偏深，先与暖白混合，保证在黑色底上仍是「日冕」而不是暗环 */
+  --eh-brand-splash-ring: color-mix(
+    in srgb,
+    var(--eh-logo-ring, var(--eh-accent)) 55%,
+    var(--eh-bg, #f7f5f1)
+  );
+  animation: eh-brand-splash-out 300ms var(--eh-ease-out) 1300ms both;
+}
+
+/* 亮色：暖白幕布从黑底上升起；放在子层，跳过场时随遮罩一起淡出，不会闪回黑色 */
+.eh-brand-splash__veil {
+  position: absolute;
+  inset: 0;
+  background: var(--eh-bg, #f7f5f1);
+  opacity: 0;
+}
+
+.eh-brand-splash[data-mode="light"] .eh-brand-splash__veil {
+  animation: eh-brand-veil-light 450ms var(--eh-ease-out) 700ms both;
+}
+
+.eh-brand-splash__scene {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 220px;
+  height: 220px;
+}
+
+.eh-brand-splash__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 58%,
+    color-mix(in srgb, var(--eh-brand-splash-ring) 28%, transparent) 72%,
+    transparent 90%
+  );
+}
+
+.eh-brand-splash__disk {
+  position: absolute;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: var(--eh-logo-disk, #14181c);
+}
+
+.eh-brand-splash__ring {
+  position: absolute;
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  border: 3.4px solid var(--eh-brand-splash-ring);
+  box-shadow: 0 0 34px color-mix(in srgb, var(--eh-brand-splash-ring) 20%, transparent);
+  opacity: 0.4;
+  animation: eh-brand-ring-in 900ms var(--eh-ease-out) both;
+}
+
+.eh-brand-splash__word {
+  position: relative;
+  animation: eh-brand-word-in 500ms var(--eh-ease-out) 480ms both;
+}
+
+/* 亮色：黑盘缩小淡出，像日食结束 */
+.eh-brand-splash[data-mode="light"] .eh-brand-splash__disk {
+  animation: eh-brand-disk-eclipse 450ms var(--eh-ease-out) 900ms both;
+}
+
+/* 亮色：背景转暖白后，字标才出现，避免浅色文字落在白底上 */
+.eh-brand-splash[data-mode="light"] .eh-brand-splash__word {
+  animation: eh-brand-word-in 280ms var(--eh-ease-out) 820ms both;
+}
+
+/* 亮色：白色底上升后收起辉光，否则会留下灰色晕圈 */
+.eh-brand-splash[data-mode="light"] .eh-brand-splash__glow {
+  animation: eh-brand-glow-out 450ms var(--eh-ease-out) 700ms both;
+}
+
+/* 亮色：背景变白时，光环从「日冕亮色」过渡回墨色品牌色，再在结尾淡出 */
+.eh-brand-splash[data-mode="light"] .eh-brand-splash__ring {
+  animation:
+    eh-brand-ring-in 900ms var(--eh-ease-out) both,
+    eh-brand-ring-ink 380ms var(--eh-ease-out) 700ms both,
+    eh-brand-ring-out 260ms var(--eh-ease-out) 1300ms both;
+}
+
+/* 主界面在遮罩下方淡入，遮罩撤走时已经就位；包裹层常驻，避免重挂载 App */
+.eh-brand-app--intro {
+  min-height: 100dvh;
+  animation: eh-brand-app-in 460ms var(--eh-ease-out) 1040ms both;
+}
+
+.eh-brand-app--reduced {
+  min-height: 100dvh;
+  animation: eh-brand-app-in 300ms ease-out both;
+}
+
+/* ?splash=hold：冻结在关键帧，点击/按键关闭 */
+.eh-brand-splash[data-paused],
+.eh-brand-splash[data-paused] * {
+  animation-play-state: paused !important;
+}
+
+.eh-brand-splash[data-leaving] {
+  animation: eh-brand-splash-leave 200ms var(--eh-ease-out) both !important;
+}
+
+@keyframes eh-brand-ring-in {
+  from {
+    opacity: 0.4;
+    transform: scale(0.955);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes eh-brand-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eh-brand-disk-eclipse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.45);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.32);
+  }
+}
+
+@keyframes eh-brand-glow-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes eh-brand-ring-ink {
+  from {
+    border-color: var(--eh-brand-splash-ring);
+  }
+  to {
+    border-color: var(--eh-logo-ring, var(--eh-accent));
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes eh-brand-ring-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes eh-brand-veil-light {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes eh-brand-splash-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes eh-brand-splash-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes eh-brand-app-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 系统减少动效：JS 已跳过日食过程，这里兜底，避免遮罩/主界面长时间不可见 */
+@media (prefers-reduced-motion: reduce) {
+  .eh-brand-splash {
+    display: none;
+  }
+  .eh-brand-app--intro {
+    animation: eh-brand-app-in 300ms ease both !important;
+  }
+}

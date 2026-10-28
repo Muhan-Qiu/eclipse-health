@@ -3,13 +3,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useAppTheme } from "@/lib/theme";
+import { isRetryableNetworkError } from "@/lib/api/error";
 import "@/lib/i18n";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 1,
+      retry: (failureCount, error) =>
+        isRetryableNetworkError(error) && failureCount < 2,
       refetchOnWindowFocus: false,
     },
   },
