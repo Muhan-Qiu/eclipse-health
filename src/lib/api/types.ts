@@ -9,6 +9,14 @@ export interface DeviceInfo {
 
 export type RecordStatus = "ready" | "analyzing" | "analyzed" | "failed";
 
+/** 列表接口附带的最新分析状态（B3-02）；单条记录接口不返回这组字段。 */
+export type LatestAnalysisStatus =
+  | "none"
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed";
+
 export interface RecordSummary {
   id: string;
   memberId: string;
@@ -19,6 +27,10 @@ export interface RecordSummary {
   leads: string[];
   sampleRateHz: number;
   status: RecordStatus;
+  /** 最新分析状态原始值；`status` 由它派生，保留以兼容既有组件。 */
+  analysisStatus: LatestAnalysisStatus;
+  latestAnalysisId: string | null;
+  latestAnalyzedAt: string | null;
   /** 仅 mock 数据为 true；真实记录必须显示为真实数据。 */
   isDemo: boolean;
   notes: string;
@@ -88,6 +100,10 @@ export interface HealthRecord {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+  /** 仅 `GET /records` 列表项返回（B3-02）；单条查询不带。 */
+  latestAnalysisStatus?: LatestAnalysisStatus | null;
+  latestAnalysisId?: string | null;
+  latestAnalyzedAt?: string | null;
 }
 
 export interface RecordPage {
@@ -314,3 +330,46 @@ export interface ImportCommitResponse {
 }
 
 export type ImportHintFormat = "wfdb" | "csv" | "auto";
+
+/* ------------------------------------------------------------------ *
+ * 趋势与对比（B3-02 / GET /trends、GET /records/compare）
+ * ------------------------------------------------------------------ */
+
+export interface TrendPoint {
+  /** 记录采集时间（RFC 3339）。 */
+  t: string;
+  value: number;
+  recordId: string;
+  analysisId: string;
+}
+
+export interface TrendSummary {
+  min: number | null;
+  max: number | null;
+  mean: number | null;
+  count: number;
+}
+
+export interface TrendSeries {
+  metric: string;
+  label: string;
+  unit: string;
+  ucum: string;
+  points: TrendPoint[];
+  summary: TrendSummary;
+}
+
+export interface TrendsResponse {
+  series: TrendSeries[];
+}
+
+export interface CompareAnalysis {
+  recordId: string;
+  /** 最新一次完成分析的摘要 + measurements；没有则为 null。 */
+  latestCompleted: AnalysisResult | null;
+}
+
+export interface RecordCompareResponse {
+  records: HealthRecord[];
+  analyses: CompareAnalysis[];
+}

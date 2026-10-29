@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FilePlus2, FileSearch, RefreshCw } from "lucide-react";
+import { FilePlus2, FileSearch, GitCompare, RefreshCw } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,10 +38,12 @@ export function RecordsPage() {
   const { t } = useTranslation();
   const tagLabel = useTagLabel();
   const { openPicker } = useImport();
+  const navigate = useNavigate();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [deviceFilter, setDeviceFilter] = useState<DeviceFilter>("all");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const capturedFrom = useMemo(() => {
     if (timeFilter === "7d") return new Date(Date.now() - 7 * 86_400_000).toISOString();
@@ -87,6 +90,19 @@ export function RecordsPage() {
     setDeviceFilter("all");
     setTagFilter(null);
     setPage(0);
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      if (current.length >= 2) return current;
+      return [...current, id];
+    });
+  };
+
+  const compareSelected = () => {
+    if (selectedIds.length !== 2) return;
+    navigate(`/compare?ids=${selectedIds.join(",")}`);
   };
 
   return (
@@ -193,6 +209,33 @@ export function RecordsPage() {
             </span>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-2">
+            <span className="eh-caption text-muted-foreground">
+              {selectedIds.length > 0
+                ? t("records.selected", { count: selectedIds.length })
+                : t("records.compareHint")}
+            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              {selectedIds.length > 0 ? (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setSelectedIds([])}
+                >
+                  {t("records.clearSelection")}
+                </Button>
+              ) : null}
+              <Button
+                size="xs"
+                onClick={compareSelected}
+                disabled={selectedIds.length !== 2}
+              >
+                <GitCompare data-icon="inline-start" />
+                {t("records.compare")}
+              </Button>
+            </div>
+          </div>
+
           {query.isLoading ? <RecordListSkeleton rows={4} /> : null}
 
           {query.isError ? (
@@ -247,7 +290,15 @@ export function RecordsPage() {
           {filtered.length > 0 ? (
             <div className="divide-y divide-border">
               {filtered.map((record) => (
-                <RecordRow key={record.id} record={record} />
+                <RecordRow
+                  key={record.id}
+                  record={record}
+                  selection={{
+                    selected: selectedIds.includes(record.id),
+                    disabled: selectedIds.length >= 2,
+                    onToggle: toggleSelection,
+                  }}
+                />
               ))}
             </div>
           ) : null}

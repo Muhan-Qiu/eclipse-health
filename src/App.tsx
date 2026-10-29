@@ -3,11 +3,10 @@ import { AppShell } from "@/components/layout/app-shell";
 import { DashboardPage } from "@/pages/dashboard";
 import { RecordsPage } from "@/pages/records";
 import { RecordDetailPage } from "@/pages/record-detail";
-import {
-  AssistantPage,
-  ReportsPage,
-  TrendsPage,
-} from "@/pages/coming-soon";
+import { TrendsPage } from "@/pages/trends";
+import { ComparePage } from "@/pages/compare";
+import { AssistantPage } from "@/pages/assistant";
+import { ReportsPage } from "@/pages/reports";
 import { SettingsPage } from "@/pages/settings";
 import { ModulesPage } from "@/pages/modules";
 import { AboutPage } from "@/pages/about";
@@ -26,6 +25,7 @@ export default function App() {
           <Route path="records" element={<RecordsPage />} />
           <Route path="records/:id" element={<RecordDetailPage />} />
           <Route path="trends" element={<TrendsPage />} />
+          <Route path="compare" element={<ComparePage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="assistant" element={<AssistantPage />} />
           <Route path="settings" element={<SettingsPage />} />

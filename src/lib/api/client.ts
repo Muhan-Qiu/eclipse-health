@@ -14,15 +14,19 @@ import type {
   ImportHintFormat,
   ImportPreview,
   Member,
+  RecordCompareResponse,
   RecordPage,
   SignalData,
   SignalMetadata,
+  TrendsResponse,
 } from "./types";
 import {
   normalizeAnalysis,
   normalizeAnalysisList,
+  normalizeCompare,
   normalizeEngine,
   normalizeImportPreview,
+  normalizeTrends,
 } from "./adapters";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8765/api/v1";
@@ -317,3 +321,40 @@ const realApi: ApiClient = {
 export const api: ApiClient = useMock ? mockApi : realApi;
 
 export const apiMode = { mock: useMock, baseUrl } as const;
+
+/* ------------------------------------------------------------------ *
+ * 趋势与对比（B3-02）
+ *
+ * 不挂到 `ApiClient` 上：mock 客户端只需要覆盖既有接口，
+ * 这两个读接口在 mock 模式返回空集合，避免示例模式去连真实后端。
+ * ------------------------------------------------------------------ */
+
+export interface TrendsParams {
+  metrics?: string[];
+  from?: string;
+  to?: string;
+  memberId?: string;
+}
+
+export async function fetchTrends(
+  params: TrendsParams = {},
+): Promise<TrendsResponse> {
+  if (useMock) return { series: [] };
+  const query = buildQuery({
+    metrics: params.metrics?.length ? params.metrics.join(",") : undefined,
+    from: params.from,
+    to: params.to,
+    memberId: params.memberId,
+  });
+  return normalizeTrends(await requestJson<unknown>(`/trends${query}`));
+}
+
+export async function fetchRecordCompare(
+  ids: string[],
+): Promise<RecordCompareResponse> {
+  if (useMock) return { records: [], analyses: [] };
+  const query = buildQuery({ ids: ids.join(",") });
+  return normalizeCompare(
+    await requestJson<unknown>(`/records/compare${query}`),
+  );
+}

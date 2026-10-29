@@ -18,18 +18,29 @@
         "name": "Cardia 2.0",
         "task": "beat-classification",
         "format": "onnx",
+        "files": [
+          {
+            "path": "models/cardia_k4_best_sim.onnx",
+            "sha256": "f59128614d185076926f9943f514fa94774cd99319a6a6cf14686bd08237bf53"
+          }
+        ],
         "input": {
           "leads": ["MLII"],
           "fs": 360,
           "windowSamples": 180,
           "beatsPerWindow": 64,
-          "features": "cardia-104d"
+          "features": "cardia-104d",
+          "tensors": {
+            "x": { "dtype": "float32", "shape": [1, 64, 104] },
+            "dt": { "dtype": "float32", "shape": [1, 64] }
+          }
         },
-        "output": { "classes": ["N", "SVEB", "VEB", "F"] },
+        "output": { "classes": ["N", "SVEB", "VEB", "F"], "tensor": "logits", "shape": [1, 64, 4] },
         "preprocess": { "pipeline": "mondejar-104-v1", "version": "2.0" },
-        "runtime": { "device": "cpu", "memoryMb": 1024 },
+        "runtime": { "format": "onnx", "device": "cpu", "memoryMb": 1024 },
         "modelCard": {
           "parameters": 722327,
+          "parametersNote": "Torch 参数量。ONNX initializer 元素数：原图 721,972 / 简化图 727,939（导出按窗口展开常量）。",
           "trainingData": "MIT-BIH Arrhythmia Database (MLII)",
           "metrics": { "composite": 74.0 },
           "limitations": [
@@ -40,7 +51,7 @@
           ],
           "license": "GPL-3.0-only",
           "nonDiagnostic": true,
-          "evaluation": "MIT-BIH 100/200/208 alignment vs V2 prediction (max |Δp| 6.2e-7)"
+          "evaluation": "onnxsim fixed-shape graph; MIT-BIH 100/200/208 per-beat |Δp| vs original < 1e-4; B1-03 vs V2 max 6.2e-7"
         }
       }
     ]

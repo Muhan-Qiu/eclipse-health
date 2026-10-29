@@ -1,8 +1,9 @@
 {
   "algorithm": "sha256",
   "files": {
-    "README.md": "64371ac047f4232a82500f59814229ff7a57dc825e198883b8f5558e59d9c876",
-    "module.json": "de9acca4f15f602d92ba138af21b40763909d1757071364828f46ad46467e6e5",
-    "src/main.py": "0c21d31a0ce9002b65f8a363bd6dab94c4f87097eb9613729953a75c629a55f5"
+    "README.md": "83a1f7f37bce5f63f236fa3b9bd658c7541b3cf58f25c1c5b15f4d19da1cffbd",
+    "models/cardia_k4_best_sim.onnx": "f59128614d185076926f9943f514fa94774cd99319a6a6cf14686bd08237bf53",
+    "module.json": "72e5c1d5dfa64823fd02a01b7f14facf08c4cfa56ea6eaed7fddcc4132910d4d",
+    "src/main.py": "aef9664771660e1f63c81fb6b30323bc3cf4df52ee5ab00eb9d5f40e93178c74"
   }
 }

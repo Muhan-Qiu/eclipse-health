@@ -6,8 +6,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import numpy as np
 from fastapi import APIRouter, Header, Query, Response, status
@@ -18,7 +19,8 @@ from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from ..db.models import RecordTable
+from ..db import analysis_repo
+from ..db.models import AnalysisTable, RecordTable
 from ..db.repositories import (
     add_record,
     add_signal,
@@ -54,11 +56,106 @@ from .deps import SessionDep
 router = APIRouter()
 
 
+LatestAnalysisStatus = Literal["none", "queued", "running", "completed", "failed"]
+
+_STATUS_TO_LATEST: dict[str, LatestAnalysisStatus] = {
+    "queued": "queued",
+    "running": "running",
+    "completed": "completed",
+    "failed": "failed",
+    # 取消不是成功终态；列表按失败呈现，让用户知道需要重新分析。
+    "cancelled": "failed",
+}
+
+
+class RecordListItem(HealthRecord):
+    """列表项：附带最新分析状态，避免前端逐条查询（B3-02）。
+
+    单条 ``GET /records/{id}`` 仍返回 ``HealthRecord``，形状不变。
+    """
+
+    latestAnalysisStatus: LatestAnalysisStatus = "none"
+    latestAnalysisId: str | None = None
+    latestAnalyzedAt: datetime | None = None
+
+
 class RecordPage(BaseModel):
-    items: list[HealthRecord]
+    items: list[RecordListItem]
     total: int
     limit: int
     offset: int
+
+
+class CompareAnalysis(BaseModel):
+    recordId: str
+    latestCompleted: dict[str, Any] | None = None
+
+
+class RecordComparePage(BaseModel):
+    records: list[HealthRecord]
+    analyses: list[CompareAnalysis]
+
+
+@dataclass(frozen=True)
+class _LatestAnalysis:
+    analysis_id: str
+    status: str
+    created_at: datetime
+
+
+def _latest_analysis_map(
+    session: Session,
+    record_ids: list[str],
+    *,
+    statuses: tuple[str, ...] | None = None,
+) -> dict[str, _LatestAnalysis]:
+    """一条窗口函数查询取出每条记录最新一次分析（可按状态过滤）。"""
+    if not record_ids:
+        return {}
+    rank = func.row_number().over(
+        partition_by=AnalysisTable.record_id,
+        order_by=(AnalysisTable.created_at.desc(), AnalysisTable.id.desc()),
+    )
+    ranked = select(
+        AnalysisTable.record_id,
+        AnalysisTable.id,
+        AnalysisTable.status,
+        AnalysisTable.created_at,
+        rank.label("rn"),
+    ).where(AnalysisTable.record_id.in_(record_ids))
+    if statuses is not None:
+        ranked = ranked.where(AnalysisTable.status.in_(statuses))
+    subquery = ranked.subquery()
+    statement = select(
+        subquery.c.record_id,
+        subquery.c.id,
+        subquery.c.status,
+        subquery.c.created_at,
+    ).where(subquery.c.rn == 1)
+    return {
+        row.record_id: _LatestAnalysis(row.id, row.status, row.created_at)
+        for row in session.execute(statement).all()
+    }
+
+
+def _list_item(row: RecordTable, latest: _LatestAnalysis | None) -> RecordListItem:
+    record = record_from_row(row)
+    status_value: LatestAnalysisStatus = "none"
+    analysis_id: str | None = None
+    analyzed_at: datetime | None = None
+    if latest is not None:
+        status_value = _STATUS_TO_LATEST.get(latest.status, "failed")
+        analysis_id = latest.analysis_id
+        if status_value == "completed":
+            analyzed_at = latest.created_at
+    return RecordListItem.model_validate(
+        {
+            **record.model_dump(by_alias=True),
+            "latestAnalysisStatus": status_value,
+            "latestAnalysisId": analysis_id,
+            "latestAnalyzedAt": analyzed_at,
+        }
+    )
 
 
 def _validation_details(exc: PydanticValidationError) -> list[Any]:
@@ -191,12 +288,60 @@ def list_records(
         .offset(offset)
     )
     rows = list(session.exec(statement))
+    latest_map = _latest_analysis_map(session, [row.id for row in rows])
     return RecordPage(
-        items=[record_from_row(row) for row in rows],
+        items=[_list_item(row, latest_map.get(row.id)) for row in rows],
         total=int(total),
         limit=limit,
         offset=offset,
     )
+
+
+@router.get(
+    "/compare",
+    response_model=RecordComparePage,
+    summary="对比 2–4 条记录的最新完成分析",
+)
+def compare_records(
+    session: SessionDep,
+    ids: Annotated[str, Query(description="逗号分隔的记录 ID，2–4 条")],
+) -> RecordComparePage:
+    requested = [part.strip() for part in ids.split(",") if part.strip()]
+    unique = list(dict.fromkeys(requested))
+    if len(requested) != len(unique) or not 2 <= len(unique) <= 4:
+        raise InvalidInputError(
+            "ids must contain 2 to 4 distinct record ids",
+            code="invalid_ids",
+            details={"ids": requested, "count": len(unique)},
+        )
+
+    rows = {
+        row.id: row
+        for row in session.exec(select(RecordTable).where(RecordTable.id.in_(unique)))
+    }
+    records: list[HealthRecord] = []
+    for record_id in unique:
+        row = rows.get(record_id)
+        if row is None or row.deleted_at is not None:
+            raise not_found("record", record_id)
+        records.append(record_from_row(row))
+
+    latest = _latest_analysis_map(session, unique, statuses=("completed",))
+    analyses: list[CompareAnalysis] = []
+    for record_id in unique:
+        entry = latest.get(record_id)
+        latest_completed: dict[str, Any] | None = None
+        if entry is not None:
+            analysis_row = analysis_repo.get_analysis_row(session, entry.analysis_id)
+            if analysis_row is not None:
+                latest_completed = analysis_repo.summary_of(analysis_row)
+                latest_completed["measurements"] = analysis_repo.measurements_for(
+                    session, analysis_row.id
+                )
+        analyses.append(
+            CompareAnalysis(recordId=record_id, latestCompleted=latest_completed)
+        )
+    return RecordComparePage(records=records, analyses=analyses)
 
 
 @router.post("", response_model=HealthRecord, status_code=status.HTTP_201_CREATED)

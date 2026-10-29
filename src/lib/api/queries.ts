@@ -4,7 +4,8 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api } from "./client";
+import { api, fetchRecordCompare, fetchTrends } from "./client";
+import type { TrendsParams } from "./client";
 import { isRetryableNetworkError } from "./error";
 import { toRecordSummary } from "./adapters";
 import type { RecordListParams } from "./contract";
@@ -24,6 +25,8 @@ export const queryKeys = {
   analysis: (id: string) => ["analysis", id] as const,
   engine: ["engine"] as const,
   members: ["members"] as const,
+  trends: (params: TrendsParams) => ["trends", params] as const,
+  compare: (ids: string[]) => ["compare", ids] as const,
 };
 
 const retryNetwork = (failureCount: number, error: unknown) =>
@@ -138,6 +141,26 @@ export function useMembers() {
   });
 }
 
+export function useTrends(params: TrendsParams) {
+  return useQuery({
+    queryKey: queryKeys.trends(params),
+    queryFn: () => fetchTrends(params),
+    staleTime: 30_000,
+    retry: retryNetwork,
+  });
+}
+
+export function useRecordCompare(ids: string[]) {
+  const unique = [...new Set(ids)];
+  return useQuery({
+    queryKey: queryKeys.compare(unique),
+    queryFn: () => fetchRecordCompare(unique),
+    enabled: unique.length >= 2 && unique.length <= 4,
+    staleTime: 30_000,
+    retry: retryNetwork,
+  });
+}
+
 export function useStartAnalysis(recordId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -148,6 +171,8 @@ export function useStartAnalysis(recordId: string | undefined) {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.recordAnalyses(recordId),
       });
+      void queryClient.invalidateQueries({ queryKey: ["records"] });
+      void queryClient.invalidateQueries({ queryKey: ["trends"] });
     },
   });
 }
@@ -159,6 +184,8 @@ export function useDeleteRecord(recordId: string | undefined) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["records"] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.record(recordId ?? "") });
+      void queryClient.invalidateQueries({ queryKey: ["trends"] });
+      void queryClient.invalidateQueries({ queryKey: ["compare"] });
     },
   });
 }

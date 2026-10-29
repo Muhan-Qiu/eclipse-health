@@ -87,7 +87,7 @@ def init_db() -> None:
 
     B1-02 的表模型只要在调用前被导入（注册进 ``Base.metadata``）就会被一并创建。
     """
-    from . import models  # noqa: F401  导入即注册表模型
+    from . import assistant_repo, models  # noqa: F401  导入即注册表模型
 
     with engine.begin() as connection:
         connection.execute(text(MIGRATIONS_TABLE_SQL))
@@ -108,7 +108,7 @@ def init_db() -> None:
 
 def reset_db() -> None:
     """删表重建。仅用于测试与显式「重置数据目录」场景。"""
-    from . import models  # noqa: F401
+    from . import assistant_repo, models  # noqa: F401
 
     Base.metadata.drop_all(engine)
     with engine.begin() as connection:

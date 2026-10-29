@@ -34,6 +34,28 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _verify_model_files(module_dir: Path, manifest: object) -> bool:
+    """manifest ``contributes.models[*].files`` 必须存在且哈希一致。"""
+    contributes = getattr(manifest, "contributes", {}) or {}
+    for model in contributes.get("models") or []:
+        for item in model.get("files") or []:
+            relative = str(item.get("path") or "")
+            expected = str(item.get("sha256") or "").strip().lower()
+            target = module_dir / relative
+            if not target.is_file():
+                print(f"error: 权重缺失 {relative}", file=sys.stderr)
+                return False
+            actual = _sha256(target)
+            if actual != expected:
+                print(
+                    f"error: 权重哈希与 manifest 不一致 {relative}（实际 {actual}）",
+                    file=sys.stderr,
+                )
+                return False
+            print(f"model: {relative} {target.stat().st_size} bytes sha256 {actual}")
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Pack the official Cardia module")
     parser.add_argument("--out", type=Path, default=None, help="output .ehmod path")
@@ -47,6 +69,8 @@ def main() -> int:
         return 2
 
     manifest = load_manifest_file(manifest_path)
+    if not _verify_model_files(module_dir, manifest):
+        return 2
     for cached in module_dir.rglob("__pycache__"):
         for item in cached.rglob("*"):
             if item.is_file():
@@ -64,6 +88,12 @@ def main() -> int:
             package.extract_package(zf, extracted)
         package.verify_checksums(extracted)
         package.verify_layout(extracted, load_manifest_file(extracted / "module.json"))
+        for model in manifest.contributes.get("models") or []:
+            for item in model.get("files") or []:
+                packed = extracted / str(item["path"])
+                if not packed.is_file() or _sha256(packed) != str(item["sha256"]).lower():
+                    print("error: 打包后权重校验失败", file=sys.stderr)
+                    return 2
 
     with zipfile.ZipFile(output) as zf:
         file_count = sum(1 for info in zf.infolist() if not info.is_dir())
@@ -71,6 +101,7 @@ def main() -> int:
     print(f"packed: {output}")
     print(f"sha256: {_sha256(output)}")
     print(f"files: {file_count}")
+    print(f"bytes: {output.stat().st_size}")
     return 0
 
 

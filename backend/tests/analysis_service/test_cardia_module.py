@@ -1,7 +1,7 @@
 """Cardia 模块全链路（真实 ONNX）：安装 → 启动 → 预热 → analyze → 落库 → 重启查询。
 
-本机 ONNX 会话初始化约 150–200 秒，因此整个文件只保留一条慢测试，模块 worker
-在一次预热后连续处理两条记录（正常记录 + 短记录）。
+模块自带 onnxsim 简化权重，会话初始化约 1.5 秒（原图约 150 秒）。原图对照
+（简化图 vs 原图逐搏概率）在 ``tests/analysis/test_alignment.py`` 的 slow 测试里。
 """
 
 from __future__ import annotations
@@ -56,6 +56,13 @@ def test_cardia_end_to_end(
         assert ready["readyAt"]
         assert ready["moduleId"] == "org.eclipsehealth.cardia"
         assert ready["warmupSeconds"] is not None
+        # 简化权重：会话初始化 ~1.3s。warmup 还含模块进程导入，受机器负载影响，
+        # 但两者都必须挡住 150s 级回归（目标 ≤3s）。
+        assert ready["warmupSeconds"] < 30.0, ready["warmupSeconds"]
+        health = get_manager().call("org.eclipsehealth.cardia", "health", {})
+        assert health["model"]["file"] == "cardia_k4_best_sim.onnx"
+        assert health["model"]["variant"] == "onnx-simplified"
+        assert health["model"]["sessionInitSeconds"] < 3.0
 
         samples, fs, lead = load_sample_100()
         record = create_ecg_record(client, default_member["id"], samples, fs=fs, lead=lead)
@@ -78,6 +85,7 @@ def test_cardia_end_to_end(
         assert {"heart_rate_mean", "rr_mean", "sdnn", "rmssd", "n_ratio"} <= codes
         assert detail["quality"]["score"] is not None
         assert detail["durationMs"] and detail["durationMs"] > 0
+        assert detail["provenance"]["modelFile"] == "cardia_k4_best_sim.onnx"
 
         with session_scope() as session:
             stored = session.exec(
@@ -108,7 +116,11 @@ def test_cardia_end_to_end(
             assert payload["summary"] == detail["summary"]
 
         print(
-            f"\n[cardia] warmup={warm_seconds:.1f}s analyze={analyze_seconds:.1f}s "
+            f"\n[cardia] model={health['model']['file']} "
+            f"import={health['model']['importSeconds']}s "
+            f"sessionInit={health['model']['sessionInitSeconds']}s "
+            f"warmup={ready['warmupSeconds']}s wall={warm_seconds:.1f}s "
+            f"postToCompleted={analyze_seconds:.2f}s durationMs={detail['durationMs']} "
             f"beats={detail['beatsTotal']} measurements={len(detail['measurements'])}"
         )
     finally:

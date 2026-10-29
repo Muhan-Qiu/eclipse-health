@@ -9,12 +9,14 @@
 |---|---|
 | 模型 ID / 版本 | `cardia-2.0` / `2.0.0` |
 | 任务 | 逐搏心律失常分类（4 类） |
-| 参数量 | ≈722k（ONNX 初始化器 float32 元素数；导出按窗口展开会重复常量） |
-| 输入 | 单导联（MLII），360 Hz，104 维特征，窗口 64 搏，非重叠 + 尾部左移补齐 |
-| 输出 | `N` / `SVEB` / `VEB` / `F` 逐搏概率 |
+| 权重 | `models/cardia_k4_best_sim.onnx`（onnxsim 固定形状，4.88 MB，11,491 节点） |
+| 启动 | 会话初始化约 1.3–1.5 秒（原图约 150 秒） |
+| 参数量 | Torch 参数 722,327；ONNX initializer 元素数：原图 721,972 / 简化图 727,939（导出按窗口展开常量） |
+| 输入 | 单导联（MLII），360 Hz，104 维特征，窗口 64 搏，非重叠 + 尾部左移补齐；张量 `x[1,64,104]`、`dt[1,64]` |
+| 输出 | `logits[1,64,4]` → softmax → `N` / `SVEB` / `VEB` / `F` 逐搏概率 |
 | 预处理 | `mondejar-104-v1`（与 V2 特征管线逐位一致） |
 | 训练数据 | MIT-BIH Arrhythmia（MLII） |
-| 评测 | 与 V2 `predict_record` 逐搏对齐：概率最大误差 6.2e-7；合成指标 74.0 |
+| 评测 | 与 V2 `predict_record` 逐搏对齐：概率最大误差 6.2e-7；简化图 vs 原图 100/200/208 最大误差 < 1e-4；合成指标 74.0 |
 | 局限 | 仅单导联 MLII、仅 360 Hz、无波形 delineation（QRS/PR/QT 不可用） |
 | 许可证 | GPL-3.0-only |
 
@@ -24,7 +26,7 @@
 |---|---|
 | `initialize` | 握手；返回能力与模型摘要。要求 `apiVersion` 主版本为 1 |
 | `warmup` | 触发后台预热（ONNX 会话初始化），立即返回当前健康状态 |
-| `health` | `{ok, warm, warmupSeconds, error}`；`warm=true` 才可分析 |
+| `health` | `{ok, warm, warmupSeconds, error, model}`；`warm=true` 才可分析；`model` 为实际加载的权重（`file`/`sha256`/`variant`） |
 | `analyze` | 见下；成功返回 AnalysisResult，业务失败返回 `{error:{code,message}}` |
 | `deactivate` | 退出 |
 
@@ -53,8 +55,18 @@
 ## 实现说明
 
 本模块直接调用核心内置的 `eclipse_health_backend.analysis` 库（与核心共用同一个
-后端解释器与虚拟环境）。B3 引入每模块 venv 后，应把分析库与 ONNX 权重作为模块
-自己的依赖打包，届时只替换 `src/main.py` 的导入路径，RPC 契约不变。
+后端解释器与虚拟环境）。模块自带 onnxsim 简化权重，预热时设置
+`EH_CARDIA_MODEL_PATH` 指向 `models/cardia_k4_best_sim.onnx`；权重缺失时自动回退
+核心原图。B3 引入每模块 venv 后，应把分析库作为模块自己的依赖打包，届时只替换
+`src/main.py` 的导入路径，RPC 契约不变。
+
+模型选择环境变量（核心进程与模块进程一致，数值路径不变）：
+
+| 变量 | 取值 | 说明 |
+|---|---|---|
+| `EH_CARDIA_MODEL` | `original` | 强制原图（初始化约 150 秒，用于对照） |
+| | `sim` / `simplified` / 留空 | 简化图优先，缺失时回退原图（默认） |
+| `EH_CARDIA_MODEL_PATH` | 任意 `.onnx` 路径 | 指定权重文件，模块用它加载自带权重 |
 
 ## 打包
 

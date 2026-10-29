@@ -4,19 +4,26 @@ import type {
   AnalysisResult,
   AnalysisStatus,
   Beat,
+  CompareAnalysis,
   DeviceInfo,
   DeviceVendor,
   EngineStatus,
   HealthRecord,
   ImportPreview,
   ImportRequires,
+  LatestAnalysisStatus,
   Measurement,
   Quality,
   QualitySegment,
   QualityWarning,
+  RecordCompareResponse,
   RecordStatus,
   RecordSummary,
   SourceInfo,
+  TrendPoint,
+  TrendSeries,
+  TrendSummary,
+  TrendsResponse,
 } from "./types";
 
 type Raw = Record<string, unknown>;
@@ -306,9 +313,16 @@ export function toRecordSummary(
   analysisStatus?: RecordStatus,
 ): RecordSummary {
   const signalCount = record.signalIds?.length ?? 0;
+  const latest = normalizeLatestAnalysisStatus(record.latestAnalysisStatus);
   let status: RecordStatus;
   if (analysisStatus) {
     status = analysisStatus;
+  } else if (latest === "completed") {
+    status = "analyzed";
+  } else if (latest === "queued" || latest === "running") {
+    status = "analyzing";
+  } else if (latest === "failed") {
+    status = "failed";
   } else {
     status = signalCount > 0 ? "ready" : "failed";
   }
@@ -323,11 +337,82 @@ export function toRecordSummary(
     leads: record.leads ?? [],
     sampleRateHz: record.samplingRate ?? 0,
     status,
+    analysisStatus: latest,
+    latestAnalysisId: record.latestAnalysisId ?? null,
+    latestAnalyzedAt: record.latestAnalyzedAt ?? null,
     isDemo:
       record.metadata?.demo === true || record.metadata?.mock === true,
     notes: record.notes ?? "",
     signalCount,
     qualityScore: record.quality?.score ?? null,
+  };
+}
+
+export function normalizeLatestAnalysisStatus(value: unknown): LatestAnalysisStatus {
+  if (
+    value === "queued" ||
+    value === "running" ||
+    value === "completed" ||
+    value === "failed"
+  ) {
+    return value;
+  }
+  return "none";
+}
+
+function normalizeTrendSummary(value: unknown): TrendSummary {
+  const item = asObject(value);
+  return {
+    min: nullableNum(item.min),
+    max: nullableNum(item.max),
+    mean: nullableNum(item.mean),
+    count: Math.trunc(num(item.count, 0)),
+  };
+}
+
+function normalizeTrendPoint(value: unknown): TrendPoint {
+  const item = asObject(value);
+  return {
+    t: str(item.t),
+    value: num(item.value),
+    recordId: str(pick(item, "recordId", "record_id")),
+    analysisId: str(pick(item, "analysisId", "analysis_id")),
+  };
+}
+
+export function normalizeTrends(value: unknown): TrendsResponse {
+  const item = asObject(value);
+  const series: TrendSeries[] = arr(item.series, (entry) => {
+    const raw = asObject(entry);
+    const metric = str(raw.metric);
+    return {
+      metric,
+      label: str(raw.label, metric),
+      unit: str(raw.unit),
+      ucum: str(raw.ucum),
+      points: arr(raw.points, normalizeTrendPoint).filter(
+        (point) => point.t !== "" && point.recordId !== "",
+      ),
+      summary: normalizeTrendSummary(raw.summary),
+    };
+  }).filter((entry) => entry.metric !== "");
+  return { series };
+}
+
+export function normalizeCompare(value: unknown): RecordCompareResponse {
+  const item = asObject(value);
+  const analyses: CompareAnalysis[] = arr(item.analyses, (entry) => {
+    const raw = asObject(entry);
+    const latest = raw.latestCompleted;
+    return {
+      recordId: str(pick(raw, "recordId", "record_id")),
+      latestCompleted:
+        latest === null || latest === undefined ? null : normalizeAnalysis(latest),
+    };
+  });
+  return {
+    records: arr(item.records, (record) => record as HealthRecord),
+    analyses,
   };
 }
 

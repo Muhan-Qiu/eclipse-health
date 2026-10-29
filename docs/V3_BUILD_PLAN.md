@@ -216,3 +216,58 @@
 | 报告与趋势数据口径 | 统一取 `measurements` 的 code；缺值显示「无数据」而不是 0 |
 | 两个 UI Agent 冲突 | B3-02 独占共享层；B3-03/04 只加 feature 目录与 feature-local i18n |
 | 简化模型数值漂移 | 对齐测试 + 原模型回退开关；差异 >1e-4 立即回退 |
+
+## 17. B3 验收结果（2026-10-29）
+
+**结论：通过。核心 MVP 主干已打通。**
+
+| 项 | 结果 |
+|---|---|
+| 后端全量 | **357 项全部通过**（1 个可选 Ollama 用例 skipped） |
+| ruff | `All checks passed!`（backend + modules/official + scripts） |
+| 前端构建 | `npm run build` 通过 |
+| 启动性能 | ONNX 初始化 1.19–1.35s；模块预热 2.4–2.7s；`/engine` ready 约 6s（含首次安装） |
+| 数值对齐 | 原图 vs 简化图逐搏概率最大差 1.8e-7 / 3.8e-7 / 4.4e-7（100/200/208） |
+| 趋势/对比 | 5 条不同日期记录、状态徽标、趋势点跳转、并排对比均实测 |
+| 报告 | simple 1 页 / detailed 2 页 / doctor 2 页 / PNG 1080×1350；脱敏/水印/历史/下载/删除均实测 |
+| 助手 | mock 全链路：3 次工具调用 → 回答；透明面板、工具 JSON、会话持久化、DPAPI key |
+| 验收修复 | `ReportsPage` 路由仍指向占位页 → 已改到真实页面；`tests/reports/test_api.py` 与 `tests/modules/test_api.py` 同名 → 改为 `test_reports_api.py` |
+
+**B3 遗留、已定处理：**
+
+- `api/__init__.py` 的 trends/reports/assistant 挂载已共存；`db/base.py` 已注册 assistant 表。
+- `modules/host.py` 白名单未放行 `EH_CARDIA_MODEL`：原图回退只对直调生效；B4 补一行。
+- `backend/pyproject.toml` 未声明 matplotlib/Pillow/Jinja2（venv 已装）：打包前补声明。
+- B3-03 的 `src/features/reports/preview.html|tsx` 是开发预览入口：B4 删除或保留由用户定。
+- B3-02 `latestAnalyzedAt` 用分析创建时间；精确完成时间需加 `completed_at` 列，B4 可选。
+- 对比页暂不进左侧导航；B4 视用户反馈决定。
+- LLM 只实测 mock；真实 Ollama/OpenAI/Anthropic 需要用户提供 key/本地模型后联调。
+- 首包 1.17MB（gzip 365KB）：B4 做路由级 `React.lazy` 分包。
+
+## 18. 整体进度（对照 44 项已确认功能）
+
+**主干完成度约 80%。** 已确认的 44 项中，约 30 项完成或基本完成；剩余 14 项以「广度 + 收口」为主，不是架构难题。
+
+| 组 | 已完成 | 未完成 / 半成品 |
+|---|---|---|
+| A 首次体验 | A2 拖拽、A3 空状态、A4 命令面板、A5 骨架 | A1 真实示例记录（当前 mock）、A6 全局快捷键（仅波形/Ctrl+K） |
+| B 波形 | B1 缩放平移、B2 单搏概率、B4 质量标色 | B3 心搏列表、B5 12 导联网格（仅展示，模型仍单导联）、B6 节律条、B7 波形 PNG |
+| C 分析 | C1 进度、C2 摘要、C3 解释、C4 警告、C6 模型卡、C7 重新分析 | C5 危急值提示条、C7 切换引擎（仅 Cardia） |
+| D 记录 | D1 列表/筛选、D2 标签/备注、D3 趋势、D4 对比 | D5 导出/备份、D6 隐私中心、D1 收藏、D2 症状/用药 |
+| E 报告 | E1/E2/E3/E4/E6 全部 | —（E5 已确认暂不加入） |
+| F LLM | F1–F6 全部（mock 验证） | 真实 provider 联调（需 key/Ollama） |
+| G 输入 | G1 WFDB/CSV、G2 参数校正 | G1 EDF、G3 三种手表格式（需样本）、G4 SCP-ECG（需样本） |
+| H 桌面 | H1 托盘/单实例、H2 窗口记忆/主题、H3 DPAPI key | H1 通知、H5 自动更新、H6 诊断日志导出 |
+| I 模块/健康 | I1 模块内核 | I1 模块安装/权限 UI、I2 手动指标、I3 健康档案 |
+
+## 19. B4 候选（按优先级）
+
+1. **打包/安装包**（必须，且不受 UI 反馈影响）：PyInstaller sidecar + Tauri 安装包 + 冒烟测试。
+2. **数据收口**：D5 导出/备份、D6 隐私中心、H6 诊断日志；设置页加「关闭到托盘 / 启动动画」开关。
+3. **波形增强**：B3 心搏列表跳转、B6 节律条、B7 波形 PNG、B5 12 导联展示（分析仍单导联）。
+4. **模块 UI**：安装/卸载/权限授权页面，接 B1-02 内核。
+5. **设备格式**：Samsung/华为/Apple/SCP-ECG，等 `uploads/` 样本到位后逐格式验证。
+6. **健康档案/手动指标**：I3 档案、I2 血压/体重/血氧录入。
+7. **收尾**：路由 lazy、真实 Ollama/API 联调、自动更新（H5）、通知（H1）。
+
+> 建议节奏：先让用户实际试用当前版本并提意见；同时只并行一个「打包」Agent。剩余功能等反馈后再排，避免返工。

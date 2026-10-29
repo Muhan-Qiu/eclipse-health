@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileChartColumn,
-  Sparkles,
   TrendingUp,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +9,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 
 interface ComingSoonPageProps {
-  pageKey: "trends" | "reports" | "assistant";
+  pageKey: "trends" | "reports";
   icon: LucideIcon;
   note?: string;
 }
@@ -58,13 +57,8 @@ export function ReportsPage() {
   );
 }
 
-export function AssistantPage() {
-  const { t } = useTranslation();
-  return (
-    <ComingSoonPage
-      pageKey="assistant"
-      icon={Sparkles}
-      note={t("assistant.note")}
-    />
-  );
-}
+/**
+ * B3-04 把助手页替换为真实实现；保留这个导出是为了让 `App.tsx`
+ * （由 B3-02 拥有）不需要改动。
+ */
+export { AssistantPage } from "@/pages/assistant";

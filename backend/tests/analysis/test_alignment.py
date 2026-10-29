@@ -52,6 +52,38 @@ def test_softmax_rows_sum_to_one(analysis_100) -> None:
     assert np.allclose(sums, 1.0, atol=1e-5)
 
 
+def test_default_model_is_simplified(cardia_model) -> None:
+    """默认权重是模块自带的 onnxsim 简化图；原图只在显式指定时加载。"""
+    assert cardia_model.info.model_path.name == "cardia_k4_best_sim.onnx"
+    assert cardia_model.info.model_variant == "onnx-simplified"
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("record", ["100", "200", "208"])
+def test_simplified_matches_original(
+    record,
+    cardia_model,
+    original_model,
+    samples_dir,
+) -> None:
+    """硬门槛：同一输入、同一 R 峰，简化图与原图逐搏概率最大差 < 1e-4。
+
+    加载原图会话约 150 秒，因此本测试标 slow；它是简化权重上线的对照证据。
+    """
+    signal = load_wfdb(samples_dir / record)
+    features = extract_104(signal.digital, signal.annotations)
+    sim_probs, _ = cardia_model.predict(
+        features.features, features.pre_r, tail_mode="drop"
+    )
+    orig_probs, _ = original_model.predict(
+        features.features, features.pre_r, tail_mode="drop"
+    )
+    assert sim_probs.shape == orig_probs.shape
+    max_diff = float(np.max(np.abs(sim_probs - orig_probs)))
+    print(f"sim-vs-original {record}: beats={len(sim_probs)} max|Δp|={max_diff:.3e}")
+    assert max_diff < 1e-4
+
+
 def test_tail_mode_drop_matches_v2_count(signal_100) -> None:
     result = analyze(
         signal_100,

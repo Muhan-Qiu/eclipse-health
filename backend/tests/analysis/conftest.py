@@ -14,7 +14,10 @@ import numpy as np
 import pytest
 
 from eclipse_health_backend.analysis import AnalysisOptions, analyze, load_wfdb
-from eclipse_health_backend.analysis.model import CardiaModel
+from eclipse_health_backend.analysis.model import (
+    ORIGINAL_MODEL_FILE,
+    CardiaModel,
+)
 from eclipse_health_backend.analysis.types import EcgSignal
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -87,7 +90,14 @@ def model_dir() -> Path:
 
 @pytest.fixture(scope="session")
 def cardia_model(model_dir: Path) -> CardiaModel:
+    """默认选择：简化图优先（无简化图时自动回退原图）。"""
     return CardiaModel(model_dir)
+
+
+@pytest.fixture(scope="session")
+def original_model(model_dir: Path) -> CardiaModel:
+    """原图会话，仅用于简化图对照（初始化约 150 秒，测试标 slow）。"""
+    return CardiaModel(model_dir, model_path=model_dir / ORIGINAL_MODEL_FILE)
 
 
 @pytest.fixture(scope="session")

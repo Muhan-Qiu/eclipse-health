@@ -2,6 +2,14 @@
 
 只加载发布权重（ONNX），不包含训练代码。模型从字节加载，避免 Windows 中文路径
 下 ``InferenceSession(path)`` 的问题。会话按文件哈希缓存，整个进程只初始化一次。
+
+模型选择（不改推理数学）：
+
+- 默认优先 ``cardia_k4_best_sim.onnx``（onnxsim 固定形状产物，初始化 ~1.5s）；
+  文件缺失时回退 ``cardia_k4_best.onnx``（原图，初始化 ~150s）。
+- ``EH_CARDIA_MODEL=original`` 强制原图；``EH_CARDIA_MODEL_PATH`` 指向任意权重文件
+  （Cardia 模块用它加载模块自带的简化权重）。
+- 两者都只影响“加载哪个文件”，预处理与推理公式不变。
 """
 
 from __future__ import annotations
@@ -28,6 +36,14 @@ _SESSIONS: dict[str, Any] = {}
 # 每个模型文件的 ONNX 会话初始化耗时（秒），供 /engine 与报告使用。
 _SESSION_INIT_SECONDS: dict[str, float] = {}
 
+MODEL_ENV = "EH_CARDIA_MODEL"
+MODEL_PATH_ENV = "EH_CARDIA_MODEL_PATH"
+ORIGINAL_MODEL_FILE = "cardia_k4_best.onnx"
+SIMPLIFIED_MODEL_FILE = "cardia_k4_best_sim.onnx"
+
+# EH_CARDIA_MODEL 的取值；未设置 / sim / 未知取值都按 auto（简化图优先）。
+_ORIGINAL_CHOICES = {"original", "orig", "baseline"}
+
 _OPT_LEVELS = {
     "all": "ORT_ENABLE_ALL",
     "basic": "ORT_ENABLE_BASIC",
@@ -46,6 +62,43 @@ class ModelInfo:
     model_sha256: str
     preprocess_sha256: str
     preprocess: dict[str, Any]
+    # "onnx-simplified"（固定形状简化图）或 "onnx"（原图）；只标注来源，不改数值。
+    model_variant: str = "onnx"
+
+
+def _variant_name(path: Path) -> str:
+    return "onnx-simplified" if path.name == SIMPLIFIED_MODEL_FILE else "onnx"
+
+
+def resolve_model_path(
+    model_dir: str | Path,
+    model_path: str | Path | None = None,
+) -> Path:
+    """按「显式参数 → 环境变量 → 简化图 → 原图」选择权重文件。
+
+    - ``model_path`` 参数：调用方指定，优先级最高（测试/调试用）；
+    - ``EH_CARDIA_MODEL=original``：强制原图；
+    - ``EH_CARDIA_MODEL_PATH``：任意权重文件（模块自带简化权重走这里），
+      文件不存在则忽略；
+    - 其余情况：``model_dir`` 下存在简化图就用简化图，否则原图。
+    """
+    model_dir = Path(model_dir)
+    if model_path is not None:
+        return Path(model_path)
+
+    choice = os.environ.get(MODEL_ENV, "").strip().lower()
+    if choice in _ORIGINAL_CHOICES:
+        return model_dir / ORIGINAL_MODEL_FILE
+
+    explicit = os.environ.get(MODEL_PATH_ENV, "").strip()
+    if explicit:
+        candidate = Path(explicit)
+        if candidate.is_file():
+            return candidate
+
+    simplified = model_dir / SIMPLIFIED_MODEL_FILE
+    # sim / 留空 / 未知取值都按 auto：简化图优先，缺失回退原图（拼写错误不至于起不来）。
+    return simplified if simplified.is_file() else model_dir / ORIGINAL_MODEL_FILE
 
 
 def _sha256(blob: bytes) -> str:
@@ -116,16 +169,29 @@ def _get_session(model_path: Path, model_sha256: str, blob: bytes) -> Any:
         return session
 
 
+def _static_batch_size(input_meta: Any) -> int | None:
+    """输入第 0 维是具体整数时返回它；符号维（dynamic batch）返回 None。"""
+    try:
+        dim = input_meta.shape[0]
+    except (IndexError, TypeError):
+        return None
+    return dim if isinstance(dim, int) and dim > 0 else None
+
+
 class CardiaModel:
     """预处理参数 + ONNX 会话。"""
 
-    def __init__(self, model_dir: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        model_dir: str | Path | None = None,
+        model_path: str | Path | None = None,
+    ) -> None:
         model_dir = Path(model_dir or DEFAULT_MODEL_DIR)
-        model_path = model_dir / "cardia_k4_best.onnx"
+        resolved_path = resolve_model_path(model_dir, model_path)
         preprocess_path = model_dir / "preprocess.json"
         config_path = model_dir / "model_config.json"
 
-        model_blob = _read_bytes(model_path, "模型")
+        model_blob = _read_bytes(resolved_path, "模型")
         preprocess_blob = _read_bytes(preprocess_path, "预处理配置")
         try:
             preprocess = json.loads(preprocess_blob.decode("utf-8"))
@@ -134,11 +200,12 @@ class CardiaModel:
 
         self.info = ModelInfo(
             model_dir=model_dir,
-            model_path=model_path,
+            model_path=resolved_path,
             preprocess_path=preprocess_path,
             model_sha256=_sha256(model_blob),
             preprocess_sha256=_sha256(preprocess_blob),
             preprocess=preprocess,
+            model_variant=_variant_name(resolved_path),
         )
         self._validate(preprocess, config_path)
 
@@ -149,13 +216,17 @@ class CardiaModel:
         self.mean = np.asarray(preprocess["scaler_mean"], dtype=np.float64)
         self.scale = np.asarray(preprocess["scaler_scale"], dtype=np.float64)
 
-        self.session = _get_session(model_path, self.info.model_sha256, model_blob)
+        self.session = _get_session(resolved_path, self.info.model_sha256, model_blob)
         inputs = list(self.session.get_inputs())
         if len(inputs) < 2:
             raise ModelLoadError("ONNX 模型缺少 x/dt 输入")
         names = [item.name for item in inputs]
         self._x_name = "x" if "x" in names else names[0]
         self._dt_name = "dt" if "dt" in names else names[1]
+        # 简化图是固定形状（batch=1）；批量窗口需要拆成单窗口前向。
+        self._fixed_batch = _static_batch_size(
+            next(item for item in inputs if item.name == self._x_name)
+        )
 
     @staticmethod
     def _validate(preprocess: dict[str, Any], config_path: Path) -> None:
@@ -191,15 +262,20 @@ class CardiaModel:
         return self.session.run(None, feeds)[0]
 
     def _forward_chunks(self, x: np.ndarray, dt: np.ndarray) -> np.ndarray:
-        try:
+        step = self._fixed_batch
+        if step is None:
+            try:
+                return self._forward(x, dt)
+            except Exception:  # noqa: BLE001 - 退化路径，任何前向失败都逐块重试
+                # 某些导出只接受 batch=1；逐块前向，结果与批量一致。
+                step = 1
+        if len(x) <= step:
             return self._forward(x, dt)
-        except Exception:  # noqa: BLE001 - 退化路径，任何前向失败都逐块重试
-            # 某些导出只接受 batch=1；逐块前向，结果与批量一致。
-            outputs = [
-                self._forward(x[i : i + 1], dt[i : i + 1])[0]
-                for i in range(len(x))
-            ]
-            return np.stack(outputs, axis=0)
+        outputs = [
+            self._forward(x[start : start + step], dt[start : start + step])
+            for start in range(0, len(x), step)
+        ]
+        return np.concatenate(outputs, axis=0)
 
     def predict(
         self,
@@ -271,19 +347,24 @@ def session_init_seconds(model_sha256: str) -> float | None:
     return _SESSION_INIT_SECONDS.get(model_sha256)
 
 
-def prewarm(model_dir: str | Path | None = None) -> dict[str, Any]:
+def prewarm(
+    model_dir: str | Path | None = None,
+    model_path: str | Path | None = None,
+) -> dict[str, Any]:
     """预热 ONNX 会话（首次会阻塞到初始化完成），返回模型标识与耗时。
 
     不跑推理、不改任何数值；供后台预热线程与 ``GET /engine`` 使用。
     """
     started = time.perf_counter()
     known_before = set(_SESSIONS)
-    model = CardiaModel(model_dir)
+    model = CardiaModel(model_dir, model_path)
     sha = model.info.model_sha256
     init_seconds = _SESSION_INIT_SECONDS.get(sha)
     return {
         "modelId": "cardia-2.0",
         "modelSha256": sha,
+        "modelFile": model.info.model_path.name,
+        "modelVariant": model.info.model_variant,
         "sequenceLength": model.sequence_length,
         "sessionInitSeconds": round(init_seconds, 3) if init_seconds is not None else None,
         "callSeconds": round(time.perf_counter() - started, 3),
