@@ -38,6 +38,7 @@ npm run dev        # Vite，1420
 - 依赖已装齐；**不要**新增全局依赖、不要改系统环境、不要 `npm install`/`pip install`，除非任务提示词明确允许。缺依赖就写进报告。
 - `npm run build` 当前因 TS5101 失败，属已知基线问题，由 B1-04 修复，其他 Agent 不要动 `tsconfig.json`。
 - 需要联网查资料时：不要用 WebSearch（本机上游不支持），用 WebFetch 打开 Bing / DuckDuckGo 结果页。优先不联网。
+- **例外**：B4-02（数据采集）、B4-03（设备适配）、B4-08（LLM 联调）允许按各自提示词下载公开数据/公开模型/公开样本；必须记录来源 URL、许可证、sha256，下载物放 `uploads/` 或临时目录，不得提交受限数据集。其他 Agent 仍默认不联网。
 
 ## 4. 范围纪律
 

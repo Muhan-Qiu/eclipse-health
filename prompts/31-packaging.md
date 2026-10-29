@@ -40,7 +40,11 @@
      - 主窗口出现、`GET /health` 200、记录页空状态正常、关闭到托盘、退出后 sidecar 进程结束。
      - 导入并分析一条 `backend/resources/samples/100`（可从开发目录手动选/或用 API），确认模型与模块在冻结环境可用。
    - 记录冷启动耗时、安装包大小、sidecar 大小。
-5. **报告**：`reports/B4-01-report.md`：产物路径/大小、构建耗时、冒烟步骤、失败点、未做项。
+5. **桌面增强（与 B4-04/B4-07 的契约）**
+   - 通知：加 `tauri-plugin-notification` + capability；前端可 `sendNotification`（B4-07 调用）。
+   - 设置命令：暴露 `get_desktop_settings` / `set_close_to_tray(enabled)` / `set_splash_enabled(enabled)`，持久化到应用配置目录（JSON 或 store）；B4-04 的设置页会 `invoke` 这些命令。命令不存在时前端有本地回退，但你应提供。
+   - 自动更新：加 `tauri-plugin-updater` 配置占位（endpoint/pubkey 从环境/配置读）；**没有签名私钥和更新服务器时不要启用**，构建仍要成功。写清楚启用步骤。
+6. **报告**：`reports/B4-01-report.md`：产物路径/大小、构建耗时、冒烟步骤、通知/设置/更新状态、失败点、未做项。
 
 ## 4. 文件所有权（只能改这些）
 
