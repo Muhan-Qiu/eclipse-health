@@ -529,4 +529,27 @@
   - 仪表盘「已有示例」只查首屏 5 条记录；示例沉到后面时会再生成一条（后端允许重复）。后续可加 `GET /records?isSample=` 过滤。
   - `AnalysisResult` 前端类型未声明后端已返回的 `engine`，当前从 `parameters.engine` 读取；平台轮补。
   - 未知引擎沿用全局 422（`unknown_engine`），未改成 400。
-  - C7 当前仅 Cardia 可用；第二引擎由平台 #1 ONNX loader 接入。 
+  - C7 当前仅 Cardia 可用；第二引擎由平台 #1 ONNX loader 接入。
+
+## 28. Stage A：平台底座 + 多源导入研究 + 发布准备（2026-10-30 启动）
+
+> 用户要求「尽量多并行、每验收一步就写下一步提示词」。Stage A 5 个 Agent 并行，互不重叠；完成后进入 Stage B（渲染器/工具注册表/S2 导入实现）。
+
+| 编号 | 任务 | 难度 | 思考强度 | 关键产出 |
+|---|---|---|---|---|
+| A1 | 平台 v2 契约 + 贡献注册表 + loader 骨架 | 困难 3/4 | high | `MODULE_CONTRACT_V2.md`、`GET /modules/contributions`、schema 收紧 |
+| A2 | 模块数据 API `records.*` + 隔离/权限/审计 | 困难 3/4 | high | 模块可读写自己的/声明类型的记录，越权 NOT_FOUND |
+| A3 | 平台 #1 通用 ONNX 分析引擎 loader | 困难 3/4 | high | 已安装 analysis-model 模块出现在 `/analyses/engines` 并可执行 |
+| A4 | S1 多源健康数据直接导入研究 | 中等 2/4 | medium | `docs/INTEGRATIONS/HEALTH_DATA_IMPORT.md`，S2 实现建议 |
+| A5 | 路由懒加载 + README + 依赖声明 + release notes | 低 1/4 | medium | 主包体积下降、发布文档就绪（不重打包） |
+
+**依赖与边界：**
+
+- A1 是关键路径；A2/A3 不依赖 A1 的 UI 契约，可完全并行。
+- A2 的可见性规则：模块只能读写「自己创建的记录」或「自己声明 recordType 的记录」；`records:delete` 默认不授予。
+- A3 不伪造生产第二引擎；真实第三方 ONNX 模型需作者提供 manifest + 文件。
+- A4 只出结论，不写解析器；S2 按结论实现 Apple 优先。
+- A5 不跑 Tauri/PyInstaller 构建；发布包在 Stage C 统一重打。
+- H5/G3 仍为外部阻塞。
+
+**Stage B 预告（等 Stage A 验收后写提示词）：** 首页 widget 渲染器（#2）、工具注册表（#3）、模块页渲染器（#4 UI）、S2 多源导入实现（Apple 优先）。 
