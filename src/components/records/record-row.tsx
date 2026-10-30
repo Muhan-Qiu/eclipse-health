@@ -8,12 +8,14 @@ import {
   CircleCheck,
   FileText,
   LoaderCircle,
+  Star,
   Watch,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { DemoBadge } from "@/components/common/demo-badge";
+import { useToggleFavorite } from "@/lib/api/queries";
 import { formatDateTime, formatDuration, formatNumber } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
 import { useTagLabel } from "@/lib/tags";
@@ -58,6 +60,8 @@ export function RecordRow({
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
   const tagLabel = useTagLabel();
+  const toggleFavorite = useToggleFavorite();
+  const dateLabel = formatDateTime(record.recordedAt, locale);
   const Icon = VENDOR_ICON[record.device.vendor] ?? Activity;
   const status =
     STATUS_PRESENTATION[record.analysisStatus] ?? STATUS_PRESENTATION.none;
@@ -95,6 +99,15 @@ export function RecordRow({
               {formatDateTime(record.recordedAt, locale)}
             </p>
             {record.isDemo ? <DemoBadge /> : null}
+            {record.isSample ? (
+              <Badge
+                variant="outline"
+                className="border-dashed font-normal text-muted-foreground"
+                aria-label={t("a11y.sampleData")}
+              >
+                {t("records.sampleBadge")}
+              </Badge>
+            ) : null}
             <Badge
               variant={status.variant}
               className={cn("gap-1 font-normal", status.tone)}
@@ -139,6 +152,28 @@ export function RecordRow({
           aria-hidden="true"
         />
       </Link>
+
+      <button
+        type="button"
+        aria-pressed={record.favorite}
+        aria-label={
+          record.favorite
+            ? t("records.unfavorite", { date: dateLabel })
+            : t("records.favorite", { date: dateLabel })
+        }
+        onClick={() =>
+          toggleFavorite.mutate({
+            id: record.id,
+            favorite: !record.favorite,
+          })
+        }
+        className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <Star
+          className={cn("size-4", record.favorite && "fill-current text-primary")}
+          aria-hidden="true"
+        />
+      </button>
     </div>
   );
 }

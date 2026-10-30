@@ -17,7 +17,7 @@
 |---|---|---|
 | GET | `/health` | 状态、版本、数据库/数据目录、迁移 |
 | GET/POST | `/members` | 成员列表/创建；`GET/PATCH /members/{id}` |
-| GET | `/records?limit=&offset=&recordType=&moduleId=&from=&to=&includeDeleted=` | `{items,total,limit,offset}` |
+| GET | `/records?limit=&offset=&recordType=&moduleId=&favorite=&from=&to=&includeDeleted=` | `{items,total,limit,offset}`；`favorite=true/false` 按收藏过滤（B5） |
 | POST | `/records` | 创建记录 + 单导联信号（B2 导入走 imports，不直接用它） |
 | GET/PATCH/DELETE | `/records/{id}` | 读取/更新/软删除 |
 | GET | `/records/{id}/signals` | 信号元数据数组 |
@@ -80,6 +80,16 @@
 
 `DELETE /imports/{importId}` → 204。
 
+### 2.4 内置示例记录（B5 / A1）
+
+`POST /imports/samples/{sampleId}`
+
+- `sampleId` 白名单：`mitdb-100`、`mitdb-200`、`mitdb-208`（`backend/resources/samples/` 内 WFDB）；未知 → 404 `sample_not_found`。
+- 请求体可空：`{memberId?, capturedAt?, timezone?, startAnalysis?}`；`memberId` 缺省用默认成员。
+- 201：`{ "recordId": "rec_...", "analysisId": "ana_..." | null }`。
+- 走真实导入管线；记录 `metadata.isSample=true` / `metadata.sampleId`，`source.kind="import"`。
+- `startAnalysis=true` 时异步发起 Cardia 分析；分析失败不影响记录创建（`analysisId=null`）。
+
 ## 3. B2 新增：分析
 
 ### 3.1 发起
@@ -131,6 +141,30 @@
 
 - UI 在 `warming` 时禁用「分析」并显示原因；引擎就绪后可点。
 - 若 ONNX 启动优化成功，`message` 改为实际耗时。
+
+### 3.4 引擎目录（B5 / C7）
+
+`GET /analyses/engines`
+
+```json
+{
+  "items": [
+    {
+      "id": "cardia",
+      "name": "Cardia 2.0",
+      "moduleId": "org.eclipsehealth.cardia",
+      "modelId": "cardia-2.0",
+      "modelVersion": "2.0.0",
+      "available": true,
+      "reason": null
+    }
+  ]
+}
+```
+
+- 列表来自后端注册表，UI 不得写死引擎；当前仅内置 Cardia，更多引擎由模块提供（平台 #1 ONNX loader）。
+- `POST /records/{id}/analyses` 的 `engine` 按注册表校验；未注册 → 422 `unknown_engine`，`details.supported` 为可用 ID。
+- 同记录存在 `queued|running` 分析时仍幂等复用；`completed|failed` 后再次 POST 视为重新分析，新建一条。
 
 ## 4. 数据形状约定
 

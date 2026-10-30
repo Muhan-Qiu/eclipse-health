@@ -93,7 +93,9 @@
 }
 ```
 
-固定字段（核心）：`schema/id/memberId/recordType/moduleId/capturedAt/timezone/source/samplingRate/leads/durationSec/unit/signalIds/tags/notes/metadata/provenance/createdAt/updatedAt/deletedAt`。
+固定字段（核心）：`schema/id/memberId/recordType/moduleId/capturedAt/timezone/source/samplingRate/leads/durationSec/unit/signalIds/tags/notes/favorite/metadata/provenance/createdAt/updatedAt/deletedAt`。
+
+- `favorite`（B5 / D1）：布尔，默认 `false`；用户收藏标记，随记录更新，不参与信号/分析语义。
 
 模块扩展：`payload`，必须通过该 `recordType` 注册的 Schema 校验。
 

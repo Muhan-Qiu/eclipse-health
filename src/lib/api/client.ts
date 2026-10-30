@@ -182,6 +182,7 @@ const realApi: ApiClient = {
         capturedTo: params.capturedTo,
         recordType: params.recordType,
         moduleId: params.moduleId,
+        favorite: params.favorite === undefined ? undefined : String(params.favorite),
       });
       const body = await requestJson<RecordPage | HealthRecord[]>(`/records${query}`);
       if (Array.isArray(body)) {
@@ -196,6 +197,13 @@ const realApi: ApiClient = {
     },
 
     get: (id) => requestJson<HealthRecord>(`/records/${encodeURIComponent(id)}`),
+
+    updateFavorite: (id, favorite) =>
+      requestJson<HealthRecord>(`/records/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ favorite }),
+      }),
 
     delete: async (id) => {
       await requestJson<void>(`/records/${encodeURIComponent(id)}`, {
@@ -314,6 +322,25 @@ const realApi: ApiClient = {
         // 已过 TTL 或已提交的 importId 删除失败不应阻塞用户
         if (!(error instanceof ApiError && error.status === 404)) throw error;
       }
+    },
+
+    sample: async (sampleId, body = {}) => {
+      const raw = await requestJson<Record<string, unknown>>(
+        `/imports/samples/${encodeURIComponent(sampleId)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        IMPORT_TIMEOUT_MS,
+      );
+      return {
+        recordId: String(raw.recordId ?? ""),
+        analysisId:
+          typeof raw.analysisId === "string" && raw.analysisId
+            ? raw.analysisId
+            : null,
+      };
     },
   },
 };

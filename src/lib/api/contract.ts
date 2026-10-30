@@ -12,6 +12,9 @@ import type {
   ImportPreview,
   Member,
   RecordPage,
+  SampleImportBody,
+  SampleImportResponse,
+  SampleRecordId,
   SignalData,
   SignalMetadata,
 } from "./types";
@@ -23,6 +26,7 @@ export interface RecordListParams {
   capturedTo?: string;
   recordType?: string;
   moduleId?: string;
+  favorite?: boolean;
 }
 
 export interface PreviewSource {
@@ -39,6 +43,8 @@ export interface ApiClient {
   records: {
     list(params?: RecordListParams): Promise<RecordPage>;
     get(id: string): Promise<HealthRecord>;
+    /** D1：只改 favorite，返回完整记录。 */
+    updateFavorite(id: string, favorite: boolean): Promise<HealthRecord>;
     delete(id: string): Promise<void>;
     signals(id: string): Promise<SignalMetadata[]>;
     signal(id: string, lead?: string): Promise<SignalData>;
@@ -61,5 +67,10 @@ export interface ApiClient {
     ): Promise<ImportPreview>;
     commit(importId: string, body: ImportCommitBody): Promise<ImportCommitResponse>;
     discard(importId: string): Promise<void>;
+    /** A1：白名单内置示例（真实 WFDB 导入）。 */
+    sample(
+      sampleId: SampleRecordId,
+      body?: SampleImportBody,
+    ): Promise<SampleImportResponse>;
   };
 }

@@ -61,6 +61,12 @@ const enUS: typeof zhCN = {
       exampleDesc:
         "Open imported records. In demo mode you will see three synthetic records with no real data.",
       exampleAction: "Open records",
+      sampleTitle: "Load a sample record",
+      sampleDesc:
+        "Sample data comes from MIT-BIH. It is for trying the flow, not for diagnosis.",
+      sampleAction: "Load sample record",
+      sampleOpen: "Open sample record",
+      sampleLoading: "Loading…",
       formatsTitle: "See supported formats",
       formatsDesc:
         "WFDB and CSV are available. Wearable formats wait for public samples.",
@@ -139,6 +145,8 @@ const enUS: typeof zhCN = {
       time: "Time",
       device: "Device",
       tag: "Tag",
+      favorite: "Favorite",
+      onlyFavorites: "Favorites only",
       allTime: "All time",
       last7: "Last 7 days",
       last30: "Last 30 days",
@@ -178,6 +186,9 @@ const enUS: typeof zhCN = {
     compareHint: "Select one more record to compare",
     clearSelection: "Clear selection",
     latestAnalyzed: "Analyzed {{time}}",
+    sampleBadge: "Sample",
+    favorite: "Favorite {{date}}",
+    unfavorite: "Remove from favorites {{date}}",
   },
   recordStatus: {
     none: "Not analyzed",
@@ -203,6 +214,8 @@ const enUS: typeof zhCN = {
     deleteFailed: "Delete failed",
     privacyNote:
       "Waveforms and analysis results stay on this device and are never uploaded. Deleted records remain in a 30-day recycle bin.",
+    reanalyzeHint:
+      "Re-analyzing creates a new analysis record; choose an engine first if more than one is installed.",
   },
   waveform: {
     title: "ECG waveform",
@@ -345,6 +358,14 @@ const enUS: typeof zhCN = {
       errorTitle: "Analysis engine unavailable",
       errorMessage: "Check the Cardia module and model files.",
       retry: "Check again",
+      current: "Current analysis: {{engine}}",
+      selectLabel: "Analysis engine",
+      loading: "Loading engines…",
+      catalogError: "Could not load the engine list; the default engine can still be used.",
+      option: "{{name}} · {{version}}",
+      single: "{{name}} ({{version}})",
+      moreHint: "More engines become available by installing analysis modules.",
+      noAvailable: "No usable analysis engine. Check the installed analysis modules.",
     },
     errorCodes: {
       too_few_beats: "Fewer than 64 valid beats; not enough for the model input.",
@@ -683,6 +704,9 @@ const enUS: typeof zhCN = {
       closeToTrayDesc: "Hide the window instead of quitting when you click close.",
       splash: "Show startup animation",
       splashDesc: "Play the eclipse animation on launch.",
+      notifications: "Analysis completion notifications",
+      notificationsDesc:
+        "Show a local notification when analysis finishes; includes the record date only, no heart-rate values, not a diagnosis.",
       saved: "Settings saved",
       savedRestart: "Saved, takes effect after restart",
       saveFailed: "Could not save settings",
@@ -861,6 +885,7 @@ const enUS: typeof zhCN = {
     expandNav: "Expand navigation",
     collapseNav: "Collapse navigation",
     demoData: "Demo data badge",
+    sampleData: "Built-in sample record (MIT-BIH)",
     tagFilter: "Filter by tag",
     paletteOption: "Choose the {{name}} palette",
     themeOption: "Use the {{name}} theme",

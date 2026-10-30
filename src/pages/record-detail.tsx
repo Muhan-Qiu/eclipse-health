@@ -49,6 +49,7 @@ import {
   useStartAnalysis,
 } from "@/lib/api/queries";
 import "@/features/waveform/i18n";
+import { useEngineCatalog } from "@/features/analysis/use-engine-catalog";
 import { toRecordSummary } from "@/lib/api/adapters";
 import {
   formatDate,
@@ -70,6 +71,7 @@ export function RecordDetailPage() {
   const recordQuery = useRecord(id);
   const analysesQuery = useRecordAnalyses(id);
   const engineQuery = useEngineStatus();
+  const engineCatalogQuery = useEngineCatalog();
   const startMutation = useStartAnalysis(id);
   const deleteMutation = useDeleteRecord(id);
   // 只用于 [ / ] 在相邻记录间跳转；列表按 capturedAt 倒序。
@@ -79,6 +81,21 @@ export function RecordDetailPage() {
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [selectedBeat, setSelectedBeat] = useState<Beat | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedEngineId, setSelectedEngineId] = useState<string | null>(null);
+
+  const engines = engineCatalogQuery.data ?? [];
+  const availableEngines = useMemo(
+    () => engines.filter((engine) => engine.available),
+    [engines],
+  );
+  // 目录刷新后如果选中的引擎消失/不可用，回退到第一个可用引擎。
+  const activeEngineId = availableEngines.some(
+    (engine) => engine.id === selectedEngineId,
+  )
+    ? selectedEngineId
+    : (availableEngines[0]?.id ?? null);
+  const engineCatalogReady =
+    !engineCatalogQuery.isLoading && !engineCatalogQuery.isError;
 
   const latest = analysesQuery.data?.items[0] ?? null;
   const analysisId = selectedAnalysisId ?? latest?.id;
@@ -264,7 +281,7 @@ export function RecordDetailPage() {
   const startAnalysis = () =>
     startMutation.mutate(
       {
-        engine: "cardia",
+        engine: activeEngineId ?? undefined,
         options: {
           allowShortRecord: (record.durationSec ?? 0) < 60,
         },
@@ -436,6 +453,15 @@ export function RecordDetailPage() {
             engineError={engineQuery.error}
             onRetryEngine={() => {
               void engineQuery.refetch();
+            }}
+            engines={engines}
+            selectedEngineId={activeEngineId}
+            onSelectEngine={setSelectedEngineId}
+            engineCatalogLoading={engineCatalogQuery.isLoading}
+            engineCatalogError={engineCatalogQuery.error}
+            engineCatalogReady={engineCatalogReady}
+            onRetryEngineCatalog={() => {
+              void engineCatalogQuery.refetch();
             }}
           />
         </div>

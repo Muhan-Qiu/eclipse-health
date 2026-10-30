@@ -14,15 +14,15 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from ..analysis_service import get_analysis_service
+from ..analysis_service import CARDIA_ENGINE, get_analysis_service
+from ..analysis_service.engines import get_engine as find_engine
+from ..analysis_service.engines import list_engines
 from ..db import analysis_repo
 from ..db.repositories import get_record_row, list_signal_rows
 from ..domain.errors import ConflictError, InvalidInputError, not_found
 from .deps import SessionDep
 
 router = APIRouter(tags=["analyses"])
-
-SUPPORTED_ENGINES = ("cardia",)
 
 
 class AnalysisOptionsIn(BaseModel):
@@ -35,7 +35,7 @@ class AnalysisOptionsIn(BaseModel):
 
 
 class AnalysisCreate(BaseModel):
-    engine: str = Field(default="cardia", max_length=64)
+    engine: str = Field(default=CARDIA_ENGINE, max_length=64)
     options: AnalysisOptionsIn = Field(default_factory=AnalysisOptionsIn)
 
 
@@ -104,6 +104,20 @@ class EngineStatusModel(BaseModel):
     )
 
 
+class EngineDescriptorModel(BaseModel):
+    id: str
+    name: str
+    moduleId: str
+    modelId: str
+    modelVersion: str
+    available: bool
+    reason: str | None = Field(default=None, description="不可用时的用户可读原因")
+
+
+class EngineCatalogModel(BaseModel):
+    items: list[EngineDescriptorModel]
+
+
 def _require_record(session: Any, record_id: str) -> Any:
     row = get_record_row(session, record_id)
     if row is None or row.deleted_at is not None:
@@ -132,11 +146,11 @@ def create_analysis(
             code="record_has_no_signal",
             details={"recordId": record_id},
         )
-    if payload.engine not in SUPPORTED_ENGINES:
+    if find_engine(payload.engine) is None:
         raise InvalidInputError(
             f"unsupported analysis engine: {payload.engine[:64]}",
             code="unknown_engine",
-            details={"supported": list(SUPPORTED_ENGINES)},
+            details={"supported": [engine.id for engine in list_engines()]},
         )
 
     accepted, _reused = get_analysis_service().submit(
@@ -161,6 +175,21 @@ def list_analyses(
     _require_record(session, record_id)
     rows = analysis_repo.list_analysis_rows(session, record_id, limit=limit, offset=offset)
     return AnalysisListModel(items=[analysis_repo.summary_of(row) for row in rows])
+
+
+@router.get(
+    "/analyses/engines",
+    response_model=EngineCatalogModel,
+    summary="分析引擎目录（含可用性）",
+    description=(
+        "返回注册表中的全部引擎，供 UI 选择与「重新分析」使用。\n\n"
+        "运行时就绪状态（预热/失败）仍由 `GET /engine` 给出；二者职责不同。"
+    ),
+)
+def list_available_engines() -> EngineCatalogModel:
+    return EngineCatalogModel(
+        items=[EngineDescriptorModel(**item.to_dict()) for item in list_engines()]
+    )
 
 
 @router.get(

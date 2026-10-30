@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FilePlus2, FileSearch, GitCompare, RefreshCw } from "lucide-react";
+import { FilePlus2, FileSearch, GitCompare, RefreshCw, Star } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,6 +42,7 @@ export function RecordsPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [deviceFilter, setDeviceFilter] = useState<DeviceFilter>("all");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -56,6 +57,7 @@ export function RecordsPage() {
     offset: page * PAGE_SIZE,
     capturedFrom,
     recordType: "org.eclipsehealth.ecg",
+    favorite: favoriteOnly ? true : undefined,
   });
 
   const records = query.data?.items ?? [];
@@ -84,11 +86,15 @@ export function RecordsPage() {
   );
 
   const hasFilters =
-    timeFilter !== "all" || deviceFilter !== "all" || tagFilter !== null;
+    timeFilter !== "all" ||
+    deviceFilter !== "all" ||
+    tagFilter !== null ||
+    favoriteOnly;
   const clearFilters = () => {
     setTimeFilter("all");
     setDeviceFilter("all");
     setTagFilter(null);
+    setFavoriteOnly(false);
     setPage(0);
   };
 
@@ -170,6 +176,28 @@ export function RecordsPage() {
                   <SelectItem value="huawei">Huawei</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="eh-caption text-muted-foreground">
+                {t("records.filters.favorite")}
+              </span>
+              <Button
+                variant={favoriteOnly ? "secondary" : "outline"}
+                size="sm"
+                aria-pressed={favoriteOnly}
+                className="gap-1.5"
+                onClick={() => {
+                  setFavoriteOnly((current) => !current);
+                  setPage(0);
+                }}
+              >
+                <Star
+                  className={cn("size-4", favoriteOnly && "fill-current")}
+                  aria-hidden="true"
+                />
+                {t("records.filters.onlyFavorites")}
+              </Button>
             </div>
 
             <div
@@ -254,7 +282,7 @@ export function RecordsPage() {
             </div>
           ) : null}
 
-          {!query.isLoading && !query.isError && total === 0 ? (
+          {!query.isLoading && !query.isError && total === 0 && !favoriteOnly ? (
             <div className="px-5 py-6">
               <EmptyState
                 icon={FilePlus2}
@@ -271,8 +299,8 @@ export function RecordsPage() {
 
           {!query.isLoading &&
           !query.isError &&
-          total > 0 &&
-          filtered.length === 0 ? (
+          filtered.length === 0 &&
+          (total > 0 || favoriteOnly) ? (
             <div className="px-5 py-6">
               <EmptyState
                 icon={FileSearch}

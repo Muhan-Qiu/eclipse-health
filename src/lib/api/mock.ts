@@ -17,6 +17,9 @@ import type {
   Member,
   Quality,
   RecordPage,
+  SampleImportBody,
+  SampleImportResponse,
+  SampleRecordId,
   SignalData,
   SignalMetadata,
   SourceInfo,
@@ -320,6 +323,7 @@ function makeRecord(input: {
   notes?: string;
   samples: Float32Array;
   withAnalysis?: boolean;
+  metadata?: Record<string, unknown>;
 }): HealthRecord {
   const signalId = registerSignal(input.id, input.lead, input.fs, input.samples);
   const record: HealthRecord = {
@@ -339,7 +343,8 @@ function makeRecord(input: {
     quality: null,
     tags: input.tags,
     notes: input.notes ?? "",
-    metadata: { demo: true, lead: input.lead },
+    favorite: false,
+    metadata: { demo: true, lead: input.lead, ...input.metadata },
     payload: {},
     provenance: { adapterVersion: "demo" },
     createdAt: input.capturedAt,
@@ -432,6 +437,11 @@ function listRecords(params: RecordListParams = {}): RecordPage {
   }
   if (params.moduleId) {
     filtered = filtered.filter((record) => record.moduleId === params.moduleId);
+  }
+  if (params.favorite !== undefined) {
+    filtered = filtered.filter(
+      (record) => (record.favorite === true) === params.favorite,
+    );
   }
   return {
     items: filtered.slice(offset, offset + limit),
@@ -668,6 +678,7 @@ function commitImport(
     quality: null,
     tags: body.tags ?? [],
     notes: body.notes ?? "",
+    favorite: false,
     metadata: {
       demo: true,
       lead,
@@ -711,6 +722,12 @@ const mockApi: ApiClient = {
   records: {
     list: (params) => sleep(listRecords(params)),
     get: (id) => sleep(findRecord(id)),
+    updateFavorite: async (id, favorite): Promise<HealthRecord> => {
+      const record = findRecord(id);
+      record.favorite = favorite;
+      record.updatedAt = new Date().toISOString();
+      return sleep(record);
+    },
     delete: async (id) => {
       const record = findRecord(id);
       const now = new Date().toISOString();
@@ -826,6 +843,30 @@ const mockApi: ApiClient = {
     discard: async (importId) => {
       imports.delete(importId);
       await sleep(undefined);
+    },
+    sample: (
+      sampleId: SampleRecordId,
+      body: SampleImportBody = {},
+    ): Promise<SampleImportResponse> => {
+      const synth = synthesizeEcg(360, 12);
+      const record = makeRecord({
+        id: uid("rec"),
+        capturedAt: body.capturedAt || new Date().toISOString(),
+        source: {
+          kind: "import",
+          manufacturer: "PhysioNet",
+          device: `MIT-BIH ${sampleId.replace("mitdb-", "")}`,
+        },
+        moduleId: "org.eclipsehealth.wfdb",
+        fs: 360,
+        lead: "MLII",
+        durationSec: 12,
+        tags: [],
+        notes: "",
+        samples: synth.samples,
+        metadata: { demo: true, sampleId, isSample: true },
+      });
+      return sleep({ recordId: record.id, analysisId: null }, 320);
     },
   },
 };

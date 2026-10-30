@@ -190,6 +190,57 @@ export function useDeleteRecord(recordId: string | undefined) {
   });
 }
 
+/** D1：收藏切换，先改本地列表再对齐后端。 */
+export function useToggleFavorite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, favorite }: { id: string; favorite: boolean }) =>
+      api.records.updateFavorite(id, favorite),
+    onMutate: async ({ id, favorite }) => {
+      await queryClient.cancelQueries({ queryKey: ["records"] });
+      queryClient.setQueriesData<RecordListResult>(
+        { queryKey: ["records"] },
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                items: previous.items.map((item) =>
+                  item.id === id ? { ...item, favorite } : item,
+                ),
+              }
+            : previous,
+      );
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ["records"] });
+    },
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["records"] });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.record(variables.id),
+      });
+    },
+  });
+}
+
+/** A1：一键载入内置 MIT-BIH 示例，并在后台发起分析。 */
+export function useImportSample() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.imports.sample("mitdb-100", { startAnalysis: true }),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["records"] });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.record(result.recordId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.recordAnalyses(result.recordId),
+      });
+    },
+  });
+}
+
 /** 仪表盘指标：取最近几条记录的分析，找最新一条完成的。 */
 export function useRecentAnalyses(records: RecordSummary[] | undefined) {
   const ids = (records ?? []).slice(0, 5).map((record) => record.id);

@@ -259,6 +259,7 @@ def list_records(
     module_id: Annotated[str | None, Query(alias="moduleId")] = None,
     captured_from: Annotated[datetime | None, Query(alias="capturedFrom")] = None,
     captured_to: Annotated[datetime | None, Query(alias="capturedTo")] = None,
+    favorite: Annotated[bool | None, Query()] = None,
     include_deleted: Annotated[bool, Query(alias="includeDeleted")] = False,
 ) -> RecordPage:
     conditions = []
@@ -270,6 +271,11 @@ def list_records(
         conditions.append(RecordTable.record_type == record_type)
     if module_id:
         conditions.append(RecordTable.module_id == module_id)
+    if favorite is not None:
+        # 旧记录的 data JSON 没有 favorite 键；json_extract 返回 NULL，
+        # coalesce 成 0 让它们落在「未收藏」一侧。
+        flag = func.coalesce(func.json_extract(RecordTable.data, "$.favorite"), 0)
+        conditions.append(flag == (1 if favorite else 0))
     since = _as_storage_datetime(captured_from)
     until = _as_storage_datetime(captured_to)
     if since is not None:

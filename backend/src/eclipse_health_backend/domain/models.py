@@ -198,6 +198,7 @@ class RecordFields(BaseModel):
     quality: Quality | None = None
     tags: list[Tag] = Field(default_factory=list, max_length=MAX_TAGS)
     notes: Notes = ""
+    favorite: bool = False
     metadata: JsonObject = Field(default_factory=dict)
     payload: JsonObject = Field(default_factory=dict)
     provenance: Provenance | None = None
@@ -291,6 +292,7 @@ class RecordUpdate(BaseModel):
     quality: Quality | None = None
     tags: list[Tag] | None = Field(default=None, max_length=MAX_TAGS)
     notes: Notes | None = None
+    favorite: bool | None = None
     metadata: JsonObject | None = None
     payload: JsonObject | None = None
     provenance: Provenance | None = None

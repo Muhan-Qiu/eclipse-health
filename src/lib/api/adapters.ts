@@ -342,6 +342,8 @@ export function toRecordSummary(
     latestAnalyzedAt: record.latestAnalyzedAt ?? null,
     isDemo:
       record.metadata?.demo === true || record.metadata?.mock === true,
+    isSample: record.metadata?.isSample === true,
+    favorite: record.favorite === true,
     notes: record.notes ?? "",
     signalCount,
     qualityScore: record.quality?.score ?? null,

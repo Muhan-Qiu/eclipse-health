@@ -6,24 +6,23 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-import numpy as np
 from fastapi import APIRouter, File, Form, Response, UploadFile, status
-from fastapi.encoders import jsonable_encoder
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
-from pydantic import ValidationError as PydanticValidationError
 
 from ..api.deps import SessionDep
-from ..db.repositories import add_record, add_signal, get_member_row, make_signal
+from ..db.repositories import (
+    ensure_default_member,
+    get_member_row,
+)
 from ..domain.common import utc_now
-from ..domain.errors import InvalidInputError, not_found
-from ..domain.ids import new_id
-from ..domain.models import HealthRecord, Provenance, Signal, SourceInfo
-from ..storage.files import delete_signal, write_signal
+from ..domain.errors import not_found
+from ..domain.models import HealthRecord
 from . import limits, store
-from .base import ImportAdapter, ImportSource, ParsedImport, ParseParameters
+from .base import ImportAdapter, ImportSource, ParseParameters
 from .errors import (
     ImportApiError,
     ImportNotFoundError,
@@ -31,12 +30,14 @@ from .errors import (
     invalid_file,
     unsupported_format,
 )
+from .persist import create_record_from_parsed
 from .registry import AdapterRegistry, build_default_registry
+from .samples import import_sample
 
 router = APIRouter(prefix="/imports", tags=["imports"])
 REGISTRY: AdapterRegistry = build_default_registry()
 
-RECORD_TYPE = "org.eclipsehealth.ecg"
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------- models
@@ -111,6 +112,20 @@ class ImportCommitRequest(BaseModel):
 class ImportCommitResponse(BaseModel):
     recordId: str
     record: HealthRecord
+
+
+class SampleImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    memberId: str | None = Field(default=None, min_length=1, max_length=64)
+    capturedAt: AwareDatetime | None = None
+    timezone: str = Field(default="UTC", max_length=64)
+    startAnalysis: bool = False
+
+
+class SampleImportResponse(BaseModel):
+    recordId: str
+    analysisId: str | None = None
 
 
 # ------------------------------------------------------------------- helpers
@@ -246,18 +261,52 @@ def _enforce_requirements(meta: dict[str, Any], parameters: ImportParameters) ->
         raise ImportApiError("请确认单位后提交", code="unit_required", details=requires)
 
 
-def _record_metadata(parsed: ParsedImport) -> dict[str, Any]:
-    metadata = dict(parsed.metadata)
-    metadata["hasAnnotations"] = bool(parsed.has_annotations)
-    metadata["annotationCount"] = int(parsed.annotation_count)
-    codes: list[str] = []
-    for item in parsed.warnings:
-        code = str(item.get("code", ""))
-        if code and code not in codes:
-            codes.append(code)
-    if codes:
-        metadata["importWarnings"] = codes[:20]
-    return metadata
+@router.post(
+    "/samples/{sample_id}",
+    response_model=SampleImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="导入内置 MIT-BIH 示例记录（只读白名单）",
+)
+def import_sample_record(
+    sample_id: str,
+    session: SessionDep,
+    payload: SampleImportRequest | None = None,
+) -> SampleImportResponse:
+    """A1 首次引导：一次调用生成一条真实的导入记录。
+
+    样本来自 ``backend/resources/samples``，样例只允许 100/200/208；
+    未知 ID → 404 ``sample_not_found``。分析失败不影响记录创建。
+    """
+    request = payload or SampleImportRequest()
+    if request.memberId:
+        if get_member_row(session, request.memberId) is None:
+            raise not_found("member", request.memberId)
+        member_id = request.memberId
+    else:
+        member_id = ensure_default_member(session).id
+
+    record = import_sample(
+        session,
+        REGISTRY,
+        sample_id=sample_id,
+        member_id=member_id,
+        captured_at=request.capturedAt or utc_now(),
+        timezone=request.timezone,
+    )
+
+    analysis_id: str | None = None
+    if request.startAnalysis:
+        try:
+            from ..analysis_service import get_analysis_service
+
+            accepted, _reused = get_analysis_service().submit(
+                record_id=record.id, engine="cardia", options={}
+            )
+            analysis_id = str(accepted.get("analysisId") or "") or None
+        except Exception:
+            logger.warning("sample import: analysis start failed", exc_info=True)
+
+    return SampleImportResponse(recordId=record.id, analysisId=analysis_id)
 
 
 # ----------------------------------------------------------------- endpoints
@@ -332,76 +381,18 @@ def commit_import(
     source = _source_from_meta(workspace, meta)
     parsed = adapter.parse(source, payload.parameters.to_parse_parameters())
 
-    now = utc_now()
-    record_id = new_id("record")
-    written: list[str] = []
-    signals: list[Signal] = []
-    try:
-        for lead in parsed.leads:
-            signal_id = new_id("signal")
-            relative_path, digest, _size = write_signal(signal_id, lead.samples)
-            written.append(relative_path)
-            signals.append(
-                make_signal(
-                    signal_id=signal_id,
-                    record_id=record_id,
-                    lead=lead.lead,
-                    fs=parsed.sampling_rate,
-                    unit="mV",
-                    n_samples=int(np.asarray(lead.samples).size),
-                    relative_path=relative_path,
-                    sha256=digest,
-                    created_at=now,
-                )
-            )
-
-        record = HealthRecord(
-            id=record_id,
-            memberId=payload.memberId,
-            recordType=RECORD_TYPE,
-            moduleId=adapter.adapter_id,
-            capturedAt=payload.capturedAt,
-            timezone=payload.timezone,
-            source=SourceInfo(kind="import"),
-            samplingRate=parsed.sampling_rate,
-            leads=[lead.lead for lead in parsed.leads],
-            durationSec=parsed.duration_sec,
-            unit="mV",
-            signalIds=[signal.id for signal in signals],
-            tags=payload.tags,
-            notes=payload.notes,
-            metadata=_record_metadata(parsed),
-            provenance=Provenance(
-                fileNameHash=str(meta.get("fileNameHash") or ""),
-                fileHash=str(meta.get("fileHash") or ""),
-                adapterVersion=adapter.adapter_version,
-            ),
-            createdAt=now,
-            updatedAt=now,
-        )
-    except PydanticValidationError as exc:
-        for path in written:
-            delete_signal(path)
-        raise InvalidInputError(
-            "记录校验失败",
-            code="record_invalid",
-            details=jsonable_encoder(exc.errors(), custom_encoder={Exception: str}),
-        ) from exc
-    except BaseException:
-        for path in written:
-            delete_signal(path)
-        raise
-
-    try:
-        add_record(session, record, commit=False)
-        for signal in signals:
-            add_signal(session, signal, commit=False)
-        session.commit()
-    except Exception:
-        session.rollback()
-        for path in written:
-            delete_signal(path)
-        raise
+    record = create_record_from_parsed(
+        session,
+        parsed,
+        member_id=payload.memberId,
+        captured_at=payload.capturedAt,
+        timezone=payload.timezone,
+        module_id=adapter.adapter_id,
+        tags=payload.tags,
+        notes=payload.notes,
+        file_name_hash=str(meta.get("fileNameHash") or ""),
+        file_hash=str(meta.get("fileHash") or ""),
+    )
 
     store.delete_workspace(import_id)
     return ImportCommitResponse(recordId=record.id, record=record)

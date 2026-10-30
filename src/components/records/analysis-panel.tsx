@@ -14,7 +14,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { EngineDescriptor } from "@/features/analysis/engine-catalog";
 import { ApiError } from "@/lib/api/error";
 import type {
   AnalysisResult,
@@ -44,6 +52,13 @@ interface AnalysisPanelProps {
   engineLoading: boolean;
   engineError: unknown;
   onRetryEngine: () => void;
+  engines: EngineDescriptor[];
+  selectedEngineId: string | null;
+  onSelectEngine: (engineId: string) => void;
+  engineCatalogLoading: boolean;
+  engineCatalogError: unknown;
+  engineCatalogReady: boolean;
+  onRetryEngineCatalog: () => void;
 }
 
 function errorCodeOf(error: unknown): string {
@@ -284,6 +299,13 @@ export function AnalysisPanel({
   engineLoading,
   engineError,
   onRetryEngine,
+  engines,
+  selectedEngineId,
+  onSelectEngine,
+  engineCatalogLoading,
+  engineCatalogError,
+  engineCatalogReady,
+  onRetryEngineCatalog,
 }: AnalysisPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
@@ -292,8 +314,32 @@ export function AnalysisPanel({
     current?.status === "queued" || current?.status === "running";
   const engineBlocked =
     engine?.status === "warming" || engine?.status === "error";
-  const startDisabled = startPending || running || engineBlocked;
+  const availableEngines = engines.filter((item) => item.available);
+  const selectedEngine =
+    availableEngines.find((item) => item.id === selectedEngineId) ??
+    availableEngines[0] ??
+    null;
+  // 目录已加载且一个可用引擎都没有时，不允许发起分析。
+  const noAvailableEngine =
+    engineCatalogReady && availableEngines.length === 0;
+  const startDisabled =
+    startPending || running || engineBlocked || noAvailableEngine;
   const startLabel = current ? t("analysis.reanalyze") : t("analysis.start");
+  // 后端摘要带 `engine`，但共享类型尚未声明；参数里也冗余保存了一份，优先读参数。
+  const rawEngine = current?.parameters?.engine;
+  const currentEngineId =
+    typeof rawEngine === "string"
+      ? rawEngine
+      : ((current as (AnalysisResult & { engine?: string }) | null)?.engine ??
+        null);
+  const currentEngineLabel = current
+    ? `${currentEngineId ?? "—"} · ${current.modelId} ${current.modelVersion}`.trim()
+    : "";
+  const canReanalyze =
+    current !== null &&
+    (current.status === "completed" ||
+      current.status === "failed" ||
+      current.status === "cancelled");
 
   const startErrorMessage = (() => {
     if (!startError) return null;
@@ -544,6 +590,11 @@ export function AnalysisPanel({
               {engine.modelId} · {engine.modelVersion}
             </span>
           ) : null}
+          {currentEngineId ? (
+            <span className="eh-caption text-muted-foreground">
+              {t("analysis.engine.current", { engine: currentEngineLabel })}
+            </span>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -579,6 +630,63 @@ export function AnalysisPanel({
           </Alert>
         ) : null}
 
+        <div className="space-y-1.5">
+          <p className="eh-caption text-muted-foreground">
+            {t("analysis.engine.selectLabel")}
+          </p>
+          {engineCatalogLoading ? (
+            <p className="eh-small inline-flex items-center gap-1 text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              {t("analysis.engine.loading")}
+            </p>
+          ) : engineCatalogError ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="eh-small text-warning">
+                {t("analysis.engine.catalogError")}
+              </p>
+              <Button variant="ghost" size="xs" onClick={onRetryEngineCatalog}>
+                <RefreshCw data-icon="inline-start" />
+                {t("common.retry")}
+              </Button>
+            </div>
+          ) : availableEngines.length > 1 && selectedEngine ? (
+            <Select value={selectedEngine.id} onValueChange={onSelectEngine}>
+              <SelectTrigger
+                className="w-full"
+                aria-label={t("analysis.engine.selectLabel")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableEngines.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {t("analysis.engine.option", {
+                      name: item.name,
+                      version: `${item.modelId} ${item.modelVersion}`.trim(),
+                    })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : selectedEngine ? (
+            <div>
+              <p className="eh-small">
+                {t("analysis.engine.single", {
+                  name: selectedEngine.name,
+                  version: `${selectedEngine.modelId} ${selectedEngine.modelVersion}`.trim(),
+                })}
+              </p>
+              <p className="eh-caption mt-0.5 text-muted-foreground">
+                {t("analysis.engine.moreHint")}
+              </p>
+            </div>
+          ) : (
+            <p className="eh-small text-warning">
+              {t("analysis.engine.noAvailable")}
+            </p>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
@@ -604,6 +712,12 @@ export function AnalysisPanel({
           ) : null}
           {running ? <Badge variant="outline">{t("analysis.inProgress")}</Badge> : null}
         </div>
+
+        {canReanalyze ? (
+          <p className="eh-caption text-muted-foreground">
+            {t("recordDetail.reanalyzeHint")}
+          </p>
+        ) : null}
 
         {startErrorMessage ? (
           <Alert variant="destructive">

@@ -15,6 +15,15 @@ export function analysisNotificationsEnabled(): boolean {
   }
 }
 
+/** 设置页写偏好；写入失败（如隐私模式）时静默，watcher 仍按默认值工作。 */
+export function setAnalysisNotificationsEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(ANALYSIS_NOTIFICATIONS_KEY, String(enabled));
+  } catch {
+    // 存储不可用时保留默认行为，不打断用户
+  }
+}
+
 function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }

@@ -33,6 +33,10 @@ export interface RecordSummary {
   latestAnalyzedAt: string | null;
   /** 仅 mock 数据为 true；真实记录必须显示为真实数据。 */
   isDemo: boolean;
+  /** 内置 MIT-BIH 示例记录（A1）：真实导入，但不是用户数据。 */
+  isSample: boolean;
+  /** 用户收藏（D1）。 */
+  favorite: boolean;
   notes: string;
   signalCount: number;
   qualityScore: number | null;
@@ -94,6 +98,7 @@ export interface HealthRecord {
   quality?: Quality | null;
   tags: string[];
   notes: string;
+  favorite?: boolean;
   metadata: Record<string, unknown>;
   payload: Record<string, unknown>;
   provenance?: Provenance | null;
@@ -330,6 +335,25 @@ export interface ImportCommitResponse {
 }
 
 export type ImportHintFormat = "wfdb" | "csv" | "auto";
+
+/* ------------------------------------------------------------------ *
+ * 内置示例记录（A1 · POST /imports/samples/{sampleId}）
+ * ------------------------------------------------------------------ */
+
+export type SampleRecordId = "mitdb-100" | "mitdb-200" | "mitdb-208";
+
+export interface SampleImportBody {
+  memberId?: string;
+  capturedAt?: string;
+  timezone?: string;
+  /** 导入后异步发起 Cardia 分析；失败不影响记录创建。 */
+  startAnalysis?: boolean;
+}
+
+export interface SampleImportResponse {
+  recordId: string;
+  analysisId: string | null;
+}
 
 /* ------------------------------------------------------------------ *
  * 趋势与对比（B3-02 / GET /trends、GET /records/compare）

@@ -4,6 +4,7 @@ import {
   Activity,
   CircleAlert,
   LoaderCircle,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
@@ -18,6 +19,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +38,7 @@ import {
   useCreateMetric,
   useDeleteMetric,
   useMetrics,
+  useUpdateMetric,
 } from "./use-profile-data";
 import { METRIC_KINDS, METRIC_UNITS } from "./types";
 import type { Metric, MetricKind, MetricValues } from "./types";
@@ -63,6 +73,19 @@ function resolvedTimezone(): string {
   }
 }
 
+function parseNumber(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const number = Number(trimmed);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function singleMetricValue(kind: MetricKind, values: MetricValues): number | undefined {
+  if (kind === "weight") return values.weight;
+  if (kind === "spo2") return values.spo2;
+  return values.glucose;
+}
+
 function formatMetricValue(metric: Metric): string {
   if (metric.kind === "blood_pressure") {
     return `${metric.values.systolic ?? "–"}/${metric.values.diastolic ?? "–"} ${metric.unit}`;
@@ -91,22 +114,15 @@ function QuickCard({ kind, measuredAt, notes, onRecorded }: QuickCardProps) {
   const [single, setSingle] = useState("");
   const [added, setAdded] = useState(false);
 
-  const parse = (value: string): number | undefined => {
-    const trimmed = value.trim();
-    if (!trimmed) return undefined;
-    const number = Number(trimmed);
-    return Number.isFinite(number) ? number : undefined;
-  };
-
   const values: MetricValues | null = (() => {
     if (kind === "blood_pressure") {
-      const s = parse(systolic);
-      const d = parse(diastolic);
+      const s = parseNumber(systolic);
+      const d = parseNumber(diastolic);
       return s === undefined || d === undefined
         ? null
         : { systolic: s, diastolic: d };
     }
-    const value = parse(single);
+    const value = parseNumber(single);
     if (value === undefined) return null;
     if (kind === "weight") return { weight: value };
     if (kind === "spo2") return { spo2: value };
@@ -260,6 +276,191 @@ function WarningBadges({ metric }: { metric: Metric }) {
   );
 }
 
+interface MetricEditDialogProps {
+  metric: Metric;
+  onClose: () => void;
+}
+
+function MetricEditDialog({ metric, onClose }: MetricEditDialogProps) {
+  const { t } = useTranslation();
+  const mutation = useUpdateMetric();
+  const isBloodPressure = metric.kind === "blood_pressure";
+  const [measuredAt, setMeasuredAt] = useState(() =>
+    localInputValue(new Date(metric.measuredAt)),
+  );
+  const [systolic, setSystolic] = useState(() =>
+    metric.values.systolic != null ? String(metric.values.systolic) : "",
+  );
+  const [diastolic, setDiastolic] = useState(() =>
+    metric.values.diastolic != null ? String(metric.values.diastolic) : "",
+  );
+  const [single, setSingle] = useState(() => {
+    const value = singleMetricValue(metric.kind, metric.values);
+    return value !== undefined ? String(value) : "";
+  });
+  const [notes, setNotes] = useState(metric.notes);
+
+  const values: MetricValues | null = (() => {
+    if (isBloodPressure) {
+      const s = parseNumber(systolic);
+      const d = parseNumber(diastolic);
+      return s === undefined || d === undefined
+        ? null
+        : { systolic: s, diastolic: d };
+    }
+    const value = parseNumber(single);
+    if (value === undefined) return null;
+    if (metric.kind === "weight") return { weight: value };
+    if (metric.kind === "spo2") return { spo2: value };
+    return { glucose: value };
+  })();
+
+  const submit = () => {
+    if (!values || !measuredAt) {
+      toast.error(t("profile.metrics.invalid"));
+      return;
+    }
+    mutation.mutate(
+      {
+        id: metric.id,
+        patch: {
+          measuredAt: new Date(measuredAt).toISOString(),
+          values,
+          notes: notes.trim(),
+          timezone: resolvedTimezone(),
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(t("profile.metrics.history.editSaved"));
+          onClose();
+        },
+        onError: (error) => toast.error(errorMessage(error)),
+      },
+    );
+  };
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next && !mutation.isPending) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {t("profile.metrics.history.editTitle", {
+              kind: t(`profile.metrics.kinds.${metric.kind}`),
+            })}
+          </DialogTitle>
+          <DialogDescription>
+            {t("profile.metrics.history.editDesc")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="metric-edit-measured-at">
+              {t("profile.metrics.measuredAt")}
+            </Label>
+            <Input
+              id="metric-edit-measured-at"
+              type="datetime-local"
+              className="eh-num"
+              value={measuredAt}
+              onChange={(event) => setMeasuredAt(event.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            {isBloodPressure ? (
+              <>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Label htmlFor="metric-edit-systolic" className="eh-caption">
+                    {t("profile.metrics.fields.systolic")}
+                  </Label>
+                  <Input
+                    id="metric-edit-systolic"
+                    inputMode="numeric"
+                    className="eh-num"
+                    value={systolic}
+                    onChange={(event) => setSystolic(event.target.value)}
+                  />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Label htmlFor="metric-edit-diastolic" className="eh-caption">
+                    {t("profile.metrics.fields.diastolic")}
+                  </Label>
+                  <Input
+                    id="metric-edit-diastolic"
+                    inputMode="numeric"
+                    className="eh-num"
+                    value={diastolic}
+                    onChange={(event) => setDiastolic(event.target.value)}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Label htmlFor="metric-edit-value" className="eh-caption">
+                  {t("profile.metrics.value")} ({METRIC_UNITS[metric.kind]})
+                </Label>
+                <Input
+                  id="metric-edit-value"
+                  inputMode="decimal"
+                  className="eh-num"
+                  value={single}
+                  onChange={(event) => setSingle(event.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          <p className="eh-caption text-muted-foreground">
+            {t(`profile.metrics.rangeHint.${metric.kind}`)}
+          </p>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="metric-edit-notes">
+              {t("profile.metrics.notes")}
+            </Label>
+            <Textarea
+              id="metric-edit-notes"
+              rows={2}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={mutation.isPending}
+            onClick={onClose}
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            type="button"
+            disabled={mutation.isPending || !values || !measuredAt}
+            onClick={submit}
+          >
+            {mutation.isPending ? (
+              <LoaderCircle className="animate-spin" data-icon="inline-start" />
+            ) : null}
+            {mutation.isPending
+              ? t("profile.metrics.history.editSaving")
+              : t("profile.metrics.history.editSave")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function MetricsPanel({ className }: { className?: string }) {
   const { t, i18n } = useTranslation();
   const [kindFilter, setKindFilter] = useState<MetricKind | "all">("all");
@@ -267,6 +468,7 @@ export function MetricsPanel({ className }: { className?: string }) {
   const [measuredAt, setMeasuredAt] = useState(() => localInputValue(new Date()));
   const [notes, setNotes] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Metric | null>(null);
 
   const from = useMemo(() => {
     if (range === "all") return undefined;
@@ -497,14 +699,24 @@ export function MetricsPanel({ className }: { className?: string }) {
                       </Button>
                     </span>
                   ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={t("profile.metrics.history.delete")}
-                      onClick={() => setConfirmId(metric.id)}
-                    >
-                      <Trash2 aria-hidden="true" />
-                    </Button>
+                    <span className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={t("profile.metrics.history.edit")}
+                        onClick={() => setEditing(metric)}
+                      >
+                        <Pencil aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={t("profile.metrics.history.delete")}
+                        onClick={() => setConfirmId(metric.id)}
+                      >
+                        <Trash2 aria-hidden="true" />
+                      </Button>
+                    </span>
                   )}
                 </li>
               ))}
@@ -512,6 +724,13 @@ export function MetricsPanel({ className }: { className?: string }) {
           ) : null}
         </section>
       </CardContent>
+      {editing ? (
+        <MetricEditDialog
+          key={editing.id}
+          metric={editing}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
     </Card>
   );
 }

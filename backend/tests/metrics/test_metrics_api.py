@@ -194,6 +194,44 @@ def test_invalid_timezone(client: TestClient) -> None:
     assert response.json()["code"] == "metric_invalid"
 
 
+def test_patch_notes_or_time_only(client: TestClient) -> None:
+    """编辑 UI 会单独提交备注或时间，未出现的字段必须保持不变。"""
+    created = _post(
+        client, "weight", {"weight": 60}, "2026-10-20T08:00:00+08:00"
+    ).json()
+
+    notes_only = client.patch(
+        f"{BASE}/{created['id']}", json={"notes": "evening"}
+    )
+    assert notes_only.status_code == 200, notes_only.text
+    body = notes_only.json()
+    assert body["notes"] == "evening"
+    assert body["values"] == {"weight": 60.0}
+    assert body["measuredAt"] == created["measuredAt"]
+
+    time_only = client.patch(
+        f"{BASE}/{created['id']}",
+        json={"measuredAt": "2026-10-21T07:30:00+08:00"},
+    )
+    assert time_only.status_code == 200, time_only.text
+    body = time_only.json()
+    assert body["notes"] == "evening"
+    assert body["values"] == {"weight": 60.0}
+    assert body["measuredAt"].startswith("2026-10-21T07:30:00")
+
+
+def test_patch_invalid_values_keeps_original(client: TestClient) -> None:
+    created = _post(
+        client, "spo2", {"spo2": 97}, "2026-10-20T08:00:00+08:00"
+    ).json()
+    bad = client.patch(f"{BASE}/{created['id']}", json={"values": {"spo2": 40}})
+    assert bad.status_code == 422
+    assert bad.json()["code"] == "invalid_metric_values"
+
+    unchanged = client.get(BASE).json()["items"][0]
+    assert unchanged["values"] == {"spo2": 97.0}
+
+
 def test_empty_first_run(client: TestClient) -> None:
     page = client.get(BASE).json()
     assert page == {"items": [], "total": 0, "limit": 50, "offset": 0}

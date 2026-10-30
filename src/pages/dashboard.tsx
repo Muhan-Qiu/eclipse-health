@@ -1,11 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   BookOpen,
   FilePlus2,
   FlaskConical,
+  LoaderCircle,
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
@@ -38,6 +39,7 @@ import { useImport } from "@/components/import/import-provider";
 import { measurementsByCode } from "@/components/records/measurement-list";
 import {
   useAnalysis,
+  useImportSample,
   useRecentAnalyses,
   useRecords,
 } from "@/lib/api/queries";
@@ -331,6 +333,8 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
   const { openPicker } = useImport();
+  const navigate = useNavigate();
+  const importSample = useImportSample();
   const [formatsOpen, setFormatsOpen] = useState(false);
   const now = new Date();
 
@@ -340,6 +344,17 @@ export function DashboardPage() {
   });
   const recent = recentQuery.data?.items ?? [];
   const analysesQueries = useRecentAnalyses(recent);
+  const sampleRecord = recent.find((record) => record.isSample);
+
+  const loadSample = () => {
+    if (sampleRecord) {
+      navigate(`/records/${sampleRecord.id}`);
+      return;
+    }
+    importSample.mutate(undefined, {
+      onSuccess: (result) => navigate(`/records/${result.recordId}`),
+    });
+  };
 
   const candidates = useMemo<Candidate[]>(() => {
     const found: Candidate[] = [];
@@ -389,14 +404,27 @@ export function DashboardPage() {
 
         <GuideCard
           icon={BookOpen}
-          title={t("dashboard.guide.exampleTitle")}
-          description={t("dashboard.guide.exampleDesc")}
+          title={t("dashboard.guide.sampleTitle")}
+          description={t("dashboard.guide.sampleDesc")}
         >
-          <Button variant="ghost" size="sm" className="-ml-2.5" asChild>
-            <Link to="/records">
-              {t("dashboard.guide.exampleAction")}
-              <ArrowRight data-icon="inline-end" />
-            </Link>
+          <Button
+            variant={sampleRecord ? "ghost" : "secondary"}
+            size="sm"
+            className={sampleRecord ? "-ml-2.5" : undefined}
+            onClick={loadSample}
+            disabled={importSample.isPending}
+          >
+            {importSample.isPending ? (
+              <LoaderCircle data-icon="inline-start" className="animate-spin" />
+            ) : (
+              <FlaskConical data-icon="inline-start" />
+            )}
+            {sampleRecord
+              ? t("dashboard.guide.sampleOpen")
+              : importSample.isPending
+                ? t("dashboard.guide.sampleLoading")
+                : t("dashboard.guide.sampleAction")}
+            <ArrowRight data-icon="inline-end" />
           </Button>
         </GuideCard>
 

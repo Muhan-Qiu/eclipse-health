@@ -12,6 +12,10 @@ import {
   readLocalPreference,
   type DesktopPreference,
 } from "./desktop-preferences";
+import {
+  analysisNotificationsEnabled,
+  setAnalysisNotificationsEnabled,
+} from "@/features/profile/notifications";
 
 interface DesktopPanelProps {
   className?: string;
@@ -27,6 +31,9 @@ export function DesktopPanel({ className }: DesktopPanelProps) {
   });
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState<DesktopPreference | null>(null);
+  const [notifyOnComplete, setNotifyOnComplete] = useState(() =>
+    analysisNotificationsEnabled(),
+  );
   const tauri = isTauriRuntime();
 
   useEffect(() => {
@@ -72,6 +79,11 @@ export function DesktopPanel({ className }: DesktopPanelProps) {
     }
   }
 
+  function handleNotifyToggle(enabled: boolean) {
+    setNotifyOnComplete(enabled);
+    setAnalysisNotificationsEnabled(enabled);
+  }
+
   return (
     <Card className={cn(className)}>
       <CardHeader>
@@ -104,6 +116,22 @@ export function DesktopPanel({ className }: DesktopPanelProps) {
             </div>
           );
         })}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <Label htmlFor="desktop-analysis-notifications">
+              {t("settings.desktop.notifications")}
+            </Label>
+            <p className="eh-caption text-muted-foreground">
+              {t("settings.desktop.notificationsDesc")}
+            </p>
+          </div>
+          <Switch
+            id="desktop-analysis-notifications"
+            checked={notifyOnComplete}
+            onCheckedChange={handleNotifyToggle}
+            aria-label={t("settings.desktop.notifications")}
+          />
+        </div>
         {!tauri ? (
           <p className="eh-caption text-muted-foreground">
             {t("settings.desktop.browserHint")}
