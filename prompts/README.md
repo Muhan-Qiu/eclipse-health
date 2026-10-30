@@ -1,62 +1,48 @@
-# 提示词索引 · B3 已验收，B4 收口（两波 8 个 Agent）
+# 提示词索引 · B5 收口（3 个 Agent 并行）
 
 > 指挥官文件。Agent 只读自己的提示词 + `00-COMMON.md`，不要读别人的。
-> B3 结果：357 项后端测试通过、ruff/build 通过；趋势/对比/PDF/PNG/LLM mock/启动 1.2s 全部落地。
+> 当前批次：B5，目标把原始 44 项从 ~90% 收到 ~95%。
+> B4 两波 8 个 Agent 已验收，报告在 `reports/B4-*.md`；提示词 `31`–`38` 仅作历史参考。
 
-## 为什么分两波
+## 本轮（B5，3 个并行）
 
-本机 16GB 内存，B3 四个 Agent 并行时已出现 OOM；8 个同时跑会互相拖慢/抢端口。
-**Wave 1（4 个）→ 验收/让路 → Wave 2（4 个）**，仍然是「一次性收口」，不是多轮迭代。
-
-## Wave 1（现在开）
-
-| 提示词 | 任务 | 难度 | 思考强度 | 端口 |
+| 提示词 | 任务 | 难度 | 思考强度 | 报告 |
 |---|---|---|---|---|
-| `31-packaging.md` | PyInstaller sidecar + Tauri 安装包 + 桌面增强 | 困难 3/4 | **high** | — |
-| `32-data-acquisition.md` | 公开样本下载 + 格式资料（EDF/SCP-ECG/Apple/Samsung/华为） | 中等 2/4 | **medium** | — |
-| `33-device-adapters.md` | 设备/医院格式适配器 | 困难 3/4 | **high** | 8783 |
-| `34-export-privacy.md` | 导出/备份 + 隐私中心 + 诊断日志 + 设置 | 困难 3/4 | **high** | 8784 / 1420 |
-
-## Wave 2（Wave 1 完成/报告出来后再开）
-
-| 提示词 | 任务 | 难度 | 思考强度 | 端口 |
-|---|---|---|---|---|
-| `35-waveform-extras.md` | 心搏列表 / 节律条 / 12 导联展示 / PNG / 快捷键 | 困难 3/4 | **high** | 1425 |
-| `36-module-ui.md` | 模块安装 / 权限 / 审计 UI | 中等偏难 3/4 | **high** | 8786 / 1426 |
-| `37-profile-metrics.md` | 健康档案 + 手动指标 + 通知 | 中等偏难 3/4 | **high** | 8787 / 1427 |
-| `38-llm-live.md` | LLM 真实联调 + 助手收尾 | 困难 3/4 | **high** | 8788 / 1428 |
+| `50-a1-sample-d1-favorites.md` | A1 首次引导 + 真实示例记录；D1 收藏与筛选 | 中等 2/4 | high | `reports/B5-01-report.md` |
+| `51-c7-engine-switch.md` | C7 通用引擎列表 + 选择 + 重新分析（当前仅 Cardia） | 困难 3/4 | high | `reports/B5-02-report.md` |
+| `52-b4-07-finish.md` | B4-07 收尾：设置页通知开关 + 手动指标编辑 | 低 1/4 | medium | `reports/B5-03-report.md` |
 
 ## 启动句
 
 ```
-阅读 prompts/00-COMMON.md 和 prompts/31-packaging.md，严格按照其中的范围执行。
-只修改「文件所有权」列出的路径；完成后写 reports/B4-01-report.md。
+阅读 prompts/00-COMMON.md 和 prompts/50-a1-sample-d1-favorites.md，严格按照其中的范围执行。
+只修改「文件所有权」列出的路径；完成后写 reports/B5-01-report.md。
 ```
 
-替换文件名/报告名即可。Wave 1 四个可同时开；Wave 2 等 Wave 1 报告齐了再开。
+替换文件名/报告名即可。三个可同时开；本机 16GB，不要再加第 4 个编码 Agent。
 
-## 依赖与共享文件
+## 文件所有权冲突预防
 
-- **B4-04** 是后端路由接线所有者：`api/__init__.py`、`app.py`；挂载 B4-07 的 `metrics.api.router`。
-- **B4-01** 拥有 `src-tauri/**`；B4-04/B4-07 通过 `invoke` 调它暴露的设置/通知命令。
-- **B4-02** 是唯一允许写 `uploads/` 的 Agent；B4-03 只读样本。
-- **B4-05** 拥有记录详情与波形；**B4-06** 拥有模块页；**B4-07** 拥有档案页/App 路由；**B4-08** 拥有助手。互不改页面。
-- `src/lib/api/*` 与 `src/lib/i18n/*`：Wave 2 中 B4-05/06/07/08 都用 feature-local bundle/fetch，不改共享；B4-04 可改 settings 相关 i18n。
+- `src/lib/api/**` 只归 B5-01；B5-02 用 `src/features/analysis/**` 本地 fetch，B5-03 用 `src/features/profile/api.ts`。
+- `record-detail.tsx` / `analysis-panel.tsx` 只归 B5-02；B5-01 不改详情页。
+- `src/lib/i18n/**` 三个都可能新增键：只允许**新增自己的键**，不得重写文件；发现冲突写进报告。
+- `backend/api/__init__.py` 只归 B5-01（挂样本导入路由）；B5-02 的 engines 路由挂在现有 analyses router 内，不改 `__init__.py`。
+- 不要同时跑 PyInstaller/Rust 构建与全量测试。
 
-## 必须提前知道的限制
+## 依赖与已知边界
 
-1. **12 导联只能展示，不能分析。** Cardia 2.0 是单导联模型；B4-05 的 12 导联网格是显示/复查，分析仍用 MLII/第一导联。
-2. **自动更新需要签名私钥 + 更新服务器。** B4-01 只做插件配置/占位与本地验证；没有这两样不能真正上线更新。
-3. **外部 LLM 需要 API Key。** B4-08 优先用本机 Ollama；没有 Ollama/Key 时用 mock 交付，并报告缺什么。不会系统级安装 Ollama。
-4. **华为样本可能找不到。** B4-02 会尽力下载公开样本；华为/部分 Samsung 导出可能只有文档没有样本，B4-03 会标 `experimental`，真实设备兼容性需你后续提供样本验证。
-5. **下载物**放 `uploads/`（已 gitignore），不提交受限数据集；每个样本记录来源/许可证/sha256。
+1. **示例记录必须走真实导入管线**，不是 `VITE_USE_MOCK`；样本来自 `backend/resources/samples/`（MIT-BIH，随仓库）。
+2. **C7 只有 Cardia 一个引擎**；不要造第二个引擎，框架要能接平台 #1 的 ONNX loader。
+3. **通知开关是纯前端偏好**（localStorage），不进后端 settings、不调 Tauri invoke。
+4. **收藏存 `records.data` JSON**，不做破坏性数据库迁移；筛选必须与分页一致。
+5. H5 自动更新、G3 真机格式仍阻塞，不在本轮。
 
 ## 启动前检查
 
-- 基线：`pytest backend\tests -q` 357 项通过；`npm run build` 通过。
+- 基线（2026-10-30 指挥官核查）：`ruff` 通过；`pytest backend/tests -q` 全绿；`npm run build` 通过。
 - 后端命令：`backend\.venv\Scripts\python.exe -m ...`（`uv` 不在 PATH）。
-- 事实源：`docs/INTERNAL_API_V1.md`、`docs/V3_BUILD_PLAN.md`。
+- 事实源：`docs/INTERNAL_API_V1.md`、`docs/V3_BUILD_PLAN.md` §27。
 
 ## 收尾
 
-Wave 1/2 报告齐后，指挥官统一做：接线检查、全量测试/build、真机冒烟、路由懒加载、依赖声明、README、git checkpoint。
+三份报告齐后，指挥官统一：全量 pytest/ruff/build、抽查截图、更新 `docs/DATA_SCHEMA_V1.md`（favorite）、更新 `V3_BUILD_PLAN.md` §22/§27、提交 checkpoint。

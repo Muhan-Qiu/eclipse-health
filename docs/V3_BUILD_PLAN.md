@@ -354,19 +354,21 @@
 - B4-04 导出/隐私/诊断/设置：**完成**。
 - B4-05 波形增强：**完成**（心搏列表/节律条/12 导联展示/PNG/快捷键/质量区段）。
 - B4-06 模块安装/权限/审计 UI：**完成**（80 项模块测试）。
-- B4-07 档案/手动指标/通知：代码已落地并接线，**报告未到**，最终验收时确认。
-- B4-08 LLM 真实联调：**未开始**；assistant 仍是 mock 验证，真实 provider 需 Ollama/API Key。
+- B4-07 档案/手动指标/通知：**完成**（报告 `reports/B4-07-report.md`；16 项 metrics 测试通过；设置页通知开关列为跨区需求，已并入 B5-03）。
+- B4-08 LLM 真实联调：**完成**（报告 `reports/B4-08-report.md`；本机 Ollama `qwen3:4b` 真实工具调用通过；外部 OpenAI/Anthropic 因无 Key 未实测）。
+
+> 2026-10-30 指挥官核查：`ruff` 通过、`pytest backend/tests -q` 全绿、`npm run build` 通过；B4-07/08 收尾修正与报告已提交 checkpoint `a848eb3`。
 
 **剩余收口（不依赖第三方模块 glue）：**
 
-1. A1 真实示例记录/首次引导 —— 低，2–3h。
-2. D1 收藏 —— 低，2h。
-3. C7 切换引擎 —— 中，需第二个可用引擎（1–2 天）。
-4. 最终 QA：全量测试/build、安装包冒烟、路由懒加载、依赖声明、README —— 约 1 天。
+1. A1 真实示例记录/首次引导 —— 低，2–3h；已有 `backend/resources/samples/` 的 MIT-BIH WFDB 样本可直接走真实导入管线。
+2. D1 收藏 —— 低，2h；记录 JSON 已可扩展字段，无需数据库迁移。
+3. C7 切换引擎 —— 中，1–2 天；先做通用引擎注册/选择/重新分析框架（当前仅 Cardia 可用），第二引擎留给平台 #1 的 ONNX loader。
+4. 最终 QA：全量测试/build、安装包冒烟、路由懒加载、依赖声明、README —— 约 1 天（指挥官统一做）。
 5. **H5 自动更新** —— 阻塞：需要签名私钥 + 更新服务器，Agent 无法独自完成。
 6. **G3 真机格式** —— 阻塞：需要用户提供 Apple/Samsung/华为真实导出；代码已就绪，标 `experimental`。
 
-> 结论：不做第三方模块 glue，也能在约 1 个短批次内把原始目标收到 ~95%；最后 5% 的 H5/G3 需要用户提供基础设施或样本。
+> 结论：B5 收口 A1/D1/C7 后，原始 44 项可到 ~95%；最后 5% 的 H5/G3 需要用户提供基础设施或样本。
 
 ## 23. 第三方 Agent 平台（#1–#4）排期（2026-10-30）
 
@@ -396,7 +398,7 @@
 | R2-1 | 首页 widget v1（#2）：8 种受控组件、语义令牌映射、数据源、示例、截图 | 第三方只交 JSON |
 | R2-2 | 工具注册表（#3）：模块 tools → 助手工具表、RPC tool.call、权限、透明面板 | 慢病/饮食 Agent 的入口 |
 | R2-3 | 模块页渲染器（#4 UI）：表单/表格/详情/列表、受控组件、模块数据 | 领域 Agent 的页面 |
-| R2-4 | 示例领域 Agent（#4）：一个真实 `health-domain` 模块（体重/血压或饮食），含数据 schema、worker、widget、tools、page | 端到端验证 #1–#4 |
+| R2-4 | ~~示例领域 Agent（#4）~~ **暂不做**（2026-10-30 用户决定：领域 Agent 留给第三方作者，只保留平台能力） | 不在当前范围 |
 
 ### 第 3 轮 · 集成、验收、发布
 
@@ -412,7 +414,7 @@
 - 第 1 轮 R1-1 必须先出契约；R1-2/3 可并行写，R2 全部依赖 R1-1/R1-2。
 - 每模块独立运行时（#5）不做；遇到必须额外 Python 库的模块，要求作者导 ONNX 或自包含 exe，否则阻塞并单独评估。
 - H5 自动更新、G3 真机格式仍需要用户提供签名服务器/样本，不计入这 3 轮。
-- 示例领域 Agent 选哪个（体重/血压 vs 饮食）需用户定；建议先用「体重/血压」验证数据+卡片+工具，饮食涉及食物库/联网，放后。
+- 示例领域 Agent 不做内置版；平台只需保证第三方作者能按模板做出「数据 + 卡片 + 工具 + 页面」的模块（#4 能力），不随核心发一个示例领域模块。
 
 ## 24. 多源健康数据「直接导入」（2026-10-30 纠正）
 
@@ -446,12 +448,14 @@
 
 **风险**：部分厂商没有公开导出；第三方工具可能只写不读；格式随版本变化；付费工具不能成为我们的依赖。S1 先给结论，S2 按「直接导入我们应用」实现。
 
-### 优先级（建议）
+### 优先级（2026-10-30 用户确认）
 
-1. Apple Health 导出（公开 XML/ZIP，最稳）
-2. 华为/小米/Zepp 导出（有公开导出或第三方转换）
-3. Samsung Health（仅当用户只有它；不作为主路径）
-4. Health Connect（若用户会用）
+1. **Apple Health 导出**（公开 XML/ZIP，最稳）
+2. **华为 / 小米 / Zepp 导出**（有公开导出或第三方转换）
+3. **Samsung Health**（仅当用户只有它；作为兜底，不作主路径）
+4. Health Connect：用户未选，暂不排期
+
+> 用户原话口径：优先 Apple、华为/小米/Zepp、Samsung；终点始终是「文件直接导入我们应用」。
 
 ## 25. 发布/上线 + 动画收尾
 
@@ -484,4 +488,34 @@
 - **4 路并行：约 5 轮 / 3 周**。
 - H5 自动更新、G3 真机格式、部分厂商无公开导出仍是外部阻塞，不计入轮次。
 
-**总计新增 Agent 位**：平台 #1–#4 约 12 个、多源数据导入 2 个、发布/动画 3–4 个、原目标收口 1–2 个；按 6 路并行约 4 轮完成。 
+**总计新增 Agent 位**：平台 #1–#4 约 12 个、多源数据导入 2 个、发布/动画 3–4 个、原目标收口 1–2 个；按 6 路并行约 4 轮完成。
+
+## 27. B5 收口批次（2026-10-30 用户确认后启动）
+
+> 用户决定：**先收口原始 44 项**，暂不开平台 #1–#4；示例领域 Agent 暂不做（留给第三方作者）。B4-07/08 已验收并提交 checkpoint `a848eb3`。
+
+### 批次目标
+
+把原始 44 项从 ~90% 收到 ~95%：A1 真实示例记录、D1 收藏、C7 引擎选择/重新分析、B4-07 通知开关与指标编辑；H5/G3 仍为外部阻塞。
+
+### 三个 Agent（并行，文件所有权不重叠）
+
+| 编号 | 任务 | 难度 | 思考强度 | 文件所有权 |
+|---|---|---|---|---|
+| B5-01 | A1 首次引导 + 真实示例记录；D1 收藏与筛选 | 中等 2/4 | high | `backend/src/eclipse_health_backend/importers/**`、`backend/src/eclipse_health_backend/api/records.py`、`backend/src/eclipse_health_backend/domain/models.py`、`backend/src/eclipse_health_backend/db/repositories.py`、`backend/tests/imports/**`、`backend/tests/api/test_records*.py`、`src/pages/dashboard.tsx`、`src/pages/records.tsx`、`src/components/records/record-row.tsx`、`src/lib/api/{types,queries,client,adapters,mock}.ts` |
+| B5-02 | C7 通用引擎列表 + 选择 + 重新分析（当前仅 Cardia） | 困难 3/4 | high | `backend/src/eclipse_health_backend/api/analyses.py`、`backend/src/eclipse_health_backend/analysis_service/**`、`backend/tests/analyses/**`、`src/pages/record-detail.tsx`、`src/components/records/analysis-panel.tsx`、`src/features/analysis/**`（新建） |
+| B5-03 | B4-07 收尾：设置页通知开关 + 手动指标编辑 | 低 1/4 | medium | `src/features/privacy/desktop-panel.tsx`、`src/features/profile/**`、`src/lib/i18n/**`（仅新增 settings 键）、`backend/tests/metrics/**`（只补测试） |
+
+### 明确不做
+
+- 不实现第二个分析引擎；C7 只做注册/选择/重新分析框架，第二引擎并入平台 #1 的 ONNX loader。
+- 不做多源健康数据导入（Apple/华为/小米/Samsung 留到 S1/S2 批次）。
+- 不做平台 #1–#4、示例领域 Agent、自动更新、真机格式验证。
+- 不改 `docs/`、`prompts/`、`uploads/`；不新增 Python/npm 依赖。
+
+### 验收
+
+- 三份报告齐后，指挥官统一：全量 `pytest` + `ruff` + `npm run build`、抽查截图、更新 `DATA_SCHEMA_V1.md`（favorite 字段）、提交 checkpoint。
+- A1 的示例记录必须走真实导入管线（不是 `VITE_USE_MOCK`），并在首次启动引导里一键生成。
+- D1 收藏必须持久化（记录 JSON 内字段即可，无需迁移），支持列表筛选。
+- C7 的引擎列表必须来自后端注册表，UI 不得写死 Cardia；重新分析可指定引擎。 
