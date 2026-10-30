@@ -202,3 +202,35 @@ Samsung Health → 右上角 ⋮ → 设置 → 滑到 **Download personal data*
 23. fitconverter — Zepp Life 导出说明：<https://www.fitconverter.com/convert/export/zepp_life.html>
 24. Health Data Export（Health Connect 导出 App）：<https://healthdataexport.com/instructions.html>
 25. 酷安 — 三星健康开发者模式/目录帖子（线索）：<https://www.coolapk.com/feed/44392293>
+
+---
+
+## 10. S2 实现状态（2026-10-30）
+
+**已实现**（`backend/src/eclipse_health_backend/importers/`）：
+
+| 源 | 适配器 | 输入 | 已映射类型 |
+|---|---|---|---|
+| Apple Health | `org.eclipsehealth.apple-health` | `export.zip`（内含 `export.xml` + `electrocardiograms/*.csv`）或单独 `export.xml` | 步数、心率、睡眠、体重、血压（Correlation）、心电图 CSV |
+| 小米 Mi Fitness | `org.eclipsehealth.xiaomi` | 解压后的 `hlth_center_fitness_data.csv`（`Key,Time,Value`） | 步数、心率、睡眠、体重 |
+
+**记录形态**
+
+- 非波形记录：`recordType = org.eclipsehealth.health.<kind>`（`steps` / `heart-rate` / `sleep` / `body-mass` / `blood-pressure`）；`payload = {value, unit, startAt, endAt, sourceApp?}`；`source.kind="import"`；`metadata.importSource = "apple-health" | "xiaomi-mi-fitness"`。
+- 单位：步数 `count`；心率 `count/min`；体重 `kg`；血压 `mm[Hg]`；睡眠 `1`（`value` 为阶段名，`durationSec` 保存时长）。
+- ECG：Apple CSV 的 `time,voltage`（秒/伏特）→ 单导联 I、mV；采样率按时间步长推断，失败时按 512 Hz 并告警。
+
+**去重**
+
+1. 整包：`provenance.fileHash`（文件 sha256）已存在 → 全部跳过。
+2. 逐条：`metadata.externalId`。Apple 优先使用 `uuid` 属性；导出未提供 UUID 时用类型/起止时间/值/来源的指纹。ECG 用 CSV 内容 sha256。
+
+**错误码**：`encrypted_export`（加密 ZIP）、`unsupported_xiaomi_export`（不是 Key/Time/Value）、`apple_export_missing`、`apple_export_empty`、`invalid_apple_export`、`invalid_ecg_csv`、`import_too_many_records`（默认 20,000 条 / 200 段 ECG）。
+
+**字段限制 / 未验证**
+
+- 未用真实 Apple / 小米导出包验证（当前用合成夹具）；ECG CSV 列名按 `time,voltage` 解析，并兼容带 `Date:` 元数据行。
+- 睡眠按单条阶段记录导入，不合并为睡眠会话；Apple `InBed/Awake/Core/Deep/REM` 映射为 kebab 值。
+- 未映射类型（如活动能量、站立）跳过并计数，不猜测。
+- 小米 `Value` 为列表的行跳过；未知 Key 与坏 JSON 逐行计入警告。
+- 不做 AES 解密、不做 Health Connect、不做 Huawei/Zepp/Samsung 健康数据。

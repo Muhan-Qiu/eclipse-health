@@ -417,7 +417,7 @@ const zhCN = {
     lowConfidence: "置信度偏低",
   },
   imports: {
-    title: "导入 ECG",
+    title: "导入数据",
     description: "文件只在本机处理；临时文件在提交或 24 小时后清理，原始文件名不会入库。",
     reading: "正在读取文件…",
     readingDesc: "识别格式并解析前 2000 个采样点，文件较大时可能需要更久。",
@@ -429,6 +429,46 @@ const zhCN = {
     commitFailedTitle: "提交失败",
     noMemberTitle: "没有可用成员",
     noMember: "后端还没有默认成员，暂时无法提交记录。",
+    sources: {
+      title: "选择数据来源",
+      description:
+        "Apple 健康导出与小米运动会直接生成健康记录；通用 ECG 文件用于单段波形导入。",
+      apple: {
+        title: "Apple 健康导出（ZIP/XML）",
+        steps:
+          "iPhone 健康 → 头像 → 导出所有健康数据 → 传到电脑后上传 export.zip。应用会自行解压，无需手动处理。",
+      },
+      xiaomi: {
+        title: "小米运动（CSV）",
+        steps:
+          "登录小米账号 → 隐私 → 管理数据 → MI Fitness 下载 → 用邮件密码解压 → 上传 hlth_center_fitness_data.csv。",
+      },
+      generic: {
+        title: "通用 ECG 文件",
+        steps:
+          "支持 WFDB（.hea/.dat 或 .zip）、CSV、EDF、SCP-ECG 等单段波形文件。",
+      },
+      privacy: "文件只在本机处理，不会上传到网络。",
+    },
+    health: {
+      summaryTitle: "将导入 {{total}} 条记录",
+      noParams: "健康数据按文件内的时间戳入库，提交时无需校正采样率或导联。",
+      doneTitle: "导入完成",
+      doneDesc: "记录已保存，可在「记录」页查看。",
+      duplicateFile: "这个文件之前已经导入过，本次没有新增记录。",
+      created: "成功",
+      skipped: "跳过重复",
+      failed: "失败",
+      viewRecords: "查看记录",
+      kinds: {
+        steps: "步数",
+        heartRate: "心率",
+        sleep: "睡眠",
+        bodyMass: "体重",
+        bloodPressure: "血压",
+        ecg: "心电图",
+      },
+    },
     nSamples: "{{value}} 个采样点",
     annotations: "{{value}} 个参考 R 峰",
     fs: "采样率",
@@ -487,6 +527,18 @@ const zhCN = {
       zip_bomb: "压缩包解压后过大，已拒绝。",
       member_not_found: "成员不存在。",
       record_invalid: "记录校验失败。",
+      apple_export_missing:
+        "压缩包里没有 export.xml。请确认上传的是 Apple 健康「导出所有健康数据」生成的 export.zip。",
+      apple_export_empty:
+        "Apple 导出里没有可导入的步数、心率、睡眠、体重、血压或心电图记录。",
+      invalid_apple_export: "export.xml 不完整或已损坏，请重新导出后再试。",
+      invalid_ecg_csv: "心电图 CSV 缺少有效的 time/voltage 数据。",
+      encrypted_export:
+        "这个导出包已加密。请先用邮件里的密码解压，再上传里面的 CSV 或 XML 文件。",
+      unsupported_xiaomi_export:
+        "这不是小米运动导出。请上传解压后的 hlth_center_fitness_data.csv（表头 Key,Time,Value）。",
+      import_too_many_records:
+        "记录数超过单次导入上限。请在手机里缩小导出时间范围后再试。",
       import_failed: "导入失败，请稍后重试。",
       network_error: "无法连接本地后端。",
       timeout: "请求超时。",
@@ -509,6 +561,15 @@ const zhCN = {
       fallback_encoding: "文件不是 UTF-8，已按兼容编码读取。",
       no_annotations: "没有参考标注，将由分析引擎自动检测 R 峰。",
       vendor_pending: "该厂商格式的真实解析尚未实现，本次只保存了识别结果。",
+      apple_health_imported: "已识别 Apple 健康导出，将导入下方列出数量的记录。",
+      apple_ignored_types: "部分未映射的 Apple 数据类型已跳过。",
+      apple_skipped_records: "部分记录因单位、数值或时间缺失被跳过。",
+      apple_ecg_default_sampling_rate:
+        "心电图时间列无法推算采样率，已按 Apple 常用 512 Hz 处理。",
+      xiaomi_fitness_imported: "已识别小米运动导出，将导入下方列出数量的记录。",
+      xiaomi_ignored_keys: "部分未映射的小米数据 Key 已跳过。",
+      xiaomi_invalid_rows: "部分小米数据行无法解析，已跳过。",
+      large_import: "记录较多，提交可能需要几分钟，请保持窗口打开。",
     },
   },
   trends: {

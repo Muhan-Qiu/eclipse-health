@@ -476,7 +476,7 @@ const enUS: typeof zhCN = {
     lowConfidence: "Low confidence",
   },
   imports: {
-    title: "Import ECG",
+    title: "Import data",
     description:
       "Files are processed locally. Temporary files are removed on commit or after 24 hours, and original filenames are never stored.",
     reading: "Reading the file…",
@@ -491,6 +491,47 @@ const enUS: typeof zhCN = {
     commitFailedTitle: "Commit failed",
     noMemberTitle: "No member available",
     noMember: "The backend has no default member yet, so the record cannot be committed.",
+    sources: {
+      title: "Choose a data source",
+      description:
+        "Apple Health exports and Xiaomi Mi Fitness create health records directly; the generic ECG option imports one waveform file.",
+      apple: {
+        title: "Apple Health export (ZIP/XML)",
+        steps:
+          "iPhone Health → profile → Export All Health Data → transfer to your computer and upload export.zip. The app unzips it for you.",
+      },
+      xiaomi: {
+        title: "Xiaomi Mi Fitness (CSV)",
+        steps:
+          "Sign in to your Xiaomi account → Privacy → Manage your data → MI Fitness download → unzip with the emailed password → upload hlth_center_fitness_data.csv.",
+      },
+      generic: {
+        title: "Generic ECG file",
+        steps:
+          "Supports WFDB (.hea/.dat or .zip), CSV, EDF, SCP-ECG and other single-record waveform files.",
+      },
+      privacy: "Files are processed locally and never uploaded to the network.",
+    },
+    health: {
+      summaryTitle: "{{total}} records will be imported",
+      noParams:
+        "Health records keep their original timestamps; no sample-rate or lead correction is needed.",
+      doneTitle: "Import complete",
+      doneDesc: "The records were saved; open Records to review them.",
+      duplicateFile: "This file was imported before; no new records were added.",
+      created: "Created",
+      skipped: "Duplicates",
+      failed: "Failed",
+      viewRecords: "View records",
+      kinds: {
+        steps: "Steps",
+        heartRate: "Heart rate",
+        sleep: "Sleep",
+        bodyMass: "Body mass",
+        bloodPressure: "Blood pressure",
+        ecg: "ECG",
+      },
+    },
     nSamples: "{{value}} samples",
     annotations: "{{value}} reference R peaks",
     fs: "Sample rate",
@@ -552,6 +593,18 @@ const enUS: typeof zhCN = {
       zip_bomb: "The archive expands too far and was rejected.",
       member_not_found: "Member not found.",
       record_invalid: "Record validation failed.",
+      apple_export_missing:
+        "The archive has no export.xml. Upload the export.zip produced by Apple Health → Export All Health Data.",
+      apple_export_empty:
+        "The Apple export has no steps, heart rate, sleep, body mass, blood pressure or ECG records to import.",
+      invalid_apple_export: "export.xml is incomplete or corrupted; export again and retry.",
+      invalid_ecg_csv: "The ECG CSV has no usable time/voltage data.",
+      encrypted_export:
+        "This export archive is encrypted. Unzip it with the emailed password, then upload the CSV or XML inside.",
+      unsupported_xiaomi_export:
+        "This is not a Xiaomi Mi Fitness export. Upload the unzipped hlth_center_fitness_data.csv (header Key,Time,Value).",
+      import_too_many_records:
+        "Too many records for one import. Narrow the export range on your phone and try again.",
       import_failed: "Import failed. Try again.",
       network_error: "Could not reach the local backend.",
       timeout: "Request timed out.",
@@ -578,6 +631,19 @@ const enUS: typeof zhCN = {
       no_annotations: "No reference annotations; the engine will detect R peaks.",
       vendor_pending:
         "Real parsing for this vendor format is not implemented yet; only detection was saved.",
+      apple_health_imported:
+        "Apple Health export detected; the record counts below will be imported.",
+      apple_ignored_types: "Some unmapped Apple data types were skipped.",
+      apple_skipped_records:
+        "Some records were skipped because their unit, value or time is missing.",
+      apple_ecg_default_sampling_rate:
+        "The ECG time column could not determine a rate; Apple's common 512 Hz was used.",
+      xiaomi_fitness_imported:
+        "Xiaomi Mi Fitness export detected; the record counts below will be imported.",
+      xiaomi_ignored_keys: "Some unmapped Xiaomi keys were skipped.",
+      xiaomi_invalid_rows: "Some Xiaomi rows could not be parsed and were skipped.",
+      large_import:
+        "There are many records; committing may take a few minutes. Keep this window open.",
     },
   },
   trends: {

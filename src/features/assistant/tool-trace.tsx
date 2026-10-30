@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
@@ -9,8 +9,80 @@ import {
   Wrench,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { baseUrl } from "@/lib/api/client";
 import { cn } from "cn";
 import type { ToolCallTrace } from "./types";
+
+/** 与后端 llm/tools.py 的命名规则保持一致：m_<fnv1a32(moduleId)>_<slug(toolId)>。 */
+const MODULE_TOOL_PREFIX = "m_";
+const MODULE_TOOL_SLUG_LIMIT = 53;
+
+interface ModuleToolLabel {
+  moduleName: string;
+  toolName: string;
+}
+
+function fnv1a32(value: string): string {
+  let digest = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(value)) {
+    digest ^= byte;
+    digest = Math.imul(digest, 0x01000193) >>> 0;
+  }
+  return digest.toString(16).padStart(8, "0");
+}
+
+function slug(value: string): string {
+  const cleaned = value.replace(/[^A-Za-z0-9_-]/g, "_").replace(/^_+|_+$/g, "");
+  return (cleaned || "tool").slice(0, MODULE_TOOL_SLUG_LIMIT);
+}
+
+function moduleToolAlias(moduleId: string, toolId: string): string {
+  return `${MODULE_TOOL_PREFIX}${fnv1a32(moduleId)}_${slug(toolId)}`;
+}
+
+// 一次会话内只拉一次贡献注册表；模块名/工具名来自后端，不在前端硬编码。
+let labelsPromise: Promise<Map<string, ModuleToolLabel>> | null = null;
+
+function loadModuleToolLabels(): Promise<Map<string, ModuleToolLabel>> {
+  labelsPromise ??= fetch(`${baseUrl}/modules/contributions?type=tools`, {
+    credentials: "omit",
+    headers: { Accept: "application/json" },
+  })
+    .then(async (response) => {
+      if (!response.ok) return new Map<string, ModuleToolLabel>();
+      const body = (await response.json()) as { items?: unknown };
+      const labels = new Map<string, ModuleToolLabel>();
+      if (!Array.isArray(body.items)) return labels;
+      for (const item of body.items as Array<Record<string, unknown>>) {
+        const moduleId = item?.moduleId;
+        const toolId = item?.id;
+        if (typeof moduleId !== "string" || typeof toolId !== "string") continue;
+        labels.set(moduleToolAlias(moduleId, toolId), {
+          moduleName: typeof item.moduleName === "string" ? item.moduleName : moduleId,
+          toolName: typeof item.name === "string" ? item.name : toolId,
+        });
+      }
+      return labels;
+    })
+    .catch(() => new Map<string, ModuleToolLabel>());
+  return labelsPromise;
+}
+
+function useModuleToolLabels(): Map<string, ModuleToolLabel> {
+  const [labels, setLabels] = useState<Map<string, ModuleToolLabel>>(
+    () => new Map<string, ModuleToolLabel>(),
+  );
+  useEffect(() => {
+    let active = true;
+    void loadModuleToolLabels().then((value) => {
+      if (active) setLabels(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return labels;
+}
 
 function compactArgs(args: Record<string, unknown>): string {
   const parts = Object.entries(args).map(([key, value]) => {
@@ -26,6 +98,7 @@ export function ToolTrace({ calls }: { calls: ToolCallTrace[] }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const moduleLabels = useModuleToolLabels();
 
   if (calls.length === 0) return null;
 
@@ -55,6 +128,9 @@ export function ToolTrace({ calls }: { calls: ToolCallTrace[] }) {
         <ul className="border-t border-border/70">
           {calls.map((call) => {
             const isOpen = expanded === call.id;
+            const moduleLabel = call.name.startsWith(MODULE_TOOL_PREFIX)
+              ? moduleLabels.get(call.name)
+              : undefined;
             return (
               <li key={call.id} className="border-b border-border/50 last:border-b-0">
                 <button
@@ -79,9 +155,21 @@ export function ToolTrace({ calls }: { calls: ToolCallTrace[] }) {
                       aria-label={t("assistant.tools.failed")}
                     />
                   )}
-                  <code className="shrink-0 font-mono text-[11px] font-medium">
-                    {call.name}
-                  </code>
+                  {moduleLabel ? (
+                    <>
+                      <Badge variant="outline" className="shrink-0 font-normal">
+                        {moduleLabel.moduleName}
+                      </Badge>
+                      <span className="shrink-0 text-[11px] text-muted-foreground">·</span>
+                      <code className="shrink-0 font-mono text-[11px] font-medium">
+                        {moduleLabel.toolName}
+                      </code>
+                    </>
+                  ) : (
+                    <code className="shrink-0 font-mono text-[11px] font-medium">
+                      {call.name}
+                    </code>
+                  )}
                   <span className="eh-caption truncate text-muted-foreground">
                     {compactArgs(call.args)}
                   </span>

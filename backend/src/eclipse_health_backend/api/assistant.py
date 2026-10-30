@@ -387,7 +387,9 @@ async def _test_litellm(provider: Provider) -> _Probe:
     }
     if key:
         kwargs["api_key"] = key
-    if provider.base_url and provider.kind == "openai":
+    if provider.base_url:
+        # 兼容代理（CC Switch / 自建网关）对 anthropic 同样要覆盖 api_base，
+        # 否则「测试连接」会打到官方端点而不是用户填写的地址。
         kwargs["api_base"] = provider.base_url
     supports_tools = _litellm_supports_tools(litellm, provider)
     started = time.perf_counter()

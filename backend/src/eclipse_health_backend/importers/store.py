@@ -144,6 +144,17 @@ def is_zip(path: Path) -> bool:
         return False
 
 
+def zip_is_encrypted(path: Path) -> bool:
+    """加密 ZIP 无法解压；交给适配器给出 ``encrypted_export`` 之类的明确错误。"""
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(path) as archive:
+            return any(info.flag_bits & 0x1 for info in archive.infolist())
+    except (zipfile.BadZipFile, OSError):
+        return False
+
+
 def _entry_name(info: Any) -> PurePosixPath:
     raw = info.filename or ""
     if not raw or "\\" in raw:
@@ -330,4 +341,5 @@ __all__ = [
     "workspace_file",
     "workspace_path",
     "write_meta",
+    "zip_is_encrypted",
 ]

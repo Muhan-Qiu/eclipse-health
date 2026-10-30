@@ -13,7 +13,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import re
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
@@ -143,6 +146,191 @@ TOOL_SPECS: list[dict[str, Any]] = [
 TOOL_NAMES = tuple(spec["function"]["name"] for spec in TOOL_SPECS)
 
 
+# --------------------------------------------------------------------------- #
+# 模块工具（B2）：已安装且授予 llm 的 ai-tool 模块，经模块 RPC 执行
+# --------------------------------------------------------------------------- #
+
+# 命名空间前缀让模型与前端都能一眼认出「这是第三方模块工具」。
+MODULE_TOOL_PREFIX = "m_"
+# `m_` + 8 位短哈希 + `_` = 11，剩余长度留给工具 id（provider 限制 64）。
+MODULE_TOOL_SLUG_LIMIT = 53
+# 模块结果对模型可见，但波形、备注与成员姓名一律不透传。
+_BLOCKED_RESULT_KEYS = frozenset(
+    {
+        "samples",
+        "signal",
+        "signals",
+        "waveform",
+        "notes",
+        "membername",
+        "displayname",
+        "beats",
+    }
+)
+_MAX_RESULT_DEPTH = 8
+_MAX_RESULT_ITEMS = 200
+_MAX_RESULT_STRING = 2_000
+
+
+def _fnv1a32(value: str) -> str:
+    """短哈希：FNV-1a 32 位。
+
+    前端用同样十行即可复现同一别名，无需把安装状态回传给 UI；
+    不允许跨请求缓存安装状态，别名必须由模块身份纯函数决定。
+    """
+    digest = 0x811C9DC5
+    for byte in value.encode("utf-8"):
+        digest ^= byte
+        digest = (digest * 0x01000193) & 0xFFFFFFFF
+    return f"{digest:08x}"
+
+
+def _slug(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_-]", "_", value).strip("_")
+    return (cleaned or "tool")[:MODULE_TOOL_SLUG_LIMIT]
+
+
+def module_tool_alias(module_id: str, tool_id: str) -> str:
+    return f"{MODULE_TOOL_PREFIX}{_fnv1a32(module_id)}_{_slug(tool_id)}"
+
+
+def _tighten_schema(value: Any) -> Any:
+    """递归强制 `additionalProperties:false`，避免模型塞入模块没声明的参数。"""
+    if isinstance(value, dict):
+        tightened = {key: _tighten_schema(item) for key, item in value.items()}
+        if tightened.get("type") == "object" or "properties" in tightened:
+            tightened.setdefault("type", "object")
+            tightened["additionalProperties"] = False
+        return tightened
+    if isinstance(value, list):
+        return [_tighten_schema(item) for item in value]
+    return value
+
+
+def _tool_parameters(schema: Any) -> dict[str, Any]:
+    if not isinstance(schema, dict):
+        schema = {}
+    tightened = _tighten_schema(schema)
+    if tightened.get("type") != "object":
+        # 函数调用的参数必须是对象；模块声明了别的顶层类型时退回空参数。
+        return {"type": "object", "properties": {}, "additionalProperties": False}
+    tightened.setdefault("properties", {})
+    tightened["additionalProperties"] = False
+    return tightened
+
+
+@dataclass(frozen=True, slots=True)
+class ModuleTool:
+    """一条可调用的模块工具；别名是模型看到的唯一名字。"""
+
+    alias: str
+    module_id: str
+    module_name: str
+    tool_id: str
+    tool_name: str
+    description: str
+    parameters: dict[str, Any]
+
+    @property
+    def display_name(self) -> str:
+        return f"{self.module_name} · {self.tool_name}"
+
+    def spec(self) -> dict[str, Any]:
+        description = self.description or self.tool_name
+        return {
+            "type": "function",
+            "function": {
+                "name": self.alias,
+                "description": f"[{self.module_name}] {description}",
+                "parameters": self.parameters,
+            },
+        }
+
+
+def module_tool_catalog(manager: Any | None = None) -> list[ModuleTool]:
+    """读取贡献注册表（已过滤 enabled + llm）并编译为工具目录。
+
+    每次调用都重新读库：安装、启用与授权随时可能变化，不做跨请求缓存。
+    """
+    try:
+        from ..modules.api import get_manager
+        from ..modules.contributions import collect_contributions
+
+        payload = collect_contributions(manager or get_manager(), kind="tools")
+    except Exception:  # 模块系统缺失时内置工具必须照常工作
+        logger.warning("module tool catalog unavailable", exc_info=True)
+        return []
+
+    items = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(items, list):
+        return []
+
+    tools: list[ModuleTool] = []
+    claimed: set[str] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        module_id = item.get("moduleId")
+        tool_id = item.get("id")
+        if not isinstance(module_id, str) or not module_id:
+            continue
+        if not isinstance(tool_id, str) or not tool_id:
+            continue
+        alias = module_tool_alias(module_id, tool_id)
+        if alias in claimed:
+            # 64 位以内出现撞名时宁可少一个工具，也不让模型调用到另一个模块。
+            logger.warning("module tool alias collision module=%s tool=%s", module_id, tool_id)
+            continue
+        claimed.add(alias)
+        tools.append(
+            ModuleTool(
+                alias=alias,
+                module_id=module_id,
+                module_name=str(item.get("moduleName") or module_id),
+                tool_id=tool_id,
+                tool_name=str(item.get("name") or tool_id),
+                description=str(item.get("description") or ""),
+                parameters=_tool_parameters(item.get("inputSchema")),
+            )
+        )
+    return tools
+
+
+def _sanitize_module_result(value: Any, *, depth: int = 0) -> Any:
+    if depth > _MAX_RESULT_DEPTH:
+        return "[truncated]"
+    if isinstance(value, dict):
+        return {
+            str(key): _sanitize_module_result(item, depth=depth + 1)
+            for key, item in value.items()
+            if str(key).lower() not in _BLOCKED_RESULT_KEYS
+        }
+    if isinstance(value, list):
+        return [
+            _sanitize_module_result(item, depth=depth + 1)
+            for item in value[:_MAX_RESULT_ITEMS]
+        ]
+    if isinstance(value, str):
+        return value[:_MAX_RESULT_STRING]
+    return value
+
+
+def trim_module_result(value: Any) -> dict[str, Any]:
+    """裁剪模块返回值：先按字段脱敏，再按字节上限截断。"""
+    sanitized = _sanitize_module_result(value)
+    if not isinstance(sanitized, dict):
+        sanitized = {"result": sanitized}
+    text = json.dumps(sanitized, ensure_ascii=False, default=str)
+    if len(text) <= MAX_TOOL_RESULT_JSON:
+        return sanitized
+    return {
+        "truncated": True,
+        "bytes": len(text),
+        "note": "module tool result truncated",
+        "preview": text[: MAX_TOOL_RESULT_JSON - 160],
+    }
+
+
 def _as_int(value: Any, default: int, *, minimum: int, maximum: int) -> int:
     try:
         parsed = int(value)
@@ -175,14 +363,34 @@ def _analysis_brief(row: Any) -> dict[str, Any] | None:
 class ToolBox:
     """绑定到「当前成员 + 当前 DB 会话」的一组只读工具。"""
 
-    def __init__(self, session: Session, member_id: str) -> None:
+    def __init__(
+        self,
+        session: Session,
+        member_id: str,
+        *,
+        manager: Any | None = None,
+    ) -> None:
         self._session = session
         self._member_id = member_id
+        # 模块工具走独立内核；测试可显式注入，生产由 get_manager() 单例提供。
+        self._manager = manager
 
     # ------------------------------------------------------------------ 入口
+    def tool_specs(self) -> list[dict[str, Any]]:
+        """内置工具 + 当前安装状态下的模块工具；每个对话轮次重建一次。"""
+        return [*TOOL_SPECS, *(tool.spec() for tool in module_tool_catalog(self._manager))]
+
+    @staticmethod
+    def is_module_tool(name: str) -> bool:
+        return name.startswith(MODULE_TOOL_PREFIX)
+
     def execute(self, name: str, args: dict[str, Any] | None) -> dict[str, Any]:
         args = args or {}
         if name not in TOOL_NAMES:
+            if self.is_module_tool(name):
+                tool = self._find_module_tool(name)
+                if tool is not None:
+                    return self._execute_module_tool(tool, args)
             return {
                 "ok": False,
                 "result": {"error": {"code": "UNKNOWN_TOOL", "message": f"unknown tool: {name}"}},
@@ -208,6 +416,51 @@ class ToolBox:
                 "citations": [],
             }
         return {"ok": True, "result": result, "summary": summary, "citations": self._citations(name, result)}
+
+    # ------------------------------------------------------------------ 模块工具
+    def _find_module_tool(self, name: str) -> ModuleTool | None:
+        """每次执行都重读注册表：撤销授权或禁用模块后立即失效。"""
+        for tool in module_tool_catalog(self._manager):
+            if tool.alias == name:
+                return tool
+        return None
+
+    def _execute_module_tool(
+        self, tool: ModuleTool, args: dict[str, Any]
+    ) -> dict[str, Any]:
+        try:
+            raw = self._call_module(tool, args)
+        except Exception as exc:  # noqa: BLE001 - 模块未运行/超时/报错一律统一映射
+            # 只留错误码，不把模块内部 message 交给模型或前端。
+            code = str(getattr(exc, "code", "") or type(exc).__name__)[:32]
+            logger.warning(
+                "module tool failed module=%s tool=%s code=%s",
+                tool.module_id,
+                tool.tool_id,
+                code,
+            )
+            return {
+                "ok": False,
+                "result": {
+                    "error": {"code": "TOOL_FAILED", "message": "module tool execution failed"}
+                },
+                "summary": f"{tool.display_name} 失败：TOOL_FAILED",
+                "citations": [],
+            }
+        return {
+            "ok": True,
+            "result": trim_module_result(raw),
+            "summary": f"{tool.display_name} 已完成",
+            "citations": [],
+        }
+
+    def _call_module(self, tool: ModuleTool, args: dict[str, Any]) -> Any:
+        manager = self._manager
+        if manager is None:
+            from ..modules.api import get_manager
+
+            manager = get_manager()
+        return manager.call(tool.module_id, tool.tool_id, args)
 
     # ------------------------------------------------------------------ 记录
     def _require_record(self, record_id: str) -> RecordTable:
@@ -474,4 +727,15 @@ def new_tool_call_id() -> str:
     return f"ltc_{uuid7()}"
 
 
-__all__ = ["TOOL_NAMES", "TOOL_SPECS", "ToolBox", "ToolError", "new_tool_call_id"]
+__all__ = [
+    "MODULE_TOOL_PREFIX",
+    "TOOL_NAMES",
+    "TOOL_SPECS",
+    "ModuleTool",
+    "ToolBox",
+    "ToolError",
+    "module_tool_alias",
+    "module_tool_catalog",
+    "new_tool_call_id",
+    "trim_module_result",
+]

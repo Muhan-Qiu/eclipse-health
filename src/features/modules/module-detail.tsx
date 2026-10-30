@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, History, ShieldCheck } from "lucide-react";
+import { AlertCircle, ChevronRight, History, LayoutGrid, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -37,6 +38,8 @@ import { moduleErrorMessage } from "./errors";
 import { ManifestFacts, ModuleIdentity } from "./manifest-summary";
 import { permissionLabel } from "./permission-utils";
 import { PermissionManager } from "./permission-list";
+import "./pages/i18n";
+import { PAGE_CONTRIBUTIONS_KEY, listPageContributions } from "./pages/page-api";
 import { ModuleStateBadge } from "./state-badge";
 import type { PermissionsState } from "./types";
 import type { ModuleSummary } from "./types";
@@ -77,6 +80,15 @@ export function ModuleDetail({
     queryFn: () => listAudit({ moduleId, limit: 8 }),
     enabled,
   });
+  const pagesQuery = useQuery({
+    queryKey: PAGE_CONTRIBUTIONS_KEY,
+    queryFn: listPageContributions,
+    enabled,
+    staleTime: 0,
+  });
+  const modulePages = (pagesQuery.data ?? []).filter(
+    (page) => page.moduleId === moduleId,
+  );
 
   function afterPermissionChange(state: PermissionsState) {
     queryClient.setQueryData(["modules", "permissions", moduleId], state);
@@ -171,6 +183,34 @@ export function ModuleDetail({
                 />
                 <ManifestFacts manifest={manifest} />
               </>
+            ) : null}
+
+            {modulePages.length > 0 ? (
+              <section>
+                <h4 className="eh-caption mb-2 flex items-center gap-1.5 text-muted-foreground">
+                  <LayoutGrid className="size-3.5" aria-hidden="true" />
+                  {t("modulePage.pagesTitle")}
+                </h4>
+                <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                  {modulePages.map((page) => (
+                    <li key={page.id}>
+                      <Link
+                        to={`/modules/${encodeURIComponent(moduleId)}/pages/${encodeURIComponent(page.id)}`}
+                        onClick={onClose}
+                        className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-muted/50"
+                      >
+                        <span className="truncate font-medium">
+                          {page.title}
+                        </span>
+                        <span className="eh-caption flex shrink-0 items-center gap-0.5 text-muted-foreground">
+                          {t("modulePage.openPage")}
+                          <ChevronRight className="size-3.5" aria-hidden="true" />
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ) : null}
 
             <section>

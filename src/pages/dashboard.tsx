@@ -37,6 +37,7 @@ import { WaveformViewer } from "@/components/records/waveform-viewer";
 import { RecordRow } from "@/components/records/record-row";
 import { useImport } from "@/components/import/import-provider";
 import { measurementsByCode } from "@/components/records/measurement-list";
+import { WidgetGrid } from "@/features/modules/widgets/widget-grid";
 import {
   useAnalysis,
   useImportSample,
@@ -444,6 +445,8 @@ export function DashboardPage() {
           </Button>
         </GuideCard>
       </section>
+
+      <WidgetGrid />
 
       <div className="eh-grid mt-6">
         <Card className="desk:col-span-5 xl:col-span-7">

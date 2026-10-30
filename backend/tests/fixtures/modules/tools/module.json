@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.example.ai-toolbox",
+  "name": "AI Toolbox (test fixture)",
+  "description": "Test-only ai-tool module used to exercise module tools in the assistant.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "ai-tool",
+  "author": { "name": "eclipse health tests" },
+  "license": "MIT",
+  "permissions": ["llm"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "tools": [
+      {
+        "id": "echo.text",
+        "name": "Echo text",
+        "description": "Echo the given text back; verifies the module RPC path end to end.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "text": { "type": "string" } },
+          "required": ["text"]
+        }
+      },
+      {
+        "id": "data.leak",
+        "name": "Leaky payload",
+        "description": "Returns payloads that include fields the assistant must never forward.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "integer", "minimum": 0, "maximum": 5000 },
+            "rows": { "type": "integer", "minimum": 0, "maximum": 200 }
+          }
+        }
+      },
+      {
+        "id": "demo.fail",
+        "name": "Failing tool",
+        "description": "Always fails with an internal error message.",
+        "parameters": { "type": "object", "properties": {} }
+      },
+      {
+        "id": "demo.slow",
+        "name": "Slow tool",
+        "description": "Sleeps past the call timeout so the kernel reports MODULE_TIMEOUT.",
+        "inputSchema": { "type": "object", "properties": {} }
+      }
+    ]
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}

@@ -27,10 +27,11 @@ from .errors import (
     ImportApiError,
     ImportNotFoundError,
     ImportTooLargeError,
+    UnsupportedFormatError,
     invalid_file,
     unsupported_format,
 )
-from .persist import create_record_from_parsed
+from .persist import commit_import_bundle, create_record_from_parsed
 from .registry import AdapterRegistry, build_default_registry
 from .samples import import_sample
 
@@ -73,6 +74,9 @@ class ImportPreviewResponse(BaseModel):
     preview: PreviewBlock
     hasAnnotations: bool = False
     annotationCount: int = 0
+    # 健康数据包（Apple / 小米）：按类型的记录数。
+    recordCounts: dict[str, int] = Field(default_factory=dict)
+    totalRecords: int = 0
 
 
 class ImportParameters(BaseModel):
@@ -111,7 +115,13 @@ class ImportCommitRequest(BaseModel):
 
 class ImportCommitResponse(BaseModel):
     recordId: str
-    record: HealthRecord
+    record: HealthRecord | None = None
+    # 批量导入（Apple / 小米）的计数；普通单条 ECG 导入 created=1。
+    created: int = 1
+    skipped: int = 0
+    failed: int = 0
+    duplicateFile: bool = False
+    recordCounts: dict[str, int] = Field(default_factory=dict)
 
 
 class SampleImportRequest(BaseModel):
@@ -189,7 +199,11 @@ def _materialize_source(
         )
 
     if store.is_zip(source.path):
-        source.extracted_dir = store.extract_zip(source.path, workspace)
+        if store.zip_is_encrypted(source.path):
+            # 加密包无法解压；适配器据此返回 ``encrypted_export`` 等明确错误。
+            source.encrypted = True
+        else:
+            source.extracted_dir = store.extract_zip(source.path, workspace)
     return source
 
 
@@ -203,6 +217,7 @@ def _meta_source(workspace: Path, source: ImportSource) -> dict[str, Any]:
         "name": source.original_name,
         "path": relative,
         "extracted": source.extracted_dir is not None,
+        "encrypted": source.encrypted,
     }
 
 
@@ -237,6 +252,7 @@ def _source_from_meta(workspace: Path, meta: dict[str, Any]) -> ImportSource:
         file_name_hash=str(meta.get("fileNameHash") or ""),
         file_hash=str(meta.get("fileHash") or ""),
         extracted_dir=extracted,
+        encrypted=bool(info.get("encrypted")),
     )
 
 
@@ -321,7 +337,15 @@ def preview_import(
     workspace = store.create_workspace(import_id)
     try:
         source = _materialize_source(workspace, file, path)
-        adapter, detection = REGISTRY.detect(source, hint_format)
+        try:
+            adapter, detection = REGISTRY.detect(source, hint_format)
+        except UnsupportedFormatError:
+            if source.encrypted:
+                raise invalid_file(
+                    "这个压缩包已加密。请先解压，再上传里面的 CSV 或 XML 文件",
+                    code="encrypted_export",
+                ) from None
+            raise
         preview = adapter.preview(source)
         meta = {
             "importId": import_id,
@@ -358,6 +382,8 @@ def preview_import(
         preview=PreviewBlock(nSamples=preview.n_samples, samples=preview.samples),
         hasAnnotations=preview.has_annotations,
         annotationCount=preview.annotation_count,
+        recordCounts=dict(preview.record_counts),
+        totalRecords=int(preview.total_records),
     )
 
 
@@ -381,6 +407,31 @@ def commit_import(
     source = _source_from_meta(workspace, meta)
     parsed = adapter.parse(source, payload.parameters.to_parse_parameters())
 
+    if parsed.is_bundle:
+        result = commit_import_bundle(
+            session,
+            parsed,
+            member_id=payload.memberId,
+            captured_at=payload.capturedAt,
+            timezone=payload.timezone,
+            module_id=adapter.adapter_id,
+            tags=payload.tags,
+            notes=payload.notes,
+            file_name_hash=str(meta.get("fileNameHash") or ""),
+            file_hash=str(meta.get("fileHash") or ""),
+        )
+        store.delete_workspace(import_id)
+        first = result.records[0] if result.records else None
+        return ImportCommitResponse(
+            recordId=first.id if first else "",
+            record=first,
+            created=len(result.records),
+            skipped=result.skipped,
+            failed=result.failed,
+            duplicateFile=result.duplicate_file,
+            recordCounts=dict(result.counts),
+        )
+
     record = create_record_from_parsed(
         session,
         parsed,
@@ -395,7 +446,11 @@ def commit_import(
     )
 
     store.delete_workspace(import_id)
-    return ImportCommitResponse(recordId=record.id, record=record)
+    return ImportCommitResponse(
+        recordId=record.id,
+        record=record,
+        recordCounts={"ecg": 1},
+    )
 
 
 @router.delete(

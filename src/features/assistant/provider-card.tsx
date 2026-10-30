@@ -63,6 +63,22 @@ const NEEDS_KEY: Record<ProviderKind, boolean> = {
   anthropic: true,
 };
 
+interface ProviderPreset {
+  label: string;
+  model: string;
+  baseUrl: string;
+}
+
+/**
+ * DeepSeek / OpenCode 通过 CC Switch 这类本地代理暴露 Anthropic Messages 格式。
+ * 只预填地址与占位模型名，不预填任何真实 Key。
+ */
+const PROXY_PRESET: ProviderPreset = {
+  label: "DeepSeek / OpenCode",
+  model: "deepseek-chat",
+  baseUrl: "http://127.0.0.1:15721",
+};
+
 interface Draft {
   kind: ProviderKind;
   label: string;
@@ -76,13 +92,14 @@ interface Draft {
 function draftFrom(
   provider: AssistantProvider | null,
   initialKind: ProviderKind = "mock",
+  preset: ProviderPreset | null = null,
 ): Draft {
   if (!provider) {
     return {
       kind: initialKind,
-      label: "",
-      model: DEFAULT_MODEL[initialKind],
-      baseUrl: DEFAULT_BASE_URL[initialKind],
+      label: preset?.label ?? "",
+      model: preset?.model ?? DEFAULT_MODEL[initialKind],
+      baseUrl: preset?.baseUrl ?? DEFAULT_BASE_URL[initialKind],
       apiKey: "",
       clearKey: false,
       enabled: true,
@@ -109,6 +126,7 @@ function newProviderId(): string {
 interface ProviderFormProps {
   provider: AssistantProvider | null;
   initialKind?: ProviderKind;
+  preset?: ProviderPreset | null;
   autoFocusLabel?: boolean;
   onSaved: (provider: AssistantProvider) => Promise<void> | void;
   onDeleted?: (id: string) => Promise<void> | void;
@@ -119,6 +137,7 @@ interface ProviderFormProps {
 function ProviderForm({
   provider,
   initialKind = "mock",
+  preset = null,
   autoFocusLabel = false,
   onSaved,
   onDeleted,
@@ -126,7 +145,9 @@ function ProviderForm({
   onError,
 }: ProviderFormProps) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<Draft>(() => draftFrom(provider, initialKind));
+  const [draft, setDraft] = useState<Draft>(() =>
+    draftFrom(provider, initialKind, preset),
+  );
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -273,6 +294,11 @@ function ProviderForm({
             placeholder={t("assistant.providers.baseUrlPlaceholder")}
             onChange={(event) => update("baseUrl", event.target.value)}
           />
+          {preset && draft.kind === "anthropic" ? (
+            <p className="eh-caption text-muted-foreground">
+              {t("assistant.providers.proxyHint")}
+            </p>
+          ) : null}
         </div>
       ) : (
         <p className="eh-caption text-muted-foreground">
@@ -455,14 +481,17 @@ export function ProviderCard({
   onError,
 }: ProviderCardProps) {
   const { t } = useTranslation();
-  const [creatingKind, setCreatingKind] = useState<ProviderKind | null>(null);
-  const creating = creatingKind !== null;
+  const [creating, setCreating] = useState<{
+    kind: ProviderKind;
+    preset: ProviderPreset | null;
+  } | null>(null);
+  const isCreating = creating !== null;
   const selected = providers.find((provider) => provider.id === activeId) ?? null;
 
   const saved = async (provider: AssistantProvider) => {
     await onProvidersChanged();
     onActiveChange(provider.id);
-    setCreatingKind(null);
+    setCreating(null);
   };
 
   const deleted = async (id: string) => {
@@ -482,16 +511,26 @@ export function ProviderCard({
         <CardTitle className="eh-h3">{t("assistant.providers.title")}</CardTitle>
         <CardDescription>{t("assistant.providers.description")}</CardDescription>
         <CardAction>
-          {!creating ? (
-            <Button size="sm" variant="outline" onClick={() => setCreatingKind("mock")}>
-              <Plus data-icon="inline-start" />
-              {t("assistant.providers.add")}
-            </Button>
+          {!isCreating ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCreating({ kind: "anthropic", preset: PROXY_PRESET })}
+              >
+                <KeyRound data-icon="inline-start" />
+                {t("assistant.providers.proxyQuickShort")}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setCreating({ kind: "mock", preset: null })}>
+                <Plus data-icon="inline-start" />
+                {t("assistant.providers.add")}
+              </Button>
+            </div>
           ) : null}
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-3">
-        {providers.length === 0 && !creating ? (
+        {providers.length === 0 && !isCreating ? (
           <div className="space-y-3 rounded-xl border border-dashed border-border bg-surface/40 p-4">
             <div className="space-y-1">
               <p className="eh-small font-medium">{t("assistant.providers.emptyTitle")}</p>
@@ -500,14 +539,14 @@ export function ProviderCard({
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => setCreatingKind("mock")}>
+              <Button size="sm" onClick={() => setCreating({ kind: "mock", preset: null })}>
                 <Server data-icon="inline-start" />
                 {t("assistant.providers.mockQuick")}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setCreatingKind("ollama")}
+                onClick={() => setCreating({ kind: "ollama", preset: null })}
               >
                 <Server data-icon="inline-start" />
                 {t("assistant.providers.ollamaQuick")}
@@ -515,10 +554,18 @@ export function ProviderCard({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setCreatingKind("openai")}
+                onClick={() => setCreating({ kind: "openai", preset: null })}
               >
                 <KeyRound data-icon="inline-start" />
                 {t("assistant.providers.apiQuick")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCreating({ kind: "anthropic", preset: PROXY_PRESET })}
+              >
+                <KeyRound data-icon="inline-start" />
+                {t("assistant.providers.proxyQuick")}
               </Button>
             </div>
           </div>
@@ -527,13 +574,13 @@ export function ProviderCard({
         {providers.length > 0 ? (
           <div className="space-y-1.5">
             {providers.map((provider) => {
-              const isActive = provider.id === selected?.id && !creating;
+              const isActive = provider.id === selected?.id && !isCreating;
               return (
                 <button
                   key={provider.id}
                   type="button"
                   onClick={() => {
-                    setCreatingKind(null);
+                    setCreating(null);
                     onActiveChange(provider.id);
                   }}
                   aria-pressed={isActive}
@@ -580,14 +627,15 @@ export function ProviderCard({
           </div>
         ) : null}
 
-        {creatingKind !== null ? (
+        {creating !== null ? (
           <ProviderForm
-            key={creatingKind}
+            key={`${creating.kind}:${creating.preset ? "preset" : "blank"}`}
             provider={null}
-            initialKind={creatingKind}
+            initialKind={creating.kind}
+            preset={creating.preset}
             autoFocusLabel
             onSaved={saved}
-            onCancel={() => setCreatingKind(null)}
+            onCancel={() => setCreating(null)}
             onError={onError}
           />
         ) : selected ? (

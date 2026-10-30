@@ -54,7 +54,8 @@ SYSTEM_PROMPT = """你是 eclipse health 的本地分析助手，帮助用户理
 3. 引用数据时给出记录 ID 或分析 ID。
 4. 用简体中文回答；用户使用其他语言时跟随用户语言。
 5. 工具只能读取摘要与测量值，读不到波形、备注和成员信息，不要假装能看到。
-6. 回答末尾用一句话提醒：以上为数据解读，不构成医学诊断。"""
+6. 以 m_ 开头的工具由已安装的第三方模块提供，结果仅供参考；与内置工具冲突时以内置结果为准。
+7. 回答末尾用一句话提醒：以上为数据解读，不构成医学诊断。"""
 
 SENT_FIELDS_BASE = [
     "system.instructions",
@@ -851,6 +852,8 @@ async def stream_reply(
     tool_calls_used = 0
     usage_total: dict[str, Any] | None = None
     turn_started = time.monotonic()
+    # 每个轮次重建一次工具表：模块的安装/授权状态随时可能变化（B2）。
+    tools = toolbox.tool_specs()
 
     async with _Guard(cancel, timeout_s) as guard:
         for _round in range(MAX_TOOL_ROUNDS + 1):
@@ -858,7 +861,7 @@ async def stream_reply(
             pending_calls: list[dict[str, Any]] = []
             attempts = 0
             while True:
-                stream = adapter.stream(conversation, TOOL_SPECS, cancel)
+                stream = adapter.stream(conversation, tools, cancel)
                 emitted = False
                 try:
                     while True:
@@ -946,7 +949,11 @@ async def stream_reply(
                 else:
                     tool_calls_used += 1
                     started = time.perf_counter()
-                    outcome = toolbox.execute(name, args)
+                    if toolbox.is_module_tool(name):
+                        # 模块 RPC 会阻塞到子进程返回；放到线程里，避免卡住整个事件循环。
+                        outcome = await asyncio.to_thread(toolbox.execute, name, args)
+                    else:
+                        outcome = toolbox.execute(name, args)
                     duration_ms = int((time.perf_counter() - started) * 1000)
 
                 event = {

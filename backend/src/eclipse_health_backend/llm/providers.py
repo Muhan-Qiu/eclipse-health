@@ -257,6 +257,12 @@ def _validate_base_url(value: str | None, kind: str) -> str | None:
     if parsed.username or parsed.password:
         # 拒绝把凭据写进 URL，避免随 provider 列表回显到界面
         raise ProviderError("invalid_base_url", "baseUrl must not contain credentials")
+    if parsed.query or parsed.fragment:
+        # 查询串常被用来夹带 token（?api_key=...），provider 列表会原样回显给前端，
+        # 因此统一拒绝；网关参数请用 provider.options 或独立配置传递。
+        raise ProviderError(
+            "invalid_base_url", "baseUrl must not contain a query string or fragment"
+        )
     return value.strip().rstrip("/")
 
 

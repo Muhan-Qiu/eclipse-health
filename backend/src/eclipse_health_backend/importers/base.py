@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -118,6 +119,8 @@ class ImportSource:
     file_name_hash: str = ""
     file_hash: str = ""
     extracted_dir: Path | None = None
+    # ZIP 被加密时无法解压；适配器可据此给出 ``encrypted_export``。
+    encrypted: bool = False
 
     @property
     def uploaded(self) -> bool:
@@ -145,6 +148,25 @@ class ParsedLead:
 
 
 @dataclass(slots=True)
+class HealthRecordDraft:
+    """非波形健康数据（步数/心率/睡眠/体重/血压）。
+
+    ``payload`` 按 DATA_SCHEMA 约定保存 ``{value, unit, startAt, endAt, sourceApp?}``；
+    ``external_id`` 是去重键（Apple 导出无 UUID 时用字段指纹）。
+    """
+
+    record_type: str
+    kind: str
+    payload: dict[str, Any]
+    captured_at: datetime
+    external_id: str
+    unit: str = "1"
+    duration_sec: float | None = None
+    source_app: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
 class ParsedImport:
     adapter_id: str
     adapter_version: str
@@ -160,6 +182,17 @@ class ParsedImport:
     reference_annotations: list[tuple[int, str]] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     warnings: list[dict[str, Any]] = field(default_factory=list)
+    # 健康数据包（Apple / 小米）：多条非波形记录 + 多条 ECG 子记录。
+    health_records: list[HealthRecordDraft] = field(default_factory=list)
+    ecg_records: list[ParsedImport] = field(default_factory=list)
+    captured_at: datetime | None = None
+    record_counts: dict[str, int] = field(default_factory=dict)
+    total_records: int = 0
+    import_source: str | None = None
+
+    @property
+    def is_bundle(self) -> bool:
+        return bool(self.health_records or self.ecg_records)
 
     @property
     def reference_r_peaks(self) -> list[int] | None:
@@ -207,6 +240,9 @@ class PreviewData:
     samples: list[float]
     has_annotations: bool = False
     annotation_count: int = 0
+    # 健康数据包按类型的记录数（steps/heartRate/sleep/bodyMass/bloodPressure/ecg）。
+    record_counts: dict[str, int] = field(default_factory=dict)
+    total_records: int = 0
 
     @property
     def requires(self) -> dict[str, bool]:
@@ -289,6 +325,7 @@ __all__ = [
     "TARGET_FS",
     "UNIT_TO_MV",
     "Detection",
+    "HealthRecordDraft",
     "ImportAdapter",
     "ImportSource",
     "ParseParameters",

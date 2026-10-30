@@ -4,15 +4,22 @@ import type {
   AuditEvent,
   AuditPage,
   AuditQuery,
+  ContributionKind,
   InstallOptions,
+  ModuleContributionGroups,
+  ModuleContributionList,
   ModuleManifest,
   ModulePreview,
   ModuleSummary,
+  ModuleWidget,
+  ModuleWidgetList,
   PermissionsState,
 } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const UPLOAD_TIMEOUT_MS = 300_000;
+/** 首次 RPC 可能要冷启动模块 worker，比普通读接口宽松。 */
+const RPC_TIMEOUT_MS = 60_000;
 
 function buildQuery(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
@@ -150,8 +157,7 @@ export function installModulePackage(
   );
 }
 
-export async function listAudit(query: AuditQuery = {}): Promise<AuditPage> {
-  const body = await requestJson<Partial<AuditPage> & { events?: AuditEvent[] }>(
+export async function listAudit(query: AuditQuery = {}): Promise<AuditPage> {  const body = await requestJson<Partial<AuditPage> & { events?: AuditEvent[] }>(
     `/modules/audit${buildQuery({
       moduleId: query.moduleId,
       action: query.action,
@@ -169,5 +175,75 @@ export async function listAudit(query: AuditQuery = {}): Promise<AuditPage> {
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function asWidgets(value: unknown): ModuleWidget[] {
+  return Array.isArray(value) ? (value as ModuleWidget[]) : [];
+}
+
+function asItems(value: unknown): ModuleContributionList["items"] {
+  return Array.isArray(value)
+    ? (value as ModuleContributionList["items"])
+    : [];
+}
+
+export function listContributions(): Promise<ModuleContributionGroups>;
+export function listContributions(type: "widgets"): Promise<ModuleWidgetList>;
+export function listContributions(
+  type: Exclude<ContributionKind, "widgets">,
+): Promise<ModuleContributionList>;
+export async function listContributions(
+  type?: ContributionKind,
+): Promise<ModuleContributionGroups | ModuleWidgetList | ModuleContributionList> {
+  const body = asRecord(
+    await requestJson<unknown>(`/modules/contributions${buildQuery({ type })}`),
+  );
+  if (type === "widgets") {
+    return { type, items: asWidgets(body.items) };
+  }
+  if (type) {
+    return { type, items: asItems(body.items) };
+  }
+  const counts = asRecord(body.counts);
+  return {
+    widgets: asWidgets(body.widgets),
+    pages: asItems(body.pages),
+    tools: asItems(body.tools),
+    recordTypes: asItems(body.recordTypes),
+    counts: {
+      widgets: typeof counts.widgets === "number" ? counts.widgets : 0,
+      pages: typeof counts.pages === "number" ? counts.pages : 0,
+      tools: typeof counts.tools === "number" ? counts.tools : 0,
+      recordTypes: typeof counts.recordTypes === "number" ? counts.recordTypes : 0,
+    },
+  };
+}
+
+/**
+ * 调用模块自身的 RPC。调用方只能拿到自己的结果；错误沿用 ApiError，
+ * 让每张卡片独立降级，而不是整块消失。
+ */
+export async function callModuleRpc<T = unknown>(
+  moduleId: string,
+  method: string,
+  params: Record<string, unknown> = {},
+): Promise<T> {
+  const body = await requestJson<{ result?: T }>(
+    `/modules/${encodeURIComponent(moduleId)}/rpc`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ method, params }),
+    },
+    RPC_TIMEOUT_MS,
+  );
+  return body.result as T;
+}
+
 export const MODULE_QUERY_KEY = ["modules"] as const;
 export const MODULE_AUDIT_KEY = ["modules", "audit"] as const;
+export const MODULE_CONTRIBUTIONS_KEY = ["modules", "contributions"] as const;

@@ -36,6 +36,9 @@ const SettingsPage = lazy(() =>
 const ModulesPage = lazy(() =>
   import("@/pages/modules").then((m) => ({ default: m.ModulesPage })),
 );
+const ModulePage = lazy(() =>
+  import("@/pages/module-page").then((m) => ({ default: m.ModulePage })),
+);
 const AboutPage = lazy(() =>
   import("@/pages/about").then((m) => ({ default: m.AboutPage })),
 );
@@ -84,6 +87,10 @@ export default function App() {
           <Route path="assistant" element={lazyPage(<AssistantPage />)} />
           <Route path="settings" element={lazyPage(<SettingsPage />)} />
           <Route path="modules" element={lazyPage(<ModulesPage />)} />
+          <Route
+            path="modules/:moduleId/pages/:pageId"
+            element={lazyPage(<ModulePage />)}
+          />
           <Route path="about" element={lazyPage(<AboutPage />)} />
           <Route path="*" element={lazyPage(<NotFoundPage />)} />
         </Route>

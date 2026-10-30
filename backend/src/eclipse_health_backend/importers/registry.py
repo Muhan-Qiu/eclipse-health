@@ -62,7 +62,7 @@ class AdapterRegistry:
         found = self._detections(source)
         if not found:
             raise unsupported_format(
-                "无法识别文件格式（支持 WFDB / CSV / EDF / SCP-ECG / Apple / Samsung / 华为）",
+                "无法识别文件格式（支持 WFDB / CSV / EDF / SCP-ECG / Apple 健康导出 / 小米运动 / Samsung / 华为）",
                 details={"adapters": [a.info() for a in self._adapters]},
             )
         best = found[0]
@@ -102,6 +102,7 @@ def _unsupported_placeholder(adapter: ImportAdapter) -> UnsupportedFormatError:
 
 def build_default_registry() -> AdapterRegistry:
     from .apple_adapter import AppleImportAdapter
+    from .apple_health_adapter import AppleHealthAdapter
     from .csv_adapter import CsvImportAdapter
     from .edf_adapter import EdfImportAdapter
     from .huawei_adapter import HuaweiImportAdapter
@@ -109,6 +110,7 @@ def build_default_registry() -> AdapterRegistry:
     from .samsung_adapter import SamsungImportAdapter
     from .scp_ecg_adapter import ScpEcgImportAdapter
     from .wfdb_adapter import WfdbImportAdapter
+    from .xiaomi_adapter import XiaomiAdapter
 
     registry = AdapterRegistry(
         [
@@ -117,6 +119,8 @@ def build_default_registry() -> AdapterRegistry:
             EdfImportAdapter(),
             ScpEcgImportAdapter(),
             AppleImportAdapter(),
+            AppleHealthAdapter(),
+            XiaomiAdapter(),
             SamsungImportAdapter(),
             HuaweiImportAdapter(),
         ]

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Activity,
   AlertTriangle,
   Check,
+  CheckCircle2,
   FileUp,
+  HeartPulse,
   Info,
   Loader2,
   RotateCcw,
@@ -40,9 +43,41 @@ import { formatNumber } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
 import { useTagLabel } from "@/lib/tags";
 import { formatSeconds } from "@/lib/waveform";
+import {
+  COUNT_ORDER,
+  type HealthImportCommitResult,
+  type ImportRecordCounts,
+  type ImportSourceKind,
+} from "./health-import-api";
 
 const KNOWN_TAGS = ["morning", "resting", "postExercise", "evening"] as const;
 const LEAD_SUGGESTIONS = ["MLII", "I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"];
+
+const SOURCES: ReadonlyArray<{
+  id: ImportSourceKind;
+  icon: typeof HeartPulse;
+  titleKey: string;
+  stepsKey: string;
+}> = [
+  {
+    id: "apple-health",
+    icon: HeartPulse,
+    titleKey: "imports.sources.apple.title",
+    stepsKey: "imports.sources.apple.steps",
+  },
+  {
+    id: "xiaomi",
+    icon: Activity,
+    titleKey: "imports.sources.xiaomi.title",
+    stepsKey: "imports.sources.xiaomi.steps",
+  },
+  {
+    id: "auto",
+    icon: FileUp,
+    titleKey: "imports.sources.generic.title",
+    stepsKey: "imports.sources.generic.steps",
+  },
+];
 
 function toLocalInput(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -117,6 +152,12 @@ interface ImportDialogProps {
   busy: boolean;
   committing: boolean;
   commitError: ApiError | null;
+  source: ImportSourceKind;
+  recordCounts: ImportRecordCounts;
+  totalRecords: number;
+  result: HealthImportCommitResult | null;
+  onPickSource: (source: ImportSourceKind) => void;
+  onDone: () => void;
   onCommit: (body: ImportCommitBody) => void;
   onPickAnother: () => void;
 }
@@ -129,6 +170,12 @@ export function ImportDialog({
   busy,
   committing,
   commitError,
+  source,
+  recordCounts,
+  totalRecords,
+  result,
+  onPickSource,
+  onDone,
   onCommit,
   onPickAnother,
 }: ImportDialogProps) {
@@ -177,12 +224,13 @@ export function ImportDialog({
       setFormError(t("imports.noMember"));
       return;
     }
+    const isHealthBundle = totalRecords > 0;
     const rate = Number(samplingRate);
-    if (!Number.isFinite(rate) || rate <= 0) {
+    if (!isHealthBundle && (!Number.isFinite(rate) || rate <= 0)) {
       setFormError(t("imports.errors.invalidSamplingRate"));
       return;
     }
-    if (!lead.trim()) {
+    if (!isHealthBundle && !lead.trim()) {
       setFormError(t("imports.errors.leadRequired"));
       return;
     }
@@ -198,17 +246,24 @@ export function ImportDialog({
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
       tags,
       notes: notes.slice(0, 4000),
-      parameters: {
-        samplingRate: rate,
-        lead: lead.trim(),
-        unit,
-        polarity,
-      },
+      parameters: isHealthBundle
+        ? {}
+        : {
+            samplingRate: rate,
+            lead: lead.trim(),
+            unit,
+            polarity,
+          },
     });
   };
 
   const requires = preview?.requires;
+  const isHealthBundle = totalRecords > 0;
   const commitDisabled = committing || busy || !preview || !memberId;
+  const showSourcePicker = !busy && !error && !preview && !result;
+  const createdKinds = COUNT_ORDER.filter(
+    (key) => (result?.recordCounts[key] ?? 0) > 0,
+  );
 
   return (
     <Dialog
@@ -223,6 +278,95 @@ export function ImportDialog({
           <DialogTitle>{t("imports.title")}</DialogTitle>
           <DialogDescription>{t("imports.description")}</DialogDescription>
         </DialogHeader>
+
+        {showSourcePicker ? (
+          <section aria-labelledby="import-source-title" className="space-y-3">
+            <div>
+              <h3 id="import-source-title" className="eh-h3">
+                {t("imports.sources.title")}
+              </h3>
+              <p className="eh-caption mt-0.5 text-muted-foreground">
+                {t("imports.sources.description")}
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {SOURCES.map((item) => {
+                const Icon = item.icon;
+                const selected = source === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => onPickSource(item.id)}
+                    className={
+                      selected
+                        ? "flex h-full flex-col gap-1.5 rounded-xl border border-primary bg-accent-soft px-3 py-3 text-left"
+                        : "flex h-full flex-col gap-1.5 rounded-xl border border-border px-3 py-3 text-left hover:bg-accent"
+                    }
+                  >
+                    <span className="flex items-center gap-1.5 text-sm font-medium">
+                      <Icon className="size-4 text-primary" aria-hidden="true" />
+                      {t(item.titleKey)}
+                    </span>
+                    <span className="eh-caption text-muted-foreground">
+                      {t(item.stepsKey)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="eh-caption text-muted-foreground">
+              {t("imports.sources.privacy")}
+            </p>
+          </section>
+        ) : null}
+
+        {result ? (
+          <section className="space-y-3">
+            <Alert>
+              <CheckCircle2 />
+              <AlertTitle>{t("imports.health.doneTitle")}</AlertTitle>
+              <AlertDescription>
+                {result.duplicateFile
+                  ? t("imports.health.duplicateFile")
+                  : t("imports.health.doneDesc")}
+              </AlertDescription>
+            </Alert>
+            <dl className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  ["created", result.created],
+                  ["skipped", result.skipped],
+                  ["failed", result.failed],
+                ] as const
+              ).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="rounded-lg border border-border px-2.5 py-2 text-center"
+                >
+                  <dt className="eh-caption text-muted-foreground">
+                    {t(`imports.health.${key}`)}
+                  </dt>
+                  <dd className="eh-num text-lg">{formatNumber(value, locale)}</dd>
+                </div>
+              ))}
+            </dl>
+            {createdKinds.length ? (
+              <ul className="flex flex-wrap gap-1.5">
+                {createdKinds.map((key) => (
+                  <li
+                    key={key}
+                    className="rounded-full border border-border px-2.5 py-0.5 text-xs"
+                  >
+                    {t(`imports.health.kinds.${key}`)} ·{" "}
+                    {formatNumber(result.recordCounts[key], locale)}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        ) : null}
 
         {busy ? (
           <div className="flex items-center gap-3 rounded-lg border border-border bg-subtle/50 px-4 py-6">
@@ -278,34 +422,62 @@ export function ImportDialog({
               </span>
             </div>
 
-            <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-lg border border-border px-2.5 py-2">
-                <dt className="eh-caption text-muted-foreground">{t("imports.fs")}</dt>
-                <dd className="eh-num text-sm">
-                  {preview.samplingRate
-                    ? `${formatNumber(preview.samplingRate, locale)} Hz`
-                    : "—"}
-                </dd>
-              </div>
-              <div className="rounded-lg border border-border px-2.5 py-2">
-                <dt className="eh-caption text-muted-foreground">{t("imports.leads")}</dt>
-                <dd className="eh-num text-sm">{preview.leads.join(" / ") || "—"}</dd>
-              </div>
-              <div className="rounded-lg border border-border px-2.5 py-2">
-                <dt className="eh-caption text-muted-foreground">{t("imports.duration")}</dt>
-                <dd className="eh-num text-sm">
-                  {preview.durationSec === null
-                    ? "—"
-                    : formatSeconds(preview.durationSec)}
-                </dd>
-              </div>
-              <div className="rounded-lg border border-border px-2.5 py-2">
-                <dt className="eh-caption text-muted-foreground">{t("imports.unit")}</dt>
-                <dd className="eh-num text-sm">{preview.unit || "—"}</dd>
-              </div>
-            </dl>
+            {isHealthBundle ? (
+              <section className="space-y-2 rounded-lg border border-border bg-subtle/40 px-3 py-2.5">
+                <p className="eh-small font-medium">
+                  {t("imports.health.summaryTitle", {
+                    total: formatNumber(totalRecords, locale),
+                  })}
+                </p>
+                <ul className="flex flex-wrap gap-1.5">
+                  {COUNT_ORDER.filter((key) => recordCounts[key] > 0).map((key) => (
+                    <li
+                      key={key}
+                      className="rounded-full border border-border px-2.5 py-0.5 text-xs"
+                    >
+                      {t(`imports.health.kinds.${key}`)} ·{" "}
+                      {formatNumber(recordCounts[key], locale)}
+                    </li>
+                  ))}
+                </ul>
+                <p className="eh-caption text-muted-foreground">
+                  {t("imports.health.noParams")}
+                </p>
+              </section>
+            ) : null}
 
-            <PreviewSignal samples={preview.preview.samples} />
+            {!isHealthBundle || preview.preview.samples.length > 0 ? (
+              <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg border border-border px-2.5 py-2">
+                  <dt className="eh-caption text-muted-foreground">{t("imports.fs")}</dt>
+                  <dd className="eh-num text-sm">
+                    {preview.samplingRate
+                      ? `${formatNumber(preview.samplingRate, locale)} Hz`
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="rounded-lg border border-border px-2.5 py-2">
+                  <dt className="eh-caption text-muted-foreground">{t("imports.leads")}</dt>
+                  <dd className="eh-num text-sm">{preview.leads.join(" / ") || "—"}</dd>
+                </div>
+                <div className="rounded-lg border border-border px-2.5 py-2">
+                  <dt className="eh-caption text-muted-foreground">{t("imports.duration")}</dt>
+                  <dd className="eh-num text-sm">
+                    {preview.durationSec === null
+                      ? "—"
+                      : formatSeconds(preview.durationSec)}
+                  </dd>
+                </div>
+                <div className="rounded-lg border border-border px-2.5 py-2">
+                  <dt className="eh-caption text-muted-foreground">{t("imports.unit")}</dt>
+                  <dd className="eh-num text-sm">{preview.unit || "—"}</dd>
+                </div>
+              </dl>
+            ) : null}
+
+            {!isHealthBundle || preview.preview.samples.length > 0 ? (
+              <PreviewSignal samples={preview.preview.samples} />
+            ) : null}
 
             {requires &&
             (requires.samplingRate || requires.lead || requires.unit) ? (
@@ -342,7 +514,8 @@ export function ImportDialog({
               </ul>
             ) : null}
 
-            <section aria-labelledby="import-params-title" className="space-y-3">
+            {!isHealthBundle ? (
+              <section aria-labelledby="import-params-title" className="space-y-3">
               <div>
                 <h3 id="import-params-title" className="eh-h3">
                   {t("imports.paramsTitle")}
@@ -519,6 +692,7 @@ export function ImportDialog({
                 />
               </div>
             </section>
+            ) : null}
 
             {membersQuery.isError ? (
               <Alert variant="destructive">
@@ -549,34 +723,39 @@ export function ImportDialog({
         ) : null}
 
         <DialogFooter>
-          {preview && !busy ? (
-            <Button
-              variant="outline"
-              onClick={() => onPickAnother()}
-              disabled={committing}
-            >
-              <RotateCcw data-icon="inline-start" />
-              {t("imports.chooseAnother")}
-            </Button>
-          ) : null}
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={committing}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button
-            onClick={submit}
-            disabled={commitDisabled}
-          >
-            {committing ? (
-              <Loader2 className="animate-spin" data-icon="inline-start" />
-            ) : (
-              <FileUp data-icon="inline-start" />
-            )}
-            {committing ? t("imports.committing") : t("imports.commit")}
-          </Button>
+          {result ? (
+            <Button onClick={onDone}>{t("imports.health.viewRecords")}</Button>
+          ) : (
+            <>
+              {preview && !busy ? (
+                <Button
+                  variant="outline"
+                  onClick={() => onPickAnother()}
+                  disabled={committing}
+                >
+                  <RotateCcw data-icon="inline-start" />
+                  {t("imports.chooseAnother")}
+                </Button>
+              ) : null}
+              <Button
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                disabled={committing}
+              >
+                {t("common.cancel")}
+              </Button>
+              {preview ? (
+                <Button onClick={submit} disabled={commitDisabled}>
+                  {committing ? (
+                    <Loader2 className="animate-spin" data-icon="inline-start" />
+                  ) : (
+                    <FileUp data-icon="inline-start" />
+                  )}
+                  {committing ? t("imports.committing") : t("imports.commit")}
+                </Button>
+              ) : null}
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

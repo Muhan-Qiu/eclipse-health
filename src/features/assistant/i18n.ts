@@ -18,6 +18,10 @@ const zhCN = {
       mockQuick: "使用 Mock 演示",
       ollamaQuick: "连接本地 Ollama",
       apiQuick: "添加 API Key 提供商",
+      proxyQuick: "DeepSeek / OpenCode（兼容代理）",
+      proxyQuickShort: "代理预设",
+      proxyHint:
+        "可填 CC Switch 这类本地代理地址，模型名以代理实际暴露的为准；Key 仅保存在本机。",
       kind: "类型",
       kinds: {
         openai: "OpenAI",
@@ -215,6 +219,10 @@ const enUS = {
       mockQuick: "Use Mock demo",
       ollamaQuick: "Connect local Ollama",
       apiQuick: "Add API key provider",
+      proxyQuick: "DeepSeek / OpenCode (compatible proxy)",
+      proxyQuickShort: "Proxy preset",
+      proxyHint:
+        "Point this at a local proxy such as CC Switch; use the model name the proxy exposes. The key stays on this device.",
       kind: "Type",
       kinds: {
         openai: "OpenAI",

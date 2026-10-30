@@ -15,6 +15,13 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/error";
 import type { ImportCommitBody, ImportPreview } from "@/lib/api/types";
 import {
+  commitHealthImport,
+  previewHealthImport,
+  type HealthImportCommitResult,
+  type ImportRecordCounts,
+  type ImportSourceKind,
+} from "./health-import-api";
+import {
   collectDroppedFiles,
   prepareImportSource,
   validateDroppedFiles,
@@ -27,6 +34,15 @@ interface ImportContextValue {
 }
 
 const ImportContext = createContext<ImportContextValue | null>(null);
+
+const EMPTY_COUNTS: ImportRecordCounts = {
+  steps: 0,
+  heartRate: 0,
+  sleep: 0,
+  bodyMass: 0,
+  bloodPressure: 0,
+  ecg: 0,
+};
 
 function localError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
@@ -70,6 +86,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const previewRef = useRef<ImportPreview | null>(null);
+  const sourceRef = useRef<ImportSourceKind>("auto");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -78,6 +95,10 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<ApiError | null>(null);
   const [commitError, setCommitError] = useState<ApiError | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [source, setSource] = useState<ImportSourceKind>("auto");
+  const [recordCounts, setRecordCounts] = useState<ImportRecordCounts>(EMPTY_COUNTS);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [commitResult, setCommitResult] = useState<HealthImportCommitResult | null>(null);
 
   useEffect(() => {
     previewRef.current = preview;
@@ -88,6 +109,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     previewRef.current = null;
     setPreview(null);
     setCommitError(null);
+    setRecordCounts({ ...EMPTY_COUNTS });
+    setTotalRecords(0);
     if (current) {
       try {
         await api.imports.discard(current.importId);
@@ -110,12 +133,17 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     setPreview(null);
     setError(null);
     setCommitError(null);
+    setCommitResult(null);
+    setRecordCounts({ ...EMPTY_COUNTS });
+    setTotalRecords(0);
     setDragActive(false);
     try {
       validateDroppedFiles(dropped);
       const file = await prepareImportSource(dropped);
-      const result = await api.imports.preview({ file });
+      const result = await previewHealthImport(file, sourceRef.current);
       setPreview(result);
+      setRecordCounts(result.recordCounts);
+      setTotalRecords(result.totalRecords);
     } catch (caught) {
       setError(localError(caught));
     } finally {
@@ -125,21 +153,42 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openPicker = useCallback(() => {
-    inputRef.current?.click();
+    setCommitResult(null);
+    setError(null);
+    setPreview(null);
+    setDialogOpen(true);
+  }, []);
+
+  const pickSource = useCallback((next: ImportSourceKind) => {
+    sourceRef.current = next;
+    setSource(next);
+    setCommitResult(null);
+    setError(null);
+    setPreview(null);
+    setRecordCounts({ ...EMPTY_COUNTS });
+    setTotalRecords(0);
+    window.setTimeout(() => inputRef.current?.click(), 0);
   }, []);
 
   const pickAnother = useCallback(() => {
     void discardCurrent();
     setError(null);
-    setDialogOpen(false);
+    setDialogOpen(true);
     window.setTimeout(() => inputRef.current?.click(), 0);
   }, [discardCurrent]);
 
   const closeDialog = useCallback(() => {
     setDialogOpen(false);
     setError(null);
+    setCommitResult(null);
     void discardCurrent();
   }, [discardCurrent]);
+
+  const finishBundle = useCallback(() => {
+    setDialogOpen(false);
+    setCommitResult(null);
+    navigate("/records");
+  }, [navigate]);
 
   const commit = useCallback(
     async (body: ImportCommitBody) => {
@@ -148,9 +197,15 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       setCommitting(true);
       setCommitError(null);
       try {
-        const result = await api.imports.commit(current.importId, body);
+        const result = await commitHealthImport(current.importId, body);
         previewRef.current = null;
         setPreview(null);
+        if (totalRecords > 0) {
+          // 健康数据包：留在对话框里显示成功/跳过/失败计数。
+          setCommitResult(result);
+          toast.success(t("imports.success"));
+          return;
+        }
         setDialogOpen(false);
         toast.success(t("imports.success"));
         navigate(`/records/${encodeURIComponent(result.recordId)}`);
@@ -160,7 +215,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         setCommitting(false);
       }
     },
-    [committing, navigate, t],
+    [committing, navigate, t, totalRecords],
   );
 
   /* 全局拖拽：任意页面拖入文件/文件夹即进入预览。 */
@@ -224,7 +279,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         ref={inputRef}
         type="file"
         multiple
-        accept=".hea,.dat,.atr,.zip,.csv,.txt"
+        accept=".hea,.dat,.atr,.zip,.csv,.txt,.xml"
         className="sr-only"
         aria-hidden="true"
         tabIndex={-1}
@@ -249,6 +304,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         busy={busy}
         committing={committing}
         commitError={commitError}
+        source={source}
+        recordCounts={recordCounts}
+        totalRecords={totalRecords}
+        result={commitResult}
+        onPickSource={pickSource}
+        onDone={finishBundle}
         onCommit={(body) => void commit(body)}
         onPickAnother={pickAnother}
       />
