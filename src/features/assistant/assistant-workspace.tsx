@@ -417,7 +417,7 @@ export function AssistantWorkspace() {
             onDelete={(id) => void data.deleteSession(id)}
             onRename={(id, title) => void data.renameSession(id, title)}
             onExport={(id) => void data.exportSession(id)}
-            onSearch={(query) => void data.searchSessions(query)}
+            onSearch={data.searchSessions}
           />
         </div>
 

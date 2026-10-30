@@ -76,8 +76,10 @@ const zhCN = {
         glucose: "mmol/L",
       },
       add: "记录",
+      addKind: "记录{{kind}}",
       adding: "保存中…",
       added: "已记录",
+      value: "数值",
       notes: "备注（可选）",
       invalid: "请填写有效的数值。",
       rangeHint: {
@@ -209,8 +211,10 @@ const enUS = {
         glucose: "mmol/L",
       },
       add: "Record",
+      addKind: "Record {{kind}}",
       adding: "Saving…",
       added: "Recorded",
+      value: "Value",
       notes: "Note (optional)",
       invalid: "Enter a valid number.",
       rangeHint: {

@@ -190,7 +190,7 @@ function QuickCard({ kind, measuredAt, notes, onRecorded }: QuickCardProps) {
         ) : (
           <div className="min-w-0 flex-1 space-y-1">
             <Label htmlFor={`metric-${kind}-value`} className="eh-caption">
-              {t(`profile.metrics.fields.${kind}`)}
+              {t("profile.metrics.value")}
             </Label>
             <Input
               id={`metric-${kind}-value`}
@@ -212,6 +212,9 @@ function QuickCard({ kind, measuredAt, notes, onRecorded }: QuickCardProps) {
           size="sm"
           onClick={submit}
           disabled={mutation.isPending || !values}
+          aria-label={t("profile.metrics.addKind", {
+            kind: t(`profile.metrics.kinds.${kind}`),
+          })}
         >
           {mutation.isPending ? (
             <LoaderCircle className="animate-spin" data-icon="inline-start" />

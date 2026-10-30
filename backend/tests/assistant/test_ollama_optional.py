@@ -23,7 +23,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from eclipse_health_backend.api.assistant import _test_ollama
+from eclipse_health_backend.api.assistant import _Probe, _test_ollama
+from eclipse_health_backend.llm import agent
 from eclipse_health_backend.llm.providers import Provider
 
 BASE_URL = os.environ.get("EH_TEST_OLLAMA_URL", "http://127.0.0.1:11434")
@@ -45,6 +46,13 @@ def test_ollama_reachable() -> None:
     assert response.status_code == 200
 
 
+def _probe_or_skip(provider: Provider) -> _Probe:
+    try:
+        return asyncio.run(_test_ollama(provider))
+    except agent.LLMError as exc:
+        pytest.skip(f"ollama unavailable: {exc.message}")
+
+
 @pytest.mark.slow
 def test_ollama_capability_probe() -> None:
     if not _enabled():
@@ -56,7 +64,7 @@ def test_ollama_capability_probe() -> None:
         model=MODEL,
         base_url=BASE_URL,
     )
-    probe = asyncio.run(_test_ollama(provider))
+    probe = _probe_or_skip(provider)
     if probe.available is False:
         pytest.skip(f"model {MODEL} is not installed: {probe.message}")
     assert probe.ok is True
@@ -76,7 +84,7 @@ def test_ollama_turn_can_be_cancelled(client: TestClient, providers_file) -> Non
         model=MODEL,
         base_url=BASE_URL,
     )
-    probe = asyncio.run(_test_ollama(provider))
+    probe = _probe_or_skip(provider)
     if not probe.ok:
         pytest.skip(f"ollama model unavailable: {probe.message}")
 

@@ -43,6 +43,9 @@ def test_mock_tool_loop_event_order(
         "get_analysis",
         "get_measurements",
     ]
+    # ID 会作为 assistant_tool_calls 主键：同一毫秒内的调用不能撞车。
+    call_ids = [call["id"] for call in tool_calls]
+    assert len(call_ids) == len(set(call_ids)) == 3
     assert names.count("tool_result") == 3
     assert names.count("citation") >= 3
     assert names[-1] == "done"

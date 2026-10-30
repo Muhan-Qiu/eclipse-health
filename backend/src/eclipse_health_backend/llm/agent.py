@@ -458,7 +458,7 @@ class MockAdapter(ChatAdapter):
 
 
 def _call(name: str, args: dict[str, Any]) -> dict[str, Any]:
-    return {"id": f"call_{uuid7().hex[:12]}", "name": name, "args": args}
+    return {"id": f"call_{uuid7().hex}", "name": name, "args": args}
 
 
 def _latest_analysis_from_tools(messages: list[dict[str, Any]]) -> dict[str, Any]:
@@ -582,7 +582,7 @@ class OllamaAdapter(ChatAdapter):
                         args = function.get("arguments")
                         calls.append(
                             {
-                                "id": f"call_{uuid7().hex[:12]}",
+                                "id": f"call_{uuid7().hex}",
                                 "name": str(name),
                                 "args": args if isinstance(args, dict) else _parse_arguments(args),
                             }
@@ -718,7 +718,7 @@ class LiteLLMAdapter(ChatAdapter):
                 "type": "tool_calls",
                 "calls": [
                     {
-                        "id": item["id"] or f"call_{uuid7().hex[:12]}",
+                        "id": item["id"] or f"call_{uuid7().hex}",
                         "name": item["name"],
                         "args": _parse_arguments(item["arguments"]),
                     }
@@ -922,7 +922,7 @@ async def stream_reply(
             conversation.append(assistant_message)
 
             for call in pending_calls:
-                call_id = str(call.get("id") or f"call_{uuid7().hex[:12]}")
+                call_id = str(call.get("id") or f"call_{uuid7().hex}")
                 name = str(call.get("name") or "")
                 args = call.get("args") if isinstance(call.get("args"), dict) else {}
                 yield {

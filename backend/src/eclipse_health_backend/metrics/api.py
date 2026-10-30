@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Response, status
+from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -54,6 +55,11 @@ def _require_metric(session: Session, metric_id: str) -> RecordTable:
     return row
 
 
+def _error_details(exc: PydanticValidationError) -> list[Any]:
+    """Pydantic 的 ctx 里可能带 ValueError 对象，统一转成可 JSON 化的字符串。"""
+    return jsonable_encoder(exc.errors(include_url=False), custom_encoder={Exception: str})
+
+
 def _parse_values(kind: MetricKind, raw: dict[str, float]) -> dict[str, float]:
     try:
         return normalize_values(kind, raw)
@@ -61,7 +67,7 @@ def _parse_values(kind: MetricKind, raw: dict[str, float]) -> dict[str, float]:
         raise InvalidInputError(
             "invalid metric values",
             code="invalid_metric_values",
-            details={"errors": exc.errors(include_url=False)},
+            details={"errors": _error_details(exc)},
         ) from exc
 
 
@@ -88,18 +94,25 @@ def create_metric(payload: MetricCreate, session: SessionDep) -> Metric:
         member_id = payload.memberId
 
     now = utc_now()
-    record = build_metric_record(
-        record_id=new_id("record"),
-        member_id=member_id,
-        kind=payload.kind,
-        measured_at=payload.measuredAt,
-        timezone=payload.timezone,
-        values=values,
-        notes=payload.notes,
-        tags=payload.tags,
-        created_at=now,
-        updated_at=now,
-    )
+    try:
+        record = build_metric_record(
+            record_id=new_id("record"),
+            member_id=member_id,
+            kind=payload.kind,
+            measured_at=payload.measuredAt,
+            timezone=payload.timezone,
+            values=values,
+            notes=payload.notes,
+            tags=payload.tags,
+            created_at=now,
+            updated_at=now,
+        )
+    except PydanticValidationError as exc:
+        raise InvalidInputError(
+            "metric validation failed",
+            code="metric_invalid",
+            details={"errors": _error_details(exc)},
+        ) from exc
     add_record(session, record, commit=False)
     session.commit()
     row = get_record_row(session, record.id)
@@ -169,7 +182,7 @@ def patch_metric(metric_id: str, payload: MetricUpdate, session: SessionDep) -> 
         raise InvalidInputError(
             "metric validation failed",
             code="metric_invalid",
-            details={"errors": exc.errors(include_url=False)},
+            details={"errors": _error_details(exc)},
         ) from exc
     update_record_row(session, row, updated)
     return _to_metric(row)

@@ -180,6 +180,20 @@ def test_unknown_member(client: TestClient) -> None:
     assert response.json()["code"] == "member_not_found"
 
 
+def test_invalid_timezone(client: TestClient) -> None:
+    response = client.post(
+        BASE,
+        json={
+            "kind": "weight",
+            "measuredAt": "2026-10-20T08:00:00Z",
+            "values": {"weight": 60},
+            "timezone": "Mars/Olympus",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "metric_invalid"
+
+
 def test_empty_first_run(client: TestClient) -> None:
     page = client.get(BASE).json()
     assert page == {"items": [], "total": 0, "limit": 50, "offset": 0}

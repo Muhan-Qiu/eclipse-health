@@ -136,12 +136,15 @@ export function ProfileForm({ className }: { className?: string }) {
   const [baseline, setBaseline] = useState<Draft>(EMPTY_DRAFT);
   const [saved, setSaved] = useState(false);
 
+  const memberUpdatedAt = member?.updatedAt;
+
   useEffect(() => {
     if (!member) return;
     const next = draftFrom(member);
     setDraft(next);
     setBaseline(next);
-  }, [member]);
+    // 只在服务端版本变化时重置草稿，避免窗口重新聚焦时的后台刷新覆盖正在编辑的内容。
+  }, [memberUpdatedAt]);
 
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
