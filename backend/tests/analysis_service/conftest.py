@@ -15,6 +15,10 @@ from eclipse_health_backend.analysis_service import AnalysisService, set_analysi
 from eclipse_health_backend.modules import package as module_package
 from eclipse_health_backend.modules.manager import ModuleManager
 
+FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
+ONNX_MODULE_SOURCE = FIXTURES_DIR / "modules" / "onnx"
+ONNX_MODEL_FILE = FIXTURES_DIR / "onnx" / "mul_1.onnx"
+
 
 @pytest.fixture()
 def cardia_package(tmp_path: Path) -> Path:
@@ -49,6 +53,37 @@ def module_manager(tmp_path: Path) -> Iterator[ModuleManager]:
 def cardia_manager(module_manager: ModuleManager, cardia_package: Path) -> ModuleManager:
     module_manager.install(cardia_package, enable=True)
     return module_manager
+
+
+@pytest.fixture()
+def onnx_package(tmp_path: Path) -> Path:
+    """A3 测试用 analysis-model 模块包：manifest + onnxruntime 自带 mul_1.onnx。"""
+    source = tmp_path / "onnx-module"
+    shutil.copytree(ONNX_MODULE_SOURCE, source)
+    models = source / "models"
+    models.mkdir()
+    shutil.copyfile(ONNX_MODEL_FILE, models / "mul_1.onnx")
+    module_package.write_checksums(source)
+    output = tmp_path / "onnx-lab-0.1.0.ehmod"
+    module_package.pack_directory(source, output)
+    return output
+
+
+@pytest.fixture()
+def onnx_manager(module_manager: ModuleManager, onnx_package: Path) -> ModuleManager:
+    module_manager.install(onnx_package, enable=True)
+    return module_manager
+
+
+@pytest.fixture()
+def onnx_engines(
+    monkeypatch: pytest.MonkeyPatch, onnx_manager: ModuleManager
+) -> ModuleManager:
+    """让引擎目录读取测试模块内核（不触碰全局单例）。"""
+    import eclipse_health_backend.analysis_service.engines as engines_module
+
+    monkeypatch.setattr(engines_module, "_module_manager", lambda: onnx_manager)
+    return onnx_manager
 
 
 @pytest.fixture()

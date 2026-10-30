@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .errors import ModuleError
-from .manifest import ALL_PERMISSIONS
+from .manifest import ALL_PERMISSIONS, Manifest
 
 # 模块 -> 核心 的受限 RPC 所需 scope；None 表示不需要额外权限。
 CORE_RPC_SCOPES: dict[str, str | None] = {
@@ -164,3 +164,48 @@ def check_core_call(granted: set[str], core_method: str) -> None:
 def diff_scopes(previous: set[str], requested: set[str]) -> tuple[list[str], list[str]]:
     """返回 (新增, 移除)。升级新增权限需重新确认（B2 UI），内核先不自动授予。"""
     return sorted(requested - previous), sorted(previous - requested)
+
+
+# ---------------------------------------------------------------- 数据可见性（A2）
+def declared_record_types(manifest: Manifest) -> frozenset[str]:
+    """模块在 ``contributes.recordTypes[].id`` 声明的记录类型。
+
+    声明类型即公开可读：核心对这类记录不做「谁创建谁可见」的限制，
+    否则模块无法读取自己产出的历史数据（例如重新导入后的旧记录）。
+    """
+    raw = manifest.contributes.get("recordTypes")
+    if not isinstance(raw, list):
+        return frozenset()
+    declared: set[str] = set()
+    for item in raw:
+        if isinstance(item, dict):
+            record_type = item.get("id")
+            if isinstance(record_type, str) and record_type:
+                declared.add(record_type)
+    return frozenset(declared)
+
+
+def record_is_visible(
+    *,
+    caller: str,
+    declared: frozenset[str],
+    module_id: str | None,
+    record_type: str,
+) -> bool:
+    """调用模块能读到的记录：自己创建的，或 recordType 在自己声明范围内。"""
+    return module_id == caller or record_type in declared
+
+
+def record_is_owned(*, caller: str, module_id: str | None) -> bool:
+    """写操作（update/delete）只允许作用于调用模块自己创建的记录。"""
+    return module_id == caller
+
+
+def require_declared_record_type(declared: frozenset[str], record_type: str) -> None:
+    """创建记录时 recordType 必须由该模块声明；否则拒绝，避免占用别人的命名空间。"""
+    if record_type not in declared:
+        raise ModuleError(
+            "INVALID_INPUT",
+            "模块未声明该 recordType",
+            {"recordType": record_type[:128], "declared": sorted(declared)[:32]},
+        )

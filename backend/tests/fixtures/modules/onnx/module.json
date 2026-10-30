@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.example.onnx-lab",
+  "name": "ONNX Lab (test fixture)",
+  "description": "Test-only analysis-model module. Contributes the tiny mul_1 ONNX model bundled with onnxruntime.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "eclipse health tests" },
+  "license": "MIT",
+  "permissions": [],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "tiny-mul",
+        "name": "Tiny Mul",
+        "task": "classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/mul_1.onnx",
+            "sha256": "71f431c4e9321ec6fbeb158d02ed240459a7dcc98673fa79a4f439ce42efaf10"
+          }
+        ],
+        "input": { "leads": ["MLII"], "fs": 360, "windowSamples": 2 },
+        "output": {
+          "type": "classification",
+          "classes": ["A", "B"],
+          "aggregation": "mean"
+        },
+        "preprocess": {
+          "lead": "MLII",
+          "samplingRate": 360,
+          "windowSamples": 2,
+          "strideSamples": 2,
+          "normalize": "zscore",
+          "channels": 1
+        },
+        "modelCard": {
+          "trainingData": "synthetic (onnxruntime datasets/mul_1.onnx)",
+          "limitations": ["test fixture only"],
+          "license": "MIT",
+          "nonDiagnostic": true
+        }
+      }
+    ]
+  },
+  "resources": { "memoryMb": 64, "cpu": 1, "startupTimeoutMs": 5000 }
+}

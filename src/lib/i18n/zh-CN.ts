@@ -8,6 +8,7 @@ const zhCN = {
     primary: "主导航",
     dashboard: "仪表盘",
     records: "记录",
+    profile: "健康档案",
     trends: "趋势",
     reports: "报告",
     assistant: "助手",

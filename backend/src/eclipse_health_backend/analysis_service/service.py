@@ -54,6 +54,8 @@ from .bridge import (
     CARDIA_SOURCE_DIR,
     CardiaBridge,
 )
+from .engines import get_engine, get_module_model_spec
+from .onnx_engine import OnnxEngineError, OnnxEngineRunner
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +304,9 @@ class AnalysisService:
     ) -> tuple[dict[str, Any], bool]:
         """创建（或复用）分析任务；返回 ``(accepted, reused)``。"""
         options = dict(options or {})
+        descriptor = get_engine(engine)
+        if descriptor is None:
+            raise JobError("unknown_engine", f"未注册的分析引擎：{engine[:64]}")
         with self._submit_lock, session_scope() as session:
             active = analysis_repo.find_active_row(session, record_id)
             if active is not None:
@@ -318,9 +323,9 @@ class AnalysisService:
                 session,
                 record_id=record_id,
                 engine=engine,
-                module_id=CARDIA_MODULE_ID,
-                model_id=CARDIA_MODEL_ID,
-                model_version=CARDIA_MODEL_VERSION,
+                module_id=descriptor.module_id,
+                model_id=descriptor.model_id,
+                model_version=descriptor.model_version,
             )
             data = dict(row.data)
             data["parameters"] = {"engine": engine, "options": options}
@@ -366,6 +371,7 @@ class AnalysisService:
             record_id = row.record_id
             parameters = dict((row.data or {}).get("parameters") or {})
             options = dict(parameters.get("options") or {})
+            engine = str((row.data or {}).get("engine") or CARDIA_ENGINE)
             analysis_repo.update_status(
                 session,
                 row,
@@ -378,13 +384,15 @@ class AnalysisService:
         try:
             signal_ref = self._prepare_signal(record_id, analysis_id, temp_dir)
             self._set_progress(analysis_id, "inference", 40)
-            result = self._analyze(signal_ref, analysis_id, options)
+            result = self._analyze(signal_ref, analysis_id, options, engine)
             self._set_progress(analysis_id, "measurements", 85)
             with session_scope() as session:
                 row = analysis_repo.get_analysis_row(session, analysis_id)
                 if row is None:
                     return
                 analysis_repo.save_result(session, row, result)
+        except OnnxEngineError as exc:
+            self._fail(analysis_id, exc.to_error())
         except JobError as exc:
             self._fail(analysis_id, exc.to_error())
         except ModuleError as exc:
@@ -448,8 +456,14 @@ class AnalysisService:
         }
 
     def _analyze(
-        self, signal_ref: dict[str, Any], analysis_id: str, options: dict[str, Any]
+        self,
+        signal_ref: dict[str, Any],
+        analysis_id: str,
+        options: dict[str, Any],
+        engine: str = CARDIA_ENGINE,
     ) -> dict[str, Any]:
+        if engine != CARDIA_ENGINE:
+            return self._analyze_module(signal_ref, analysis_id, options, engine)
         allow_short = bool(options.get("allowShortRecord", False))
         tail_mode = str(options.get("tailMode", "pad"))
         request = {
@@ -472,6 +486,43 @@ class AnalysisService:
         if result.get("status") not in (None, "completed"):
             raise JobError("analysis_failed", "模块返回了未完成的分析结果")
         return result
+
+    def _analyze_module(
+        self,
+        signal_ref: dict[str, Any],
+        analysis_id: str,
+        options: dict[str, Any],
+        engine: str,
+    ) -> dict[str, Any]:
+        """模块自带 ONNX 引擎：直接读本地模型文件，不经过模块 worker。"""
+        descriptor = get_engine(engine)
+        if descriptor is None:
+            raise JobError("unknown_engine", f"未注册的分析引擎：{engine[:64]}")
+        if not descriptor.available:
+            raise JobError("engine_unavailable", descriptor.reason or "模块引擎不可用")
+        spec = get_module_model_spec(engine)
+        if spec is None:
+            raise JobError("engine_unavailable", "模块模型清单缺失或不可用")
+
+        ref = signal_ref["signalRef"]
+        path = Path(str(ref["path"]))
+        try:
+            blob = path.read_bytes()
+        except OSError as exc:
+            raise JobError("invalid_signal", "临时波形文件不可读") from exc
+        if sha256_hex(blob) != ref["sha256"]:
+            raise JobError("invalid_signal", "临时波形文件校验失败")
+        samples = np.frombuffer(blob, dtype="<f4").astype(np.float32)
+
+        return OnnxEngineRunner(spec).analyze(
+            record_id=signal_ref["recordId"],
+            analysis_id=analysis_id,
+            samples=samples,
+            fs=float(ref["fs"]),
+            lead=str(ref["lead"]),
+            tail_mode=str(options.get("tailMode", "pad")),
+            started_at=utc_now(),
+        )
 
     def _analyze_direct(self, request: dict[str, Any]) -> dict[str, Any]:
         from ..analysis.engine import analyze

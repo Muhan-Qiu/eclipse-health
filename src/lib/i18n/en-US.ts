@@ -10,6 +10,7 @@ const enUS: typeof zhCN = {
     primary: "Primary navigation",
     dashboard: "Dashboard",
     records: "Records",
+    profile: "Health profile",
     trends: "Trends",
     reports: "Reports",
     assistant: "Assistant",

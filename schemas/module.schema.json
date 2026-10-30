@@ -507,8 +507,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "widgets": { "type": "array", "maxItems": 64, "items": { "type": "object" } },
-        "pages": { "type": "array", "maxItems": 64, "items": { "type": "object" } },
+        "widgets": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/widget" } },
+        "pages": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/page" } },
         "commands": { "type": "array", "maxItems": 64, "items": { "type": "object" } },
         "settings": { "type": "array", "maxItems": 64, "items": { "type": "object" } }
       }
@@ -527,15 +527,28 @@
     "tool": {
       "type": "object",
       "additionalProperties": false,
+      "description": "LLM/agent tool; executed only through the module's own RPC.",
       "required": ["id", "name", "description"],
       "properties": {
         "id": { "$ref": "#/$defs/localId" },
         "name": { "type": "string", "minLength": 1, "maxLength": 80 },
         "description": { "type": "string", "minLength": 1, "maxLength": 500 },
         "inputSchema": { "type": "object" },
+        "parameters": {
+          "type": "object",
+          "description": "Accepted alias of inputSchema (contract v2); do not set both."
+        },
         "outputSchema": { "type": "object" },
-        "longRunning": { "type": "boolean" }
-      }
+        "longRunning": { "type": "boolean" },
+        "permissions": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/permission" },
+          "description": "Scopes the tool needs in addition to llm; checked again at RPC time."
+        }
+      },
+      "not": { "required": ["inputSchema", "parameters"] }
     },
     "theme": {
       "type": "object",
@@ -566,6 +579,203 @@
         "id": { "$ref": "#/$defs/localId" },
         "name": { "type": "string", "minLength": 1, "maxLength": 80 },
         "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "moduleRpcSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Declarative data binding: the core calls the owning module over RPC. No expressions.",
+      "required": ["type", "method"],
+      "properties": {
+        "type": { "type": "string", "enum": ["module-rpc"] },
+        "method": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_.:-]+$"
+        },
+        "params": { "type": "object", "maxProperties": 32 }
+      }
+    },
+    "valuePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+|\\[[0-9]+\\])*$",
+      "description": "Restricted dotted path into an RPC result (e.g. latest.weight). No expressions."
+    },
+    "widget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "size", "dataSource", "view"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 300 },
+        "size": { "type": "string", "enum": ["sm", "md", "lg"] },
+        "dataSource": { "$ref": "#/$defs/moduleRpcSource" },
+        "view": { "$ref": "#/$defs/widgetView" }
+      }
+    },
+    "widgetView": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Controlled view components only; arbitrary React/CSS/iframe is forbidden.",
+      "required": ["type", "valuePath"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["stat", "sparkline", "list", "progress", "text"]
+        },
+        "valuePath": { "$ref": "#/$defs/valuePath" },
+        "unit": { "type": "string", "maxLength": 32 },
+        "label": { "type": "string", "maxLength": 120 },
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      }
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "layout"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "icon": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "layout": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/pageBlock" }
+        }
+      }
+    },
+    "pageBlock": {
+      "description": "Declarative, script-free page block.",
+      "oneOf": [
+        { "$ref": "#/$defs/pageText" },
+        { "$ref": "#/$defs/pageList" },
+        { "$ref": "#/$defs/pageTable" },
+        { "$ref": "#/$defs/pageForm" },
+        { "$ref": "#/$defs/pageDetail" }
+      ]
+    },
+    "pageText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "text"],
+      "properties": {
+        "component": { "const": "text" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 }
+      }
+    },
+    "pageList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source"],
+      "properties": {
+        "component": { "const": "list" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "itemPath": { "$ref": "#/$defs/valuePath" },
+        "primaryPath": { "$ref": "#/$defs/valuePath" },
+        "secondaryPath": { "$ref": "#/$defs/valuePath" }
+      }
+    },
+    "pageTable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source", "columns"],
+      "properties": {
+        "component": { "const": "table" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "rowPath": { "$ref": "#/$defs/valuePath" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/column" }
+        }
+      }
+    },
+    "pageDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source"],
+      "properties": {
+        "component": { "const": "detail" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "fields": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/column" }
+        }
+      }
+    },
+    "pageForm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source", "fields"],
+      "properties": {
+        "component": { "const": "form" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "submitMethod": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_.:-]+$"
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/formField" }
+        }
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "label"],
+      "properties": {
+        "key": { "$ref": "#/$defs/valuePath" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "unit": { "type": "string", "maxLength": 32 }
+      }
+    },
+    "formField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "label", "type"],
+      "properties": {
+        "key": { "$ref": "#/$defs/valuePath" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "type": {
+          "type": "string",
+          "enum": ["text", "textarea", "number", "date", "select", "checkbox"]
+        },
+        "required": { "type": "boolean" },
+        "default": { "type": ["string", "number", "boolean"] },
+        "options": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string", "maxLength": 120 },
+              "label": { "type": "string", "maxLength": 120 }
+            }
+          }
+        }
       }
     },
     "localId": {

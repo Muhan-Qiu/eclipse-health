@@ -21,6 +21,7 @@ from sqlalchemy import Engine
 
 from . import package
 from .constants import DEFAULT_LOCALE, MAX_MANIFEST_BYTES
+from .contributions import collect_contributions
 from .errors import ModuleError
 from .manager import ModuleManager
 from .manifest import Manifest, check_compatibility, load_manifest_file, parse_manifest
@@ -326,6 +327,18 @@ def list_audit_events(
 def list_permission_catalog() -> JSONResponse:
     """全部权限 scope 的风险与说明，供安装确认和权限管理复用。"""
     return JSONResponse(content={"permissions": permission_catalog()})
+
+
+@router.get("/contributions")
+def list_contributions(
+    kind: Annotated[
+        str | None,
+        Query(alias="type", max_length=32, description="widgets|pages|tools|recordTypes"),
+    ] = None,
+) -> JSONResponse:
+    """聚合已安装且启用模块的贡献点；不启动 worker、不执行模块代码。"""
+    manager = get_manager()
+    return _run(lambda: collect_contributions(manager, kind=kind))
 
 
 @router.post("/preview-upload")

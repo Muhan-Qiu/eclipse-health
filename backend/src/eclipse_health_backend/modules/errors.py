@@ -26,6 +26,8 @@ _ERROR_SPECS: dict[str, tuple[int, str]] = {
     "UNSAFE_PACKAGE_PATH": (422, "模块包包含不安全路径"),
     "MODULE_ERROR": (502, "模块返回错误"),
     "METHOD_NOT_FOUND": (404, "方法不存在"),
+    "NOT_FOUND": (404, "记录或资源不存在"),
+    "NO_SIGNAL": (404, "记录没有可用信号"),
     "NOT_IMPLEMENTED": (501, "功能尚未实现"),
 }
 
@@ -43,6 +45,8 @@ _RPC_CODES: dict[str, int] = {
     "MODULE_DISABLED": -32010,
     "METHOD_NOT_FOUND": -32601,
     "INVALID_INPUT": -32602,
+    "NOT_FOUND": -32011,
+    "NO_SIGNAL": -32012,
 }
 _RPC_CODE_TO_NAME = {v: k for k, v in _RPC_CODES.items()}
 _RPC_CODE_TO_NAME[-32600] = "INVALID_INPUT"

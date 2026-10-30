@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import shutil
+import tempfile
 import threading
 import time
 import uuid
@@ -13,9 +15,26 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import Engine
-from sqlalchemy.orm import Session
+import numpy as np
+from pydantic import ValidationError as PydanticValidationError
+from sqlalchemy import Engine, func, or_
+from sqlmodel import Session, select
 
+from ..db.models import RecordTable
+from ..db.repositories import (
+    add_record,
+    get_member_row,
+    get_record_row,
+    get_signal_row,
+    list_signal_rows,
+    record_from_row,
+    update_record_row,
+)
+from ..domain.common import json_size_bytes, to_storage_dt, utc_now
+from ..domain.errors import StorageIntegrityError
+from ..domain.ids import new_id
+from ..domain.models import HealthRecord
+from ..storage.files import read_signal
 from . import audit, package, registry
 from .constants import (
     CORE_VERSION,
@@ -30,12 +49,124 @@ from .manifest import Manifest, check_compatibility, load_manifest_file
 from .permissions import (
     DEFAULT_DENIED_SCOPES,
     check_core_call,
+    declared_record_types,
     diff_scopes,
+    record_is_owned,
+    record_is_visible,
+    require_declared_record_type,
     required_scope,
     validate_scope,
 )
 
 _MISSING = object()
+
+# 模块可回调的核心数据方法；权限映射见 permissions.CORE_RPC_SCOPES。
+_DATA_METHODS = frozenset(
+    {
+        "records.query",
+        "records.get",
+        "records.create",
+        "records.update",
+        "records.delete",
+        "signals.read",
+    }
+)
+# 创建只允许这些字段；memberId/recordType 用于定位，moduleId 由核心强制为调用方。
+_RECORD_CREATE_FIELDS = frozenset(
+    {"memberId", "recordType", "capturedAt", "timezone", "payload", "tags", "notes", "metadata"}
+)
+# 更新只允许内容字段；memberId/moduleId/recordType/signalIds 一律拒绝。
+_RECORD_UPDATE_FIELDS = frozenset(
+    {"payload", "tags", "notes", "metadata", "capturedAt", "timezone"}
+)
+# 超过这个样本数走临时文件句柄，避免把巨量 JSON 塞进 stdio（契约 §5）。
+_MAX_INLINE_SIGNAL_SAMPLES = 65_536
+
+
+def _require_str(params: dict[str, Any], key: str) -> str:
+    value = params.get(key)
+    if not isinstance(value, str) or not value or len(value) > 256:
+        raise ModuleError("INVALID_INPUT", f"{key} 必填", {"field": key})
+    return value
+
+
+def _reject_extra_fields(
+    params: dict[str, Any], allowed: frozenset[str] | set[str], *, method: str
+) -> None:
+    """显式拒绝未声明的字段，避免模块以为改成功、实际被静默丢弃。"""
+    extra = sorted(set(params) - set(allowed))
+    if extra:
+        raise ModuleError(
+            "INVALID_INPUT",
+            "包含不允许的字段",
+            {"method": method, "fields": extra[:16]},
+        )
+
+
+def _int_param(
+    params: dict[str, Any],
+    key: str,
+    default: int,
+    *,
+    minimum: int,
+    maximum: int | None = None,
+) -> int:
+    value = params.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ModuleError("INVALID_INPUT", f"{key} 必须是整数", {"field": key})
+    if value < minimum or (maximum is not None and value > maximum):
+        raise ModuleError(
+            "INVALID_INPUT",
+            f"{key} 超出范围",
+            {"field": key, "value": value, "min": minimum, "max": maximum},
+        )
+    return value
+
+
+def _optional_timestamp(params: dict[str, Any], key: str) -> datetime | None:
+    value = params.get(key)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise ModuleError(
+                "INVALID_INPUT", f"{key} 不是合法时间", {"field": key}
+            ) from exc
+    if not isinstance(value, datetime) or value.tzinfo is None:
+        raise ModuleError(
+            "INVALID_INPUT", f"{key} 必须是带时区的 ISO 时间", {"field": key}
+        )
+    return to_storage_dt(value)
+
+
+def _dump_record(record: HealthRecord) -> dict[str, Any]:
+    return record.model_dump(by_alias=True, mode="json")
+
+
+def _record_summary(record: HealthRecord) -> dict[str, Any]:
+    """列表摘要：不含完整 payload / 波形，只给键与大小，避免一次拉走大对象。"""
+    payload = record.payload or {}
+    return {
+        "id": record.id,
+        "memberId": record.memberId,
+        "moduleId": record.moduleId,
+        "recordType": record.recordType,
+        "capturedAt": record.capturedAt.isoformat(),
+        "timezone": record.timezone,
+        "tags": list(record.tags),
+        "notes": record.notes,
+        "metadata": record.metadata,
+        "payloadSummary": {"keys": sorted(payload), "bytes": json_size_bytes(payload)},
+    }
+
+
+def _validation_errors(exc: PydanticValidationError) -> list[dict[str, str]]:
+    return [
+        {"path": ".".join(str(part) for part in error["loc"]), "message": error["msg"]}
+        for error in exc.errors()[:16]
+    ]
 
 
 class ModuleManager:
@@ -71,6 +202,8 @@ class ModuleManager:
         self._hosts: dict[str, ModuleHost] = {}
         self._states: dict[str, str] = {}
         self._crash_counts: dict[str, int] = {}
+        # signals.read 大文件句柄；关闭内核时统一清理，避免健康数据留在临时目录。
+        self._temp_handles: set[Path] = set()
         self._create_tables()
 
     # ------------------------------------------------------------------ 基础设施
@@ -662,16 +795,17 @@ class ModuleManager:
             try:
                 check_core_call(granted, method)
             except ModuleError as exc:
-                audit.append(
-                    session,
-                    "core.call",
-                    module_id=module_id,
-                    scope=scope,
-                    detail={"method": method, "ok": False, "errorCode": exc.code},
+                self._audit_core_call(
+                    session, module_id, method, scope, ok=False, error_code=exc.code
                 )
                 # 越权也要留痕：显式提交后再抛给 worker。
                 session.commit()
                 raise
+
+            if method in _DATA_METHODS:
+                return self._handle_data_call(
+                    session, module_id, self._manifest(row), method, params, scope
+                )
 
             if method == "log.write":
                 level = str(params.get("level", "info"))[:16]
@@ -708,6 +842,312 @@ class ModuleManager:
             )
             return result
 
+    def _handle_data_call(
+        self,
+        session: Session,
+        module_id: str,
+        manifest: Manifest,
+        method: str,
+        params: dict[str, Any],
+        scope: str | None,
+    ) -> Any:
+        record_id: str | None = None
+        try:
+            result, record_id = self._dispatch_data(session, module_id, manifest, method, params)
+        except ModuleError as exc:
+            # 失败时先丢弃本次可能写入的改动，再单独提交审计。
+            session.rollback()
+            self._audit_core_call(
+                session, module_id, method, scope, ok=False, error_code=exc.code
+            )
+            session.commit()
+            raise
+        self._audit_core_call(session, module_id, method, scope, ok=True, record_id=record_id)
+        return result
+
+    def _dispatch_data(
+        self,
+        session: Session,
+        caller: str,
+        manifest: Manifest,
+        method: str,
+        params: dict[str, Any],
+    ) -> tuple[Any, str | None]:
+        declared = declared_record_types(manifest)
+        if method == "records.query":
+            return self._records_query(session, caller, declared, params), None
+        if method == "records.get":
+            record_id = _require_str(params, "recordId")
+            row = self._visible_record(session, caller, declared, record_id)
+            return _dump_record(record_from_row(row)), record_id
+        if method == "records.create":
+            return self._records_create(session, caller, declared, params)
+        if method == "records.update":
+            return self._records_update(session, caller, params)
+        if method == "records.delete":
+            return self._records_delete(session, caller, params)
+        if method == "signals.read":
+            return self._signals_read(session, caller, declared, params)
+        raise ModuleError("NOT_IMPLEMENTED", "该核心方法将在后续批次接线",
+                          {"method": method[:64]})
+
+    # ------------------------------------------------------------------ 记录读写
+    @staticmethod
+    def _audit_core_call(
+        session: Session,
+        module_id: str,
+        method: str,
+        scope: str | None,
+        *,
+        ok: bool,
+        error_code: str | None = None,
+        record_id: str | None = None,
+    ) -> None:
+        detail: dict[str, Any] = {"method": method, "ok": ok}
+        if error_code:
+            detail["errorCode"] = error_code
+        if record_id:
+            detail["recordId"] = record_id
+        audit.append(session, "core.call", module_id=module_id, scope=scope, detail=detail)
+
+    @staticmethod
+    def _visible_record(
+        session: Session, caller: str, declared: frozenset[str], record_id: str
+    ) -> RecordTable:
+        row = get_record_row(session, record_id)
+        if (
+            row is None
+            or row.deleted_at is not None
+            or not record_is_visible(
+                caller=caller,
+                declared=declared,
+                module_id=row.module_id,
+                record_type=row.record_type,
+            )
+        ):
+            # 不存在与越权返回同一个错误，不泄漏记录是否存在。
+            raise ModuleError("NOT_FOUND", "记录不存在")
+        return row
+
+    @staticmethod
+    def _owned_record(session: Session, caller: str, record_id: str) -> RecordTable:
+        row = get_record_row(session, record_id)
+        if (
+            row is None
+            or row.deleted_at is not None
+            or not record_is_owned(caller=caller, module_id=row.module_id)
+        ):
+            raise ModuleError("NOT_FOUND", "记录不存在")
+        return row
+
+    def _records_query(
+        self,
+        session: Session,
+        caller: str,
+        declared: frozenset[str],
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        limit = _int_param(params, "limit", 50, minimum=1, maximum=500)
+        offset = _int_param(params, "offset", 0, minimum=0)
+        conditions: list[Any] = [RecordTable.deleted_at.is_(None)]
+        if declared:
+            conditions.append(
+                or_(RecordTable.module_id == caller, RecordTable.record_type.in_(sorted(declared)))
+            )
+        else:
+            conditions.append(RecordTable.module_id == caller)
+
+        member_id = params.get("memberId")
+        if member_id is not None:
+            if not isinstance(member_id, str) or not member_id:
+                raise ModuleError("INVALID_INPUT", "memberId 必须是字符串", {"field": "memberId"})
+            conditions.append(RecordTable.member_id == member_id)
+        record_type = params.get("recordType")
+        if record_type is not None:
+            if not isinstance(record_type, str) or not record_type:
+                raise ModuleError("INVALID_INPUT", "recordType 必须是字符串", {"field": "recordType"})
+            conditions.append(RecordTable.record_type == record_type)
+        since = _optional_timestamp(params, "from")
+        until = _optional_timestamp(params, "to")
+        if since is not None:
+            conditions.append(RecordTable.captured_at >= since)
+        if until is not None:
+            conditions.append(RecordTable.captured_at <= until)
+
+        total = session.scalar(select(func.count()).select_from(RecordTable).where(*conditions))
+        statement = (
+            select(RecordTable)
+            .where(*conditions)
+            .order_by(RecordTable.captured_at.desc(), RecordTable.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        rows = session.exec(statement).all()
+        return {
+            "items": [_record_summary(record_from_row(row)) for row in rows],
+            "total": int(total or 0),
+            "limit": limit,
+            "offset": offset,
+        }
+
+    def _records_create(
+        self,
+        session: Session,
+        caller: str,
+        declared: frozenset[str],
+        params: dict[str, Any],
+    ) -> tuple[dict[str, Any], str]:
+        _reject_extra_fields(params, _RECORD_CREATE_FIELDS, method="records.create")
+        member_id = _require_str(params, "memberId")
+        record_type = _require_str(params, "recordType")
+        captured_at = params.get("capturedAt")
+        if captured_at is None:
+            raise ModuleError("INVALID_INPUT", "capturedAt 必填", {"field": "capturedAt"})
+        require_declared_record_type(declared, record_type)
+        if get_member_row(session, member_id) is None:
+            raise ModuleError("NOT_FOUND", "成员不存在", {"memberId": member_id[:128]})
+
+        now = utc_now()
+        try:
+            record = HealthRecord(
+                id=new_id("record"),
+                memberId=member_id,
+                recordType=record_type,
+                # moduleId 由核心强制，模块不能代别人写入。
+                moduleId=caller,
+                capturedAt=captured_at,
+                timezone=params.get("timezone", "UTC"),
+                tags=params.get("tags", []),
+                notes=params.get("notes", ""),
+                metadata=params.get("metadata", {}),
+                payload=params.get("payload", {}),
+                createdAt=now,
+                updatedAt=now,
+            )
+        except PydanticValidationError as exc:
+            raise ModuleError(
+                "INVALID_INPUT", "记录不符合 schema", {"errors": _validation_errors(exc)}
+            ) from exc
+        add_record(session, record, commit=False)
+        return _dump_record(record), record.id
+
+    def _records_update(
+        self, session: Session, caller: str, params: dict[str, Any]
+    ) -> tuple[dict[str, Any], str]:
+        record_id = _require_str(params, "recordId")
+        _reject_extra_fields(
+            params, _RECORD_UPDATE_FIELDS | {"recordId"}, method="records.update"
+        )
+        row = self._owned_record(session, caller, record_id)
+        merged = record_from_row(row).model_dump(by_alias=True, mode="json")
+        for field in _RECORD_UPDATE_FIELDS:
+            if field in params:
+                merged[field] = params[field]
+        merged["updatedAt"] = utc_now()
+        try:
+            updated = HealthRecord.model_validate(merged)
+        except PydanticValidationError as exc:
+            raise ModuleError(
+                "INVALID_INPUT", "记录不符合 schema", {"errors": _validation_errors(exc)}
+            ) from exc
+        update_record_row(session, row, updated, commit=False)
+        return _dump_record(updated), record_id
+
+    def _records_delete(
+        self, session: Session, caller: str, params: dict[str, Any]
+    ) -> tuple[dict[str, Any], str]:
+        record_id = _require_str(params, "recordId")
+        _reject_extra_fields(params, {"recordId"}, method="records.delete")
+        row = self._owned_record(session, caller, record_id)
+        now = utc_now()
+        merged = record_from_row(row).model_dump(by_alias=True, mode="json")
+        merged["deletedAt"] = now
+        merged["updatedAt"] = now
+        deleted = HealthRecord.model_validate(merged)
+        update_record_row(session, row, deleted, commit=False)
+        return {"recordId": record_id, "deleted": True, "deletedAt": registry.to_iso(now)}, record_id
+
+    # ------------------------------------------------------------------ 波形读取
+    def _signals_read(
+        self,
+        session: Session,
+        caller: str,
+        declared: frozenset[str],
+        params: dict[str, Any],
+    ) -> tuple[dict[str, Any], str]:
+        record_id = _require_str(params, "recordId")
+        _reject_extra_fields(
+            params, {"recordId", "lead", "start", "count"}, method="signals.read"
+        )
+        self._visible_record(session, caller, declared, record_id)
+        signal_rows = list_signal_rows(session, record_id)
+        if not signal_rows:
+            raise ModuleError("NO_SIGNAL", "记录没有信号")
+
+        lead = params.get("lead")
+        if lead is not None and not isinstance(lead, str):
+            raise ModuleError("INVALID_INPUT", "lead 必须是字符串", {"field": "lead"})
+        if lead is None:
+            if len(signal_rows) > 1:
+                raise ModuleError(
+                    "INVALID_INPUT",
+                    "多导联记录必须指定 lead",
+                    {"leads": [row.lead for row in signal_rows]},
+                )
+            signal_row = signal_rows[0]
+        else:
+            signal_row = get_signal_row(session, record_id, lead)
+            if signal_row is None:
+                raise ModuleError("NO_SIGNAL", "该导联没有信号", {"lead": lead[:16]})
+
+        try:
+            raw = read_signal(signal_row.relative_path, signal_row.sha256)
+        except StorageIntegrityError as exc:
+            raise ModuleError("MODULE_ERROR", "波形文件不可用") from exc
+        samples = np.frombuffer(raw, dtype="<f4")
+        total = int(samples.size)
+        start = _int_param(params, "start", 0, minimum=0, maximum=total)
+        count = _int_param(params, "count", total - start, minimum=0)
+        count = min(count, total - start)
+        window = samples[start : start + count]
+
+        result: dict[str, Any] = {
+            "recordId": record_id,
+            "signalId": signal_row.id,
+            "lead": signal_row.lead,
+            "fs": signal_row.fs,
+            "unit": signal_row.unit,
+            "dtype": "float32",
+            "byteOrder": "little",
+            "startSample": start,
+            "count": int(window.size),
+            "totalSamples": total,
+        }
+        if window.size > _MAX_INLINE_SIGNAL_SAMPLES:
+            result["fileHandle"] = self._write_signal_handle(
+                window.astype("<f4", copy=False).tobytes()
+            )
+        else:
+            result["samples"] = [float(value) for value in window]
+        return result, record_id
+
+    def _write_signal_handle(self, payload: bytes) -> dict[str, Any]:
+        fd, name = tempfile.mkstemp(prefix="eh-signal-", suffix=".f32")
+        path = Path(name)
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(payload)
+        except OSError as exc:
+            path.unlink(missing_ok=True)
+            raise ModuleError("MODULE_ERROR", "无法写入波形临时文件") from exc
+        self._temp_handles.add(path)
+        return {
+            "path": str(path),
+            "format": "float32-le",
+            "byteOrder": "little",
+            "bytes": len(payload),
+        }
+
     def _append_module_log(self, module_id: str, message: str) -> None:
         path = self.logs_root / f"{module_id}.log"
         try:
@@ -722,4 +1162,10 @@ class ModuleManager:
             for module_id in list(self._hosts):
                 self._stop_host(module_id)
             self._states.clear()
+            for path in list(self._temp_handles):
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            self._temp_handles.clear()
 
