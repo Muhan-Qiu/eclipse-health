@@ -552,4 +552,35 @@
 - A5 不跑 Tauri/PyInstaller 构建；发布包在 Stage C 统一重打。
 - H5/G3 仍为外部阻塞。
 
-**Stage B 预告（等 Stage A 验收后写提示词）：** 首页 widget 渲染器（#2）、工具注册表（#3）、模块页渲染器（#4 UI）、S2 多源导入实现（Apple 优先）。 
+**Stage B 预告（等 Stage A 验收后写提示词）：** 首页 widget 渲染器（#2）、工具注册表（#3）、模块页渲染器（#4 UI）、S2 多源导入实现（Apple 优先）。
+
+### Stage A 验收结果（2026-10-30）
+
+- 五份报告：`reports/A1`–`A5`；checkpoint `1a5b33e`。
+- 全量：ruff 通过；`pytest backend/tests` **547 passed / 3 skipped**；`npm run build` 通过（主 chunk 1,372.74 → 583.81 kB，−57%）。
+- 关键结论：
+  - 模块贡献注册表 + `GET /modules/contributions` 可用；schema v2 收紧 widgets/pages/tools。
+  - 模块 `records.*` / `signals.read` 已接线，按「自己的记录 + 自己声明 recordType」隔离。
+  - 已安装 analysis-model 模块可注册为 ONNX 引擎并在 `/analyses/engines` 出现；真实第三方 ECG 模型待样本验证。
+  - S1：Apple（4 步）最稳；S2 首批建议 Apple + 小米。
+- 已知小问题：`nav.profile` 缺 key 已修；模块引擎 `available=false` 的前端禁用留 Stage B。
+
+## 29. Stage B：平台展示/工具 + 多源导入实现 + LLM 联调（2026-10-30 启动）
+
+| 编号 | 任务 | 难度 | 思考强度 | 关键产出 |
+|---|---|---|---|---|
+| B1 | 首页 widget 渲染器（#2） | 困难 3/4 | high | 受控 stat/sparkline/list/progress/text，模块 RPC 数据 |
+| B2 | 模块工具注册表（#3） | 困难 3/4 | high | ai-tool 模块工具进助手，命名空间 + 权限 + 审计 |
+| B3 | 模块页渲染器（#4 UI） | 困难 3/4 | high | 声明式 text/list/table/detail/form + submit RPC |
+| B4 | S2 Apple + 小米直接导入 | 困难 3/4 | high | Apple export.xml/zip + ECG CSV、小米 CSV、去重 |
+| B5 | LLM 真实 provider 联调 | 中等 2/4 | medium | DeepSeek/OpenCode 兼容代理、流式/工具/用量/错误 |
+
+**边界：**
+
+- B1/B3 只渲染受控组件，不执行任意 React/CSS/iframe；未知类型降级。
+- B2 工具必须已授予 `llm`；结果裁剪，不返回波形/备注/成员姓名。
+- B4 只做 Apple + 小米；华为/Zepp/Samsung 等用户脱敏样本；不做 Health Connect/AES 解密。
+- B5 不读取/打印 CC Switch 数据库；用环境变量凭据，缺凭据 skip 并如实报告。
+- H5/G3 仍为外部阻塞。
+
+**Stage C 预告：** 集成 owner、端到端验收、发布打包（NSIS + 校验和 + release notes）、用户看包、动画/视觉收尾。 
