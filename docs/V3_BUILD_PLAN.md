@@ -583,4 +583,26 @@
 - B5 不读取/打印 CC Switch 数据库；用环境变量凭据，缺凭据 skip 并如实报告。
 - H5/G3 仍为外部阻塞。
 
-**Stage C 预告：** 集成 owner、端到端验收、发布打包（NSIS + 校验和 + release notes）、用户看包、动画/视觉收尾。 
+**Stage C 预告：** 集成 owner、端到端验收、发布打包（NSIS + 校验和 + release notes）、用户看包、动画/视觉收尾。
+
+### Stage B 验收结果（2026-10-30）
+
+- 五份报告：`reports/B1`–`B5`；checkpoint `ad4c22e`。
+- 全量：ruff 通过；`pytest backend/tests` **568 passed / 11 skipped**（8 个 live LLM + 3 个 Ollama 慢测默认跳过）；`npm run build` 通过。
+- 能力：首页模块卡片、模块工具进助手、声明式模块页、Apple/小米导入、真实 Anthropic 兼容代理联调（流式/工具/取消/401）。
+- 已知小口子：widget `link` 与 page `format` 尚未进 schema；模块启停后 contributions 刷新需复核；健康数据导入后记录页不可见；LLM 流式 usage/网络错误映射待修。
+
+## 30. Stage C：集成修复 + 端到端验收 + 健康数据页（2026-10-30 启动）
+
+| 编号 | 任务 | 难度 | 思考强度 | 关键产出 |
+|---|---|---|---|---|
+| C1 | 契约补口 + 跨区修复 + 全量回归 | 困难 3/4 | high | schema `link/format`、LLM 错误/usage、进度条 aria、模块启停刷新 |
+| C2 | 真实安装 → 卡片/工具/页面 → 卸载 | 中等 2/4 | medium | `scripts/e2e_stage_c.py` + 端到端报告 |
+| C3 | 健康数据页 | 中等 2/4 | high | Apple/小米导入的步数/心率/睡眠/体重/血压可见、可筛选 |
+
+**边界：**
+
+- C2 不改生产代码，只写测试/报告；发现问题进 C1 或后续。
+- C3 不做图表/睡眠会话合并；华为/Zepp/Samsung 等样本。
+- 本轮结束后指挥官重打 NSIS 候选包，交用户安装试用；随后进入 Stage D（动画/视觉 + 反馈修复 + 最终包）。
+- H5/G3 仍为外部阻塞。 
