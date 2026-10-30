@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from .errors import ModuleError
 from .manifest import ALL_PERMISSIONS
 
@@ -26,6 +28,108 @@ CORE_RPC_SCOPES: dict[str, str | None] = {
 
 # 契约 §6：records:delete 属高风险权限，默认不授予，需要用户显式开启。
 DEFAULT_DENIED_SCOPES: frozenset[str] = frozenset({"records:delete"})
+
+
+# UI 需要把权限按风险分级展示；本表只描述，不参与授权判断。
+HIGH_RISK_SCOPES: frozenset[str] = frozenset(
+    {"records:delete", "network", "ui:custom"}
+)
+
+
+@dataclass(frozen=True, slots=True)
+class PermissionMeta:
+    scope: str
+    risk: str
+    label: str
+    description: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "scope": self.scope,
+            "risk": self.risk,
+            "label": self.label,
+            "description": self.description,
+        }
+
+
+PERMISSION_META: dict[str, PermissionMeta] = {
+    meta.scope: meta
+    for meta in (
+        PermissionMeta(
+            "records:read",
+            "low",
+            "Read records",
+            "Read records, measurements and analyses",
+        ),
+        PermissionMeta("records:write", "medium", "Write records", "Create and update records"),
+        PermissionMeta(
+            "records:delete",
+            "high",
+            "Delete records",
+            "Delete records permanently; denied unless explicitly granted",
+        ),
+        PermissionMeta(
+            "files:user-selected",
+            "low",
+            "Read selected files",
+            "Read files the user picks in a file dialog",
+        ),
+        PermissionMeta(
+            "files:export",
+            "medium",
+            "Export files",
+            "Write files into a directory the user confirms",
+        ),
+        PermissionMeta(
+            "network",
+            "high",
+            "Network access",
+            "Reach hosts declared in allowedHosts",
+        ),
+        PermissionMeta(
+            "llm",
+            "medium",
+            "Call LLM",
+            "Send data to the user-configured LLM",
+        ),
+        PermissionMeta(
+            "models:download",
+            "medium",
+            "Download models",
+            "Download model weights",
+        ),
+        PermissionMeta(
+            "ui:custom",
+            "high",
+            "Custom UI",
+            "Render a sandboxed custom interface",
+        ),
+        PermissionMeta(
+            "system:notify",
+            "low",
+            "Notifications",
+            "Show system notifications",
+        ),
+        PermissionMeta(
+            "system:background",
+            "medium",
+            "Run in background",
+            "Keep running while the window is minimized",
+        ),
+    )
+}
+
+
+def describe_scope(scope: str) -> dict[str, str]:
+    meta = PERMISSION_META.get(scope)
+    if meta is not None:
+        return meta.to_dict()
+    return {"scope": scope, "risk": "medium", "label": scope, "description": ""}
+
+
+def permission_catalog() -> list[dict[str, str]]:
+    """按 manifest schema 的顺序返回全部权限，供 UI/OpenAPI 消费者展示。"""
+    return [describe_scope(scope) for scope in ALL_PERMISSIONS]
 
 
 def validate_scope(scope: str) -> str:

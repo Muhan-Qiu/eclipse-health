@@ -33,7 +33,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "cn";
 import { errorMessage } from "@/lib/api/error";
 import { assistantApi } from "./api";
-import type { AssistantProvider, ProviderInput, ProviderKind } from "./types";
+import type {
+  AssistantProvider,
+  ProviderInput,
+  ProviderKind,
+  ProviderTestResult,
+} from "./types";
 
 const KIND_ORDER: ProviderKind[] = ["mock", "ollama", "openai", "anthropic"];
 
@@ -68,13 +73,16 @@ interface Draft {
   enabled: boolean;
 }
 
-function draftFrom(provider: AssistantProvider | null): Draft {
+function draftFrom(
+  provider: AssistantProvider | null,
+  initialKind: ProviderKind = "mock",
+): Draft {
   if (!provider) {
     return {
-      kind: "mock",
+      kind: initialKind,
       label: "",
-      model: DEFAULT_MODEL.mock,
-      baseUrl: DEFAULT_BASE_URL.mock,
+      model: DEFAULT_MODEL[initialKind],
+      baseUrl: DEFAULT_BASE_URL[initialKind],
       apiKey: "",
       clearKey: false,
       enabled: true,
@@ -100,6 +108,7 @@ function newProviderId(): string {
 
 interface ProviderFormProps {
   provider: AssistantProvider | null;
+  initialKind?: ProviderKind;
   autoFocusLabel?: boolean;
   onSaved: (provider: AssistantProvider) => Promise<void> | void;
   onDeleted?: (id: string) => Promise<void> | void;
@@ -109,6 +118,7 @@ interface ProviderFormProps {
 
 function ProviderForm({
   provider,
+  initialKind = "mock",
   autoFocusLabel = false,
   onSaved,
   onDeleted,
@@ -116,13 +126,15 @@ function ProviderForm({
   onError,
 }: ProviderFormProps) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<Draft>(() => draftFrom(provider));
+  const [draft, setDraft] = useState<Draft>(() => draftFrom(provider, initialKind));
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(
-    null,
-  );
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    message: string;
+    result: ProviderTestResult | null;
+  } | null>(null);
 
   const isNew = provider === null;
   const needsKey = NEEDS_KEY[draft.kind];
@@ -181,6 +193,7 @@ function ProviderForm({
         message: result.ok
           ? t("assistant.providers.testOkMessage", { ms: result.latencyMs ?? 0 })
           : t("assistant.providers.testFailMessage", { message: result.message }),
+        result,
       });
     } catch (cause) {
       setTestResult({
@@ -188,6 +201,7 @@ function ProviderForm({
         message: t("assistant.providers.testFailMessage", {
           message: errorMessage(cause),
         }),
+        result: null,
       });
     } finally {
       setTesting(false);
@@ -303,6 +317,13 @@ function ProviderForm({
         </div>
       ) : null}
 
+      {needsKey && !provider?.configured ? (
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-subtle px-3 py-2 text-xs">
+          <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span>{t("assistant.providers.missingKeyNotice")}</span>
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2">
         <Label htmlFor="assistant-provider-enabled" className="text-sm">
           {t("assistant.providers.enabled")}
@@ -317,19 +338,62 @@ function ProviderForm({
       {testResult ? (
         <div
           className={cn(
-            "flex items-start gap-2 rounded-lg border px-3 py-2 text-sm",
+            "rounded-lg border px-3 py-2 text-sm",
             testResult.ok
               ? "border-border bg-subtle text-foreground"
               : "border-destructive/40 bg-destructive/5 text-destructive",
           )}
           role="status"
         >
-          {testResult.ok ? (
-            <CircleCheck className="mt-0.5 size-4" aria-hidden="true" />
-          ) : (
-            <CircleAlert className="mt-0.5 size-4" aria-hidden="true" />
-          )}
-          <span>{testResult.message}</span>
+          <div className="flex items-start gap-2">
+            {testResult.ok ? (
+              <CircleCheck className="mt-0.5 size-4" aria-hidden="true" />
+            ) : (
+              <CircleAlert className="mt-0.5 size-4" aria-hidden="true" />
+            )}
+            <span>{testResult.message}</span>
+          </div>
+          {testResult.result ? (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {testResult.result.latencyMs !== null ? (
+                <Badge variant="secondary" className="font-normal">
+                  {t("assistant.providers.latency", { ms: testResult.result.latencyMs })}
+                </Badge>
+              ) : null}
+              {testResult.result.available === true ? (
+                <Badge variant="outline" className="font-normal">
+                  {t("assistant.providers.modelAvailable")}
+                </Badge>
+              ) : testResult.result.available === false ? (
+                <Badge
+                  variant="outline"
+                  className="border-destructive/40 font-normal text-destructive"
+                >
+                  {t("assistant.providers.modelMissing")}
+                </Badge>
+              ) : null}
+              {testResult.result.supportsTools === true ? (
+                <Badge variant="outline" className="font-normal">
+                  {t("assistant.providers.toolsSupported")}
+                </Badge>
+              ) : testResult.result.supportsTools === false ? (
+                <Badge variant="outline" className="font-normal text-muted-foreground">
+                  {t("assistant.providers.toolsUnsupported")}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="font-normal text-muted-foreground">
+                  {t("assistant.providers.toolsUnknown")}
+                </Badge>
+              )}
+            </div>
+          ) : null}
+          {testResult.result?.models.length ? (
+            <p className="eh-caption mt-1.5 text-muted-foreground">
+              {t("assistant.providers.availableModels", {
+                models: testResult.result.models.slice(0, 6).join("、"),
+              })}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -391,13 +455,14 @@ export function ProviderCard({
   onError,
 }: ProviderCardProps) {
   const { t } = useTranslation();
-  const [creating, setCreating] = useState(false);
+  const [creatingKind, setCreatingKind] = useState<ProviderKind | null>(null);
+  const creating = creatingKind !== null;
   const selected = providers.find((provider) => provider.id === activeId) ?? null;
 
   const saved = async (provider: AssistantProvider) => {
     await onProvidersChanged();
     onActiveChange(provider.id);
-    setCreating(false);
+    setCreatingKind(null);
   };
 
   const deleted = async (id: string) => {
@@ -418,7 +483,7 @@ export function ProviderCard({
         <CardDescription>{t("assistant.providers.description")}</CardDescription>
         <CardAction>
           {!creating ? (
-            <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+            <Button size="sm" variant="outline" onClick={() => setCreatingKind("mock")}>
               <Plus data-icon="inline-start" />
               {t("assistant.providers.add")}
             </Button>
@@ -435,9 +500,25 @@ export function ProviderCard({
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => setCreating(true)}>
+              <Button size="sm" onClick={() => setCreatingKind("mock")}>
                 <Server data-icon="inline-start" />
                 {t("assistant.providers.mockQuick")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCreatingKind("ollama")}
+              >
+                <Server data-icon="inline-start" />
+                {t("assistant.providers.ollamaQuick")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCreatingKind("openai")}
+              >
+                <KeyRound data-icon="inline-start" />
+                {t("assistant.providers.apiQuick")}
               </Button>
             </div>
           </div>
@@ -452,7 +533,7 @@ export function ProviderCard({
                   key={provider.id}
                   type="button"
                   onClick={() => {
-                    setCreating(false);
+                    setCreatingKind(null);
                     onActiveChange(provider.id);
                   }}
                   aria-pressed={isActive}
@@ -499,13 +580,14 @@ export function ProviderCard({
           </div>
         ) : null}
 
-        {creating ? (
+        {creatingKind !== null ? (
           <ProviderForm
-            key="new"
+            key={creatingKind}
             provider={null}
+            initialKind={creatingKind}
             autoFocusLabel
             onSaved={saved}
-            onCancel={() => setCreating(false)}
+            onCancel={() => setCreatingKind(null)}
             onError={onError}
           />
         ) : selected ? (

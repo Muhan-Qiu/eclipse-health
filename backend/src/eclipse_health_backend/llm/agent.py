@@ -32,9 +32,13 @@ logger = logging.getLogger(__name__)
 
 MAX_TOOL_CALLS = 5
 MAX_TOOL_ROUNDS = 5
-TURN_TIMEOUT_S = 60.0
-REQUEST_TIMEOUT_S = 30.0
+# 首 token 可能包含本地模型冷加载（9B 量级约 10–20 s），给足余量。
+TURN_TIMEOUT_S = 90.0
+REQUEST_TIMEOUT_S = 45.0
 MAX_HISTORY_MESSAGES = 20
+# 流式请求在「尚未输出任何内容」时允许重试一次；已输出后重试会重复 token。
+MAX_STREAM_RETRIES = 1
+RETRY_BACKOFF_S = 0.6
 
 STYLE_INSTRUCTIONS = {
     "brief": "用 2–3 句话回答，先给结论，再给关键数值。",
@@ -239,6 +243,63 @@ def approx_tokens(*parts: str) -> int:
     return max(1, total // 3)
 
 
+def make_usage(
+    prompt: Any, completion: Any, *, source: str = "provider"
+) -> dict[str, Any]:
+    """统一的用量结构；provider 没给就留 ``None``，绝不编造数字。"""
+    prompt_tokens = max(0, int(prompt)) if isinstance(prompt, (int, float)) else None
+    completion_tokens = (
+        max(0, int(completion)) if isinstance(completion, (int, float)) else None
+    )
+    total = (
+        prompt_tokens + completion_tokens
+        if prompt_tokens is not None and completion_tokens is not None
+        else None
+    )
+    return {
+        "promptTokens": prompt_tokens,
+        "completionTokens": completion_tokens,
+        "totalTokens": total,
+        "source": source,
+    }
+
+
+def merge_usage(total: dict[str, Any] | None, extra: dict[str, Any] | None) -> dict[str, Any] | None:
+    """按轮累加：工具循环每轮都会重新发送增长后的上下文，累计值才对应真实消耗。"""
+    if not extra:
+        return total
+    if total is None:
+        return dict(extra)
+    merged = dict(total)
+    for key in ("promptTokens", "completionTokens", "totalTokens"):
+        left, right = total.get(key), extra.get(key)
+        if left is None or right is None:
+            if key == "totalTokens":
+                continue
+            # 某一轮缺数据时保留已知值，不把缺失当 0
+            merged[key] = left if right is None else right
+        else:
+            merged[key] = int(left) + int(right)
+    merged["source"] = (
+        "provider"
+        if "provider" in {_usage_source(total), _usage_source(extra)}
+        else "estimate"
+    )
+    return merged
+
+
+def _usage_source(usage: dict[str, Any] | None) -> str | None:
+    """没有数字的 usage（例如 provider 只回了一个空对象）不参与来源判断。"""
+    if usage is None:
+        return None
+    if not any(
+        usage.get(key) is not None
+        for key in ("promptTokens", "completionTokens", "totalTokens")
+    ):
+        return None
+    return "provider" if usage.get("source") == "provider" else "estimate"
+
+
 def build_transparency(
     provider: Provider,
     *,
@@ -264,6 +325,7 @@ def build_transparency(
         "analysisIds": context["analysisIds"],
         "includeNotes": context["includeNotes"],
         "toolCalls": tool_calls,
+        "usage": None,
         "localOnly": provider.kind in {"ollama", "mock"},
     }
 
@@ -291,15 +353,43 @@ def build_messages(
 # --------------------------------------------------------------------------- #
 
 
+_HTTP_STATUS_MAP: dict[int, tuple[str, str]] = {
+    400: ("bad_request", "{kind} rejected the request (HTTP 400)"),
+    401: ("auth_error", "{kind} authentication failed (HTTP 401) — check the API key"),
+    403: ("auth_error", "{kind} access denied (HTTP 403) — check API key permissions"),
+    404: ("not_found", "{kind} endpoint or model not found (HTTP 404)"),
+    408: ("timeout", "{kind} request timed out (HTTP 408)"),
+    413: ("bad_request", "{kind} request too large (HTTP 413)"),
+    422: ("bad_request", "{kind} rejected the request (HTTP 422)"),
+    429: ("rate_limited", "{kind} is rate limited (HTTP 429) — retry later"),
+}
+
+TRANSIENT_CODE_SUFFIXES = ("_rate_limited", "_server_error", "_network_error")
+
+
 def _sanitize(kind: str, exc: BaseException, *, status: int | None = None) -> LLMError:
     """只保留 provider 类型与 HTTP 状态；绝不透传原始异常文本。"""
     if status is not None:
-        return LLMError(f"{kind}_http_error", f"{kind} request failed (HTTP {status})")
+        if 500 <= status <= 599:
+            return LLMError(
+                f"{kind}_server_error", f"{kind} server error (HTTP {status})"
+            )
+        code, template = _HTTP_STATUS_MAP.get(
+            status, ("http_error", "{kind} request failed (HTTP {status})")
+        )
+        return LLMError(f"{kind}_{code}", template.format(kind=kind, status=status))
     if isinstance(exc, httpx.TimeoutException):
         return LLMError("timeout", f"{kind} request timed out")
     if isinstance(exc, httpx.HTTPError):
         return LLMError(f"{kind}_network_error", f"{kind} connection failed")
     return LLMError(f"{kind}_error", f"{kind} request failed ({type(exc).__name__})")
+
+
+def is_retryable(error: LLMError | None) -> bool:
+    """只有「重发不会产生重复内容」的错误才允许重试。"""
+    if error is None:
+        return False
+    return error.code.endswith(TRANSIENT_CODE_SUFFIXES)
 
 
 class ChatAdapter:
@@ -356,6 +446,15 @@ class MockAdapter(ChatAdapter):
                 return
             yield {"type": "token", "text": text[index : index + 12]}
             await asyncio.sleep(0)
+        # Mock 没有真实计费数据，按字节估算并明确标注 source=estimate。
+        yield {
+            "type": "usage",
+            "usage": make_usage(
+                approx_tokens(json.dumps(messages, ensure_ascii=False, default=str)),
+                approx_tokens(text),
+                source="estimate",
+            ),
+        }
 
 
 def _call(name: str, args: dict[str, Any]) -> dict[str, Any]:
@@ -445,10 +544,16 @@ class OllamaAdapter(ChatAdapter):
             "messages": [_ollama_message(message) for message in messages],
             "stream": True,
         }
+        # 不主动关闭 think：qwen3:4b 这类模型关了 think 会把推理塞进 content 且不调用工具。
+        # 需要更快首字时可由 provider.options 显式设置。
+        think_option = self.provider.options.get("think")
+        if think_option is not None:
+            payload["think"] = bool(think_option)
         if tools:
             payload["tools"] = tools
 
         calls: list[dict[str, Any]] = []
+        usage: dict[str, Any] | None = None
         try:
             async with (
                 httpx.AsyncClient(timeout=REQUEST_TIMEOUT_S) as client,
@@ -483,6 +588,9 @@ class OllamaAdapter(ChatAdapter):
                             }
                         )
                     if chunk.get("done"):
+                        usage = make_usage(
+                            chunk.get("prompt_eval_count"), chunk.get("eval_count")
+                        )
                         break
         except LLMError:
             raise
@@ -491,6 +599,8 @@ class OllamaAdapter(ChatAdapter):
 
         if calls:
             yield {"type": "tool_calls", "calls": calls}
+        if usage is not None:
+            yield {"type": "usage", "usage": usage}
 
 
 def _ollama_message(message: dict[str, Any]) -> dict[str, Any]:
@@ -559,13 +669,25 @@ class LiteLLMAdapter(ChatAdapter):
             kwargs["api_key"] = self.api_key
         if self.provider.base_url:
             kwargs["api_base"] = self.provider.base_url
+        if self.provider.kind == "openai":
+            # OpenAI 兼容端点默认不在流里带 usage，需要显式要求。
+            kwargs["stream_options"] = {"include_usage": True}
 
         calls: dict[int, dict[str, Any]] = {}
+        usage: dict[str, Any] | None = None
         try:
             response = await litellm.acompletion(**kwargs)
             async for chunk in response:
                 if cancel.is_set():
                     return
+                raw_usage = getattr(chunk, "usage", None)
+                if raw_usage is not None:
+                    candidate = make_usage(
+                        _usage_value(raw_usage, "prompt_tokens"),
+                        _usage_value(raw_usage, "completion_tokens"),
+                    )
+                    if candidate["totalTokens"] is not None:
+                        usage = candidate
                 choices = getattr(chunk, "choices", None) or []
                 if not choices:
                     continue
@@ -604,6 +726,13 @@ class LiteLLMAdapter(ChatAdapter):
                     if item["name"]
                 ],
             }
+        if usage is not None:
+            yield {"type": "usage", "usage": usage}
+
+
+def _usage_value(raw: Any, key: str) -> int | None:
+    value = raw.get(key) if isinstance(raw, dict) else getattr(raw, key, None)
+    return int(value) if isinstance(value, (int, float)) else None
 
 
 def adapter_for(provider: Provider, api_key: str | None) -> ChatAdapter:
@@ -656,6 +785,28 @@ class _Guard:
         raise TurnTimeout
 
 
+async def _sleep_or_cancel(cancel: asyncio.Event, seconds: float) -> None:
+    """重试退避期间保持可取消。"""
+    if seconds <= 0:
+        return
+    try:
+        await asyncio.wait_for(cancel.wait(), timeout=seconds)
+    except TimeoutError:
+        return
+    raise TurnCancelled
+
+
+async def _close_stream(stream: AsyncIterator[dict[str, Any]]) -> None:
+    """丢弃失败的流时显式关闭底层连接，避免 HTTP 客户端连接泄漏。"""
+    close = getattr(stream, "aclose", None)
+    if close is None:
+        return
+    try:
+        await close()
+    except Exception:
+        logger.debug("llm stream close failed", exc_info=True)
+
+
 def _truncate_tool_result(result: dict[str, Any], limit: int = 12_000) -> str:
     text = json.dumps(result, ensure_ascii=False, default=str)
     if len(text) <= limit:
@@ -698,25 +849,54 @@ async def stream_reply(
     final_parts: list[str] = []
     citations: list[dict[str, Any]] = []
     tool_calls_used = 0
+    usage_total: dict[str, Any] | None = None
+    turn_started = time.monotonic()
 
     async with _Guard(cancel, timeout_s) as guard:
         for _round in range(MAX_TOOL_ROUNDS + 1):
-            stream = adapter.stream(conversation, TOOL_SPECS, cancel)
             text_parts: list[str] = []
             pending_calls: list[dict[str, Any]] = []
+            attempts = 0
             while True:
+                stream = adapter.stream(conversation, TOOL_SPECS, cancel)
+                emitted = False
                 try:
-                    chunk = await guard.next(stream)
-                except StopAsyncIteration:
-                    break
-                kind = chunk.get("type")
-                if kind == "token":
-                    text = str(chunk.get("text") or "")
-                    if text:
-                        text_parts.append(text)
-                        yield {"event": "token", "data": {"text": text}}
-                elif kind == "tool_calls":
-                    pending_calls.extend(chunk.get("calls") or [])
+                    while True:
+                        try:
+                            chunk = await guard.next(stream)
+                        except StopAsyncIteration:
+                            break
+                        kind = chunk.get("type")
+                        if kind == "token":
+                            text = str(chunk.get("text") or "")
+                            if text:
+                                emitted = True
+                                text_parts.append(text)
+                                yield {"event": "token", "data": {"text": text}}
+                        elif kind == "tool_calls":
+                            pending_calls.extend(chunk.get("calls") or [])
+                        elif kind == "usage":
+                            usage_total = merge_usage(usage_total, chunk.get("usage"))
+                except LLMError as exc:
+                    await _close_stream(stream)
+                    if (
+                        emitted
+                        or pending_calls
+                        or attempts >= MAX_STREAM_RETRIES
+                        or not is_retryable(exc)
+                    ):
+                        raise
+                    attempts += 1
+                    text_parts.clear()
+                    logger.warning(
+                        "llm stream retry provider=%s code=%s attempt=%s",
+                        provider.kind,
+                        exc.code,
+                        attempts,
+                    )
+                    await _sleep_or_cancel(cancel, RETRY_BACKOFF_S * attempts)
+                    continue
+                break
 
             text = "".join(text_parts)
             if not pending_calls:
@@ -810,13 +990,20 @@ async def stream_reply(
 
     content = "".join(final_parts).strip()
     citations = _dedupe_citations(citations)
+    duration_ms = int((time.monotonic() - turn_started) * 1000)
     yield {
         "event": "done",
         "data": {
             "content": content,
             "citations": citations,
             "toolCalls": tool_calls_used,
-            "transparency": {**transparency, "toolCalls": tool_calls_used},
+            "usage": usage_total,
+            "durationMs": duration_ms,
+            "transparency": {
+                **transparency,
+                "toolCalls": tool_calls_used,
+                "usage": usage_total,
+            },
         },
     }
 
@@ -851,5 +1038,8 @@ __all__ = [
     "build_transparency",
     "error_event",
     "format_sse",
+    "is_retryable",
+    "make_usage",
+    "merge_usage",
     "stream_reply",
 ]

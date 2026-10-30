@@ -17,21 +17,23 @@ from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from ..db import assistant_repo
 from ..db.base import engine, session_scope
 from ..db.repositories import ensure_default_member, get_record_row
+from ..domain.common import utc_now
 from ..domain.errors import ApiError, ConflictError, InvalidInputError, NotFoundError, not_found
-from ..llm import agent
+from ..llm import agent, session_export
 from ..llm.providers import (
     Provider,
     ProviderError,
     get_provider_store,
 )
 from ..llm.tools import ToolBox
+from ..llm.turns import get_turn_registry
 from .deps import SessionDep
 
 logger = logging.getLogger(__name__)
@@ -64,6 +66,10 @@ class ProviderTestResult(BaseModel):
     model: str
     latencyMs: int | None = None
     message: str
+    # 能力探测：模型是否已安装、是否声明支持 tool calling；无法判断时为 null。
+    available: bool | None = None
+    supportsTools: bool | None = None
+    models: list[str] = []
 
 
 class SessionIn(BaseModel):
@@ -71,6 +77,10 @@ class SessionIn(BaseModel):
     providerId: str | None = Field(default=None, max_length=64)
     style: StyleName = "brief"
     recordId: str | None = Field(default=None, max_length=64)
+
+
+class SessionPatch(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
 
 
 class MessageIn(BaseModel):
@@ -83,6 +93,10 @@ class MessageIn(BaseModel):
 
 class MessageListOut(BaseModel):
     items: list[dict[str, Any]]
+    total: int = 0
+    limit: int = 200
+    offset: int = 0
+    hasMore: bool = False
 
 
 # --------------------------------------------------------------------------- #
@@ -182,55 +196,177 @@ async def test_provider(provider_id: str) -> ProviderTestResult:
     started = time.perf_counter()
     try:
         if provider.kind == "mock":
-            message = "mock provider 始终可用"
+            probe = _Probe(
+                ok=True,
+                message="Mock 始终可用，支持工具调用",
+                available=True,
+                supports_tools=True,
+            )
         elif provider.kind == "ollama":
-            message = await _test_ollama(provider)
+            probe = await _test_ollama(provider)
         else:
-            message = await _test_litellm(provider)
+            probe = await _test_litellm(provider)
     except ProviderError as exc:
         raise _translate(exc) from exc
     except agent.LLMError as exc:
-        return ProviderTestResult(
-            ok=False,
-            providerId=provider.id,
-            kind=provider.kind,
-            model=provider.model,
-            latencyMs=int((time.perf_counter() - started) * 1000),
-            message=exc.message,
+        probe = _Probe(ok=False, message=exc.message)
+    latency = probe.latency_ms
+    if latency is None:
+        latency = int((time.perf_counter() - started) * 1000)
+    if probe.ok:
+        logger.info(
+            "provider test ok id=%s kind=%s model=%s latency_ms=%s tools=%s",
+            provider.id,
+            provider.kind,
+            provider.model,
+            latency,
+            probe.supports_tools,
         )
-    latency = int((time.perf_counter() - started) * 1000)
-    logger.info("provider test ok id=%s kind=%s latency_ms=%s", provider.id, provider.kind, latency)
+    else:
+        logger.info(
+            "provider test failed id=%s kind=%s code_message=%s",
+            provider.id,
+            provider.kind,
+            probe.message[:120],
+        )
     return ProviderTestResult(
-        ok=True,
+        ok=probe.ok,
         providerId=provider.id,
         kind=provider.kind,
         model=provider.model,
         latencyMs=latency,
-        message=message,
+        message=probe.message,
+        available=probe.available,
+        supportsTools=probe.supports_tools,
+        models=probe.models,
     )
 
 
-async def _test_ollama(provider: Provider) -> str:
+class _Probe:
+    """一次能力探测的结果；``latency_ms`` 只计模型调用本身。"""
+
+    def __init__(
+        self,
+        *,
+        ok: bool,
+        message: str,
+        available: bool | None = None,
+        supports_tools: bool | None = None,
+        models: list[str] | None = None,
+        latency_ms: int | None = None,
+    ) -> None:
+        self.ok = ok
+        self.message = message
+        self.available = available
+        self.supports_tools = supports_tools
+        self.models = models or []
+        self.latency_ms = latency_ms
+
+
+def _model_present(model: str, names: list[str]) -> bool:
+    """Ollama 不带 tag 时等价于 ``:latest``，不做模糊匹配以免误报可用。"""
+    if model in names:
+        return True
+    return ":" not in model and f"{model}:latest" in names
+
+
+async def _test_ollama(
+    provider: Provider, *, transport: httpx.AsyncBaseTransport | None = None
+) -> _Probe:
     base = (provider.base_url or "http://127.0.0.1:11434").rstrip("/")
-    payload = {
-        "model": provider.model,
-        "messages": [{"role": "user", "content": "ping"}],
-        "stream": False,
-        "options": {"num_predict": 4},
-    }
+    # 冷加载 9B 级模型可能要 30 s+；探测是用户主动点击，可以等。
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(f"{base}/api/chat", json=payload)
-    except httpx.TimeoutException:
-        raise agent.LLMError("timeout", "ollama request timed out") from None
-    except httpx.HTTPError:
-        raise agent.LLMError("ollama_network_error", "ollama connection failed") from None
-    if response.status_code >= 400:
-        raise agent.LLMError("ollama_http_error", f"ollama request failed (HTTP {response.status_code})")
-    return "Ollama 连接成功"
+        async with httpx.AsyncClient(timeout=60.0, transport=transport) as client:
+            try:
+                tags = await client.get(f"{base}/api/tags")
+            except httpx.TimeoutException:
+                raise agent.LLMError("timeout", "Ollama 连接超时") from None
+            except httpx.HTTPError:
+                raise agent.LLMError(
+                    "ollama_network_error", "无法连接 Ollama，请确认本地服务已启动"
+                ) from None
+            if tags.status_code >= 400:
+                raise agent.sanitize_error(
+                    "ollama", RuntimeError("http"), status=tags.status_code
+                )
+            try:
+                payload = tags.json()
+            except ValueError:
+                payload = {}
+            names = [
+                str(item.get("name"))
+                for item in (payload.get("models") or [])
+                if isinstance(item, dict) and item.get("name")
+            ]
+            if not _model_present(provider.model, names):
+                hint = "、".join(names[:6]) if names else "（没有已安装模型）"
+                return _Probe(
+                    ok=False,
+                    available=False,
+                    models=names[:20],
+                    message=f"模型 {provider.model} 未安装；本地可用：{hint}",
+                )
+
+            supports_tools: bool | None = None
+            try:
+                show = await client.post(
+                    f"{base}/api/show", json={"model": provider.model}
+                )
+                if show.status_code < 400:
+                    capabilities = show.json().get("capabilities")
+                    if isinstance(capabilities, list):
+                        supports_tools = "tools" in capabilities
+            except (httpx.HTTPError, ValueError):
+                # /api/show 在旧版本上可能不存在，能力保持未知，不影响主探测。
+                supports_tools = None
+
+            started = time.perf_counter()
+            try:
+                chat = await client.post(
+                    f"{base}/api/chat",
+                    json={
+                        "model": provider.model,
+                        "messages": [{"role": "user", "content": "ping"}],
+                        "stream": False,
+                        "think": False,
+                        "options": {"num_predict": 4, "temperature": 0},
+                    },
+                )
+            except httpx.TimeoutException:
+                raise agent.LLMError(
+                    "timeout", "Ollama 响应超时（模型可能正在首次加载，请稍后重试）"
+                ) from None
+            except httpx.HTTPError:
+                raise agent.LLMError(
+                    "ollama_network_error", "无法连接 Ollama，请确认本地服务已启动"
+                ) from None
+            latency_ms = int((time.perf_counter() - started) * 1000)
+            if chat.status_code >= 400:
+                raise agent.sanitize_error(
+                    "ollama", RuntimeError("http"), status=chat.status_code
+                )
+    except agent.LLMError as exc:
+        logger.info("ollama probe failed code=%s", exc.code)
+        raise
+
+    tool_hint = (
+        "支持工具调用"
+        if supports_tools
+        else "不支持或未声明工具调用"
+        if supports_tools is False
+        else "工具调用能力未知"
+    )
+    return _Probe(
+        ok=True,
+        available=True,
+        supports_tools=supports_tools,
+        models=names[:20],
+        latency_ms=latency_ms,
+        message=f"Ollama 连接成功，{tool_hint}",
+    )
 
 
-async def _test_litellm(provider: Provider) -> str:
+async def _test_litellm(provider: Provider) -> _Probe:
     if provider.needs_key:
         key = get_provider_store().resolve_api_key(provider)
         if not key:
@@ -247,18 +383,50 @@ async def _test_litellm(provider: Provider) -> str:
         "model": f"{provider.kind}/{provider.model}",
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 4,
-        "timeout": 10,
+        "timeout": 15,
     }
     if key:
         kwargs["api_key"] = key
     if provider.base_url and provider.kind == "openai":
         kwargs["api_base"] = provider.base_url
+    supports_tools = _litellm_supports_tools(litellm, provider)
+    started = time.perf_counter()
     try:
         await litellm.acompletion(**kwargs)
     except BaseException as exc:  # noqa: BLE001 - 统一脱敏
         status = getattr(exc, "status_code", None)
         raise agent.sanitize_error(provider.kind, exc, status=status) from None
-    return "连接成功"
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    tool_hint = (
+        "支持工具调用"
+        if supports_tools
+        else "模型信息未声明工具调用"
+        if supports_tools is False
+        else "工具调用能力未知"
+    )
+    return _Probe(
+        ok=True,
+        available=True,
+        supports_tools=supports_tools,
+        latency_ms=latency_ms,
+        message=f"连接成功，{tool_hint}",
+    )
+
+
+def _litellm_supports_tools(litellm_module: Any, provider: Provider) -> bool | None:
+    """LiteLLM 的模型能力表；未知模型返回 None，不假装探测过。"""
+    try:
+        params = litellm_module.get_supported_openai_params(
+            model=f"{provider.kind}/{provider.model}"
+        )
+    except Exception:  # noqa: BLE001 - 未知模型/离线表缺失都按未知处理
+        try:
+            params = litellm_module.get_supported_openai_params(model=provider.model)
+        except Exception:  # noqa: BLE001
+            return None
+    if not isinstance(params, (list, tuple)):
+        return None
+    return "tools" in params
 
 
 # --------------------------------------------------------------------------- #
@@ -266,21 +434,27 @@ async def _test_litellm(provider: Provider) -> str:
 # --------------------------------------------------------------------------- #
 
 
-@router.get("/sessions", summary="会话列表（按更新时间倒序）")
+@router.get("/sessions", summary="会话列表（按更新时间倒序，可按标题/首条消息搜索）")
 def list_sessions(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    q: Annotated[str | None, Query(max_length=120)] = None,
 ) -> dict[str, Any]:
     member_id = _current_member_id(session)
-    rows = assistant_repo.list_session_rows(session, member_id, limit=limit, offset=offset)
+    if q and q.strip():
+        rows = assistant_repo.search_session_rows(
+            session, member_id, q, limit=limit, offset=offset
+        )
+    else:
+        rows = assistant_repo.list_session_rows(session, member_id, limit=limit, offset=offset)
     items = [
         assistant_repo.session_to_dict(
             row, message_count=assistant_repo.count_messages(session, row.id)
         )
         for row in rows
     ]
-    return {"items": items}
+    return {"items": items, "query": q or ""}
 
 
 @router.post("/sessions", status_code=201, summary="新建会话")
@@ -308,6 +482,19 @@ def get_session(session_id: str, session: SessionDep) -> dict[str, Any]:
     )
 
 
+@router.patch("/sessions/{session_id}", summary="重命名会话")
+def rename_session(session_id: str, payload: SessionPatch, session: SessionDep) -> dict[str, Any]:
+    member_id = _current_member_id(session)
+    row = _require_session(session, session_id, member_id)
+    try:
+        assistant_repo.rename_session(session, row, payload.title)
+    except ValueError as exc:
+        raise InvalidInputError(str(exc), code="invalid_title") from exc
+    return assistant_repo.session_to_dict(
+        row, message_count=assistant_repo.count_messages(session, session_id)
+    )
+
+
 @router.delete("/sessions/{session_id}", status_code=204, summary="删除会话及其消息")
 def delete_session(session_id: str, session: SessionDep) -> None:
     member_id = _current_member_id(session)
@@ -321,14 +508,67 @@ def list_messages(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
     offset: Annotated[int, Query(ge=0)] = 0,
+    order: Annotated[Literal["asc", "desc"], Query()] = "asc",
 ) -> MessageListOut:
     member_id = _current_member_id(session)
     _require_session(session, session_id, member_id)
-    rows = assistant_repo.list_message_rows(session, session_id, limit=limit, offset=offset)
+    total = assistant_repo.count_messages(session, session_id)
+    # 多取一条判断是否还有更早/更新的消息，避免 UI 先请求 total。
+    rows = assistant_repo.list_message_rows(
+        session, session_id, limit=limit + 1, offset=offset, order=order
+    )
+    has_more = len(rows) > limit
+    rows = rows[:limit]
     items = [
         _message_payload(row, assistant_repo.list_tool_calls(session, row.id)) for row in rows
     ]
-    return MessageListOut(items=items)
+    return MessageListOut(
+        items=items, total=total, limit=limit, offset=offset, hasMore=has_more
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/export",
+    summary="导出会话为 Markdown（默认不含工具原始返回与参数）",
+)
+def export_session(
+    session_id: str,
+    session: SessionDep,
+    includeToolArgs: Annotated[bool, Query()] = False,
+) -> Response:
+    member_id = _current_member_id(session)
+    row = _require_session(session, session_id, member_id)
+    messages = [
+        _message_payload(message, assistant_repo.list_tool_calls(session, message.id))
+        for message in assistant_repo.list_message_rows(session, session_id, limit=10_000)
+    ]
+    provider = get_provider_store().find(row.provider_id) if row.provider_id else None
+    model = None
+    for message in messages:
+        if message.get("model"):
+            model = message["model"]
+            break
+    markdown = session_export.render_markdown(
+        title=row.title,
+        session_id=row.id,
+        provider_label=provider.label if provider else None,
+        model=model or (provider.model if provider else None),
+        style=row.style,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
+        messages=messages,
+        generated_at=utc_now().isoformat(),
+        include_tool_args=includeToolArgs,
+    )
+    filename = session_export.export_filename(utc_now())
+    return Response(
+        content=markdown,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get(
@@ -350,6 +590,41 @@ def get_transparency(message_id: str, session: SessionDep) -> dict[str, Any]:
             code="transparency_not_available",
         )
     return transparency
+
+
+# --------------------------------------------------------------------------- #
+# 取消
+# --------------------------------------------------------------------------- #
+
+
+@router.post("/messages/{message_id}/cancel", summary="取消正在生成的回答")
+async def cancel_message(message_id: str, session: SessionDep) -> dict[str, Any]:
+    """优先停止活跃轮次；若进程重启后残留 ``streaming`` 记录，则直接标为 cancelled。"""
+    member_id = _current_member_id(session)
+    row = assistant_repo.get_message_row(session, message_id)
+    if row is None:
+        raise not_found("assistant_message", message_id)
+    parent = assistant_repo.get_session_row(session, row.session_id)
+    if parent is None or parent.member_id != member_id:
+        raise not_found("assistant_message", message_id)
+    if row.role != assistant_repo.ROLE_ASSISTANT:
+        raise InvalidInputError(
+            "only assistant messages can be cancelled", code="invalid_message_role"
+        )
+
+    if get_turn_registry().cancel(message_id):
+        return {"messageId": message_id, "cancelled": True, "status": "cancelling"}
+
+    if row.status == assistant_repo.STATUS_STREAMING:
+        assistant_repo.update_message(
+            session, row, status=assistant_repo.STATUS_CANCELLED, commit=True
+        )
+        return {"messageId": message_id, "cancelled": True, "status": "cancelled"}
+    return {
+        "messageId": message_id,
+        "cancelled": False,
+        "status": row.status,
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -381,6 +656,10 @@ async def send_message(
     style = payload.style if payload.style in STYLES else "brief"
     history = assistant_repo.history_for_prompt(session, session_id)
     is_first_user_message = not any(item["role"] == "user" for item in history)
+    # 用户手动命名过的会话不被首条消息覆盖；只有默认标题才自动取首条消息。
+    auto_title = payload.content.strip()[:24] if is_first_user_message else None
+    if auto_title and session_row.title and session_row.title != "新会话":
+        auto_title = None
 
     user_row = assistant_repo.add_message(
         session,
@@ -396,12 +675,17 @@ async def send_message(
         role=assistant_repo.ROLE_ASSISTANT,
         content="",
         status=assistant_repo.STATUS_STREAMING,
-        data={"style": style, "providerId": provider.id},
+        data={
+            "style": style,
+            "providerId": provider.id,
+            "providerLabel": provider.label,
+            "model": provider.model,
+        },
     )
     assistant_repo.touch_session(
         session,
         session_row,
-        title=payload.content.strip()[:24] if is_first_user_message else None,
+        title=auto_title,
         provider_id=provider.id,
         style=style,
         record_id=payload.recordId or session_row.record_id,
@@ -410,6 +694,7 @@ async def send_message(
     )
     assistant_id = assistant_row.id
     user_id = user_row.id
+    cancel = get_turn_registry().register(assistant_id, session_id)
 
     return StreamingResponse(
         _sse_events(
@@ -422,6 +707,7 @@ async def send_message(
             payload=payload,
             style=style,
             history=history,
+            cancel=cancel,
         ),
         media_type="text/event-stream",
         headers={
@@ -444,13 +730,30 @@ async def _sse_events(
     payload: MessageIn,
     style: str,
     history: list[dict[str, Any]],
+    cancel: asyncio.Event,
 ) -> AsyncIterator[str]:
-    cancel = asyncio.Event()
     watcher = asyncio.create_task(_watch_disconnect(request, cancel))
     content_parts: list[str] = []
     final: dict[str, Any] | None = None
     failure: dict[str, Any] | None = None
     cancelled = False
+    transparency: dict[str, Any] | None = None
+
+    # 先告诉前端服务端消息 ID：停止生成时用它调用取消 API，而不是只断开连接。
+    yield agent.format_sse(
+        "start",
+        {
+            "sessionId": session_id,
+            "userMessageId": user_id,
+            "assistantMessageId": assistant_id,
+            "provider": {
+                "id": provider.id,
+                "kind": provider.kind,
+                "label": provider.label,
+                "model": provider.model,
+            },
+        },
+    )
 
     # 工具读取用只读会话；SQLite WAL 下长事务只读不会阻塞写入。
     tool_session = Session(engine)
@@ -509,7 +812,10 @@ async def _sse_events(
         except agent.TurnCancelled:
             cancelled = True
         except agent.TurnTimeout:
-            failure = {"code": "timeout", "message": "本轮对话超过 60 秒，已停止"}
+            failure = {
+                "code": "timeout",
+                "message": f"本轮对话超过 {int(agent.TURN_TIMEOUT_S)} 秒，已停止",
+            }
             yield agent.format_sse("error", failure)
         except agent.LLMError as exc:
             failure = {"code": exc.code, "message": exc.message}
@@ -525,6 +831,8 @@ async def _sse_events(
         cancelled = True
         raise
     finally:
+        # 先注销活跃轮次：取消请求到达时若已结束，改为走「残留 streaming 修正」。
+        get_turn_registry().unregister(assistant_id)
         watcher.cancel()
         tool_session.close()
         _finalize_message(
@@ -533,6 +841,7 @@ async def _sse_events(
             final=final,
             failure=failure,
             cancelled=cancelled,
+            transparency=transparency,
         )
         try:
             with session_scope() as db:
@@ -593,6 +902,7 @@ def _finalize_message(
     final: dict[str, Any] | None,
     failure: dict[str, Any] | None,
     cancelled: bool,
+    transparency: dict[str, Any] | None = None,
 ) -> None:
     try:
         with session_scope() as db:
@@ -603,6 +913,10 @@ def _finalize_message(
             if final is not None:
                 data["citations"] = final.get("citations") or []
                 data["transparency"] = final.get("transparency")
+                if final.get("usage") is not None:
+                    data["usage"] = final.get("usage")
+                if final.get("durationMs") is not None:
+                    data["durationMs"] = final.get("durationMs")
                 if cancelled:
                     assistant_repo.update_message(
                         db,
@@ -622,6 +936,8 @@ def _finalize_message(
                         commit=False,
                     )
             elif cancelled:
+                if transparency is not None:
+                    data["transparency"] = transparency
                 assistant_repo.update_message(
                     db,
                     row,
@@ -632,6 +948,8 @@ def _finalize_message(
                 )
             elif failure is not None:
                 data["error"] = failure
+                if transparency is not None:
+                    data["transparency"] = transparency
                 assistant_repo.update_message(
                     db,
                     row,

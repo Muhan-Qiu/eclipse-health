@@ -44,6 +44,13 @@ function localId(prefix: string): string {
 
 function applyEvent(message: ChatMessage, event: StreamEvent): ChatMessage {
   switch (event.event) {
+    case "start":
+      return {
+        ...message,
+        serverId: event.data.assistantMessageId,
+        model: event.data.provider.model,
+        providerId: event.data.provider.id,
+      };
     case "token":
       return { ...message, content: message.content + event.data.text };
     case "tool_call":
@@ -89,6 +96,8 @@ function applyEvent(message: ChatMessage, event: StreamEvent): ChatMessage {
         content: event.data.content || message.content,
         citations: event.data.citations ?? message.citations,
         transparency: event.data.transparency ?? message.transparency,
+        usage: event.data.usage ?? message.usage,
+        durationMs: event.data.durationMs ?? message.durationMs,
         status: event.data.cancelled ? "cancelled" : "completed",
       };
     case "error":
@@ -111,6 +120,8 @@ export function AssistantWorkspace() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [transparency, setTransparency] = useState<Transparency | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const abortFallbackRef = useRef<number | null>(null);
+  const activeServerIdRef = useRef<string | null>(null);
   const appliedSessionRef = useRef<string | null>(null);
 
   const { providers, sessions, records, messages, activeSessionId } = data;
@@ -230,11 +241,16 @@ export function AssistantWorkspace() {
       data.setMessages((current) => [...current, userMessage, assistantMessage]);
       setActionError(null);
       setStreaming(true);
+      activeServerIdRef.current = null;
 
       const controller = new AbortController();
       abortRef.current = controller;
       try {
         await assistantApi.stream(sessionId, body, controller.signal, (event) => {
+          // start 事件带回服务端消息 ID，取消按钮据此调用取消 API。
+          if (event.event === "start") {
+            activeServerIdRef.current = event.data.assistantMessageId;
+          }
           data.setMessages((current) =>
             current.map((message) =>
               message.id === assistantId ? applyEvent(message, event) : message,
@@ -266,6 +282,11 @@ export function AssistantWorkspace() {
           );
         }
       } finally {
+        if (abortFallbackRef.current !== null) {
+          window.clearTimeout(abortFallbackRef.current);
+          abortFallbackRef.current = null;
+        }
+        activeServerIdRef.current = null;
         abortRef.current = null;
         setStreaming(false);
         // 用服务端记录对齐真实 ID、工具调用与透明面板
@@ -301,7 +322,21 @@ export function AssistantWorkspace() {
   );
 
   const stop = useCallback(() => {
-    abortRef.current?.abort();
+    const serverId = activeServerIdRef.current;
+    if (!serverId) {
+      abortRef.current?.abort();
+      return;
+    }
+    // 先让服务端停下并落库；5 秒内没有收到 done 再断开连接兜底。
+    void assistantApi.messages.cancel(serverId).catch(() => {
+      abortRef.current?.abort();
+    });
+    if (abortFallbackRef.current !== null) {
+      window.clearTimeout(abortFallbackRef.current);
+    }
+    abortFallbackRef.current = window.setTimeout(() => {
+      abortRef.current?.abort();
+    }, 5_000);
   }, []);
 
   const confirmPrivacy = useCallback(() => {
@@ -327,6 +362,9 @@ export function AssistantWorkspace() {
   useEffect(
     () => () => {
       abortRef.current?.abort();
+      if (abortFallbackRef.current !== null) {
+        window.clearTimeout(abortFallbackRef.current);
+      }
     },
     [],
   );
@@ -373,9 +411,13 @@ export function AssistantWorkspace() {
           <SessionList
             sessions={sessions}
             activeId={activeSessionId}
+            query={data.sessionQuery}
             onCreate={() => void createSession()}
             onSelect={selectSession}
             onDelete={(id) => void data.deleteSession(id)}
+            onRename={(id, title) => void data.renameSession(id, title)}
+            onExport={(id) => void data.exportSession(id)}
+            onSearch={(query) => void data.searchSessions(query)}
           />
         </div>
 
@@ -398,6 +440,10 @@ export function AssistantWorkspace() {
             onRecordIdChange={setRecordId}
             includeNotes={includeNotes}
             onIncludeNotesChange={setIncludeNotes}
+            hasMoreMessages={data.hasMoreMessages}
+            loadingEarlier={data.loadingEarlier}
+            messageTotal={data.messageTotal}
+            onLoadEarlier={() => void data.loadEarlierMessages()}
           />
         </div>
       </div>

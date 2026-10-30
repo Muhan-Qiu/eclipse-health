@@ -42,4 +42,11 @@ backend/dist/
 # Local agent config / generated analysis output
 .claude/settings.local.json
 reports/analysis-*.json
+
+# Release build artifacts (large, generated)
+backend/packaging/build/
+backend/packaging/dist/
+backend/packaging/eclipse-health-backend/
+src-tauri/binaries/
+src-tauri/_internal/
 .playwright-mcp/

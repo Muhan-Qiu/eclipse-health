@@ -109,6 +109,42 @@ export function TransparencySheet({
               </div>
             </div>
 
+            <div className="rounded-lg border border-border/60 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="eh-caption text-muted-foreground">
+                  {t("assistant.transparency.usageTitle")}
+                </p>
+                <Badge variant="outline" className="font-normal">
+                  {transparency.usage
+                    ? t(`assistant.transparency.usageSource.${transparency.usage.source}`, {
+                        defaultValue: transparency.usage.source,
+                      })
+                    : t("assistant.transparency.none")}
+                </Badge>
+              </div>
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ["usagePrompt", transparency.usage?.promptTokens],
+                    ["usageCompletion", transparency.usage?.completionTokens],
+                    ["usageTotal", transparency.usage?.totalTokens],
+                  ] as const
+                ).map(([key, value]) => (
+                  <div key={key}>
+                    <p className="eh-caption text-muted-foreground">
+                      {t(`assistant.transparency.${key}`)}
+                    </p>
+                    <p className="eh-num mt-0.5 text-base">
+                      {value ?? "—"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="eh-caption mt-1 text-muted-foreground">
+                {t("assistant.transparency.usageHint")}
+              </p>
+            </div>
+
             <Separator />
 
             <section className="space-y-2">

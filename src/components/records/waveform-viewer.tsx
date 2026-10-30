@@ -1,24 +1,57 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
-import uPlot from "uplot";
-import "uplot/dist/uPlot.min.css";
-import { Maximize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { useQueries } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  Download,
+  LayoutGrid,
+  Loader2,
+  Maximize2,
+  RotateCcw,
+  Waves,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useRecordSignals, useSignal } from "@/lib/api/queries";
-import type { AnalysisResult, Beat } from "@/lib/api/types";
-import { useAppTheme } from "@/lib/theme";
 import {
-  clampView,
-  formatClock,
-  formatSeconds,
-  minMaxDecimate,
-  nearestPeakIndex,
-} from "@/lib/waveform";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { api } from "@/lib/api/client";
+import { queryKeys, useRecordSignals } from "@/lib/api/queries";
+import type { AnalysisResult, Beat, SignalData } from "@/lib/api/types";
+import { clampView, formatClock, formatSeconds, buildEnvelope } from "@/lib/waveform";
+import { LeadStrip } from "@/features/waveform/lead-strip";
+import { OverviewStrip } from "@/features/waveform/overview-strip";
+import { exportWaveformPng, type PngLead } from "@/features/waveform/export-png";
+import { waveColors } from "@/features/waveform/colors";
 
-interface WaveformViewerProps {
+const GRID_CELL_HEIGHT = 76;
+
+export interface WaveformViewerHandle {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  pan: (fraction: number) => void;
+  reset: () => void;
+  focusBeat: (index: number) => void;
+  focusRange: (startSec: number, endSec: number) => void;
+  exportPng: (mode: "view" | "full") => Promise<void>;
+  getView: () => [number, number];
+}
+
+export interface WaveformViewerProps {
   recordId: string;
   leads: string[];
   analysis?: AnalysisResult | null;
@@ -27,514 +60,561 @@ interface WaveformViewerProps {
   height?: number;
   compact?: boolean;
   className?: string;
+  /** 导出 PNG 时写入的记录时间；由父组件按当前语言格式化。 */
+  recordDate?: string;
+  defaultLayout?: "single" | "grid";
 }
 
-function cssToken(name: string, fallback: string): string {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-  return value || fallback;
+function primaryOf(leads: string[], fallback: string[] = []): string {
+  const all = leads.length ? leads : fallback;
+  return all.find((lead) => lead.toUpperCase() === "MLII") ?? all[0] ?? "";
 }
 
-export function WaveformViewer({
-  recordId,
-  leads,
-  analysis,
-  selectedBeatIndex = null,
-  onBeatSelect,
-  height = 300,
-  compact = false,
-  className,
-}: WaveformViewerProps) {
-  const { t } = useTranslation();
-  const { resolved, palette } = useAppTheme();
-  const signalsQuery = useRecordSignals(recordId);
-  const availableLeads = useMemo(() => {
-    if (leads.length > 0) return leads;
-    return (signalsQuery.data ?? []).map((signal) => signal.lead);
-  }, [leads, signalsQuery.data]);
+/**
+ * 记录详情波形：单导联主视图、12 导联网格、节律条与 PNG 导出。
+ *
+ * 单导联是分析口径（Cardia 2.0 单导联模型）；多导联记录只做同步展示，
+ * 所有导联共享同一个时间窗，切换布局不会改变分析结果。
+ */
+export const WaveformViewer = forwardRef<WaveformViewerHandle, WaveformViewerProps>(
+  function WaveformViewer(
+    {
+      recordId,
+      leads,
+      analysis = null,
+      selectedBeatIndex = null,
+      onBeatSelect,
+      height = 300,
+      compact = false,
+      className,
+      recordDate,
+      defaultLayout = "single",
+    },
+    ref,
+  ) {
+    const { t } = useTranslation();
+    const signalsQuery = useRecordSignals(recordId);
+    const availableLeads = useMemo(() => {
+      const fromMeta = (signalsQuery.data ?? []).map((signal) => signal.lead);
+      return fromMeta.length ? fromMeta : leads;
+    }, [leads, signalsQuery.data]);
+    const primaryLead = useMemo(() => primaryOf(availableLeads), [availableLeads]);
 
-  const [lead, setLead] = useState(availableLeads[0] ?? "");
-  useEffect(() => {
-    if (!availableLeads.length) return;
-    if (!availableLeads.includes(lead)) setLead(availableLeads[0]);
-  }, [availableLeads, lead]);
+    const [lead, setLead] = useState(primaryLead);
+    const [layout, setLayout] = useState<"single" | "grid">(
+      compact ? "single" : defaultLayout,
+    );
 
-  const signalQuery = useSignal(recordId, lead || undefined);
-  const signal = signalQuery.data;
-  const fs = signal?.fs ?? 0;
-  const duration = signal && fs > 0 ? signal.sampleCount / fs : 0;
+    useEffect(() => {
+      if (!availableLeads.length) return;
+      if (!availableLeads.includes(lead)) setLead(primaryLead);
+    }, [availableLeads, lead, primaryLead]);
 
-  const [width, setWidth] = useState(0);
-  const [view, setView] = useState<[number, number]>([0, duration]);
-  const viewRef = useRef(view);
-  viewRef.current = view;
+    useEffect(() => {
+      if (availableLeads.length <= 1) setLayout("single");
+    }, [availableLeads.length]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
-  const attachContainer = useCallback((element: HTMLDivElement | null) => {
-    containerRef.current = element;
-    setContainerEl(element);
-  }, []);
-  const plotRef = useRef<uPlot | null>(null);
-  const analysisRef = useRef<AnalysisResult | null>(analysis ?? null);
-  const selectedRef = useRef<number | null>(selectedBeatIndex);
-  const onBeatSelectRef = useRef(onBeatSelect);
-  analysisRef.current = analysis ?? null;
-  selectedRef.current = selectedBeatIndex;
-  onBeatSelectRef.current = onBeatSelect;
-
-  useEffect(() => {
-    if (!containerEl) return;
-    const observer = new ResizeObserver((entries) => {
-      const next = Math.round(entries[0]?.contentRect.width ?? 0);
-      setWidth(next > 0 ? next : 0);
+    const leadQueries = useQueries({
+      queries: availableLeads.map((name) => ({
+        queryKey: queryKeys.signal(recordId, name),
+        queryFn: () => api.records.signal(recordId, name),
+        enabled: layout === "grid" || name === lead || name === primaryLead,
+        staleTime: Number.POSITIVE_INFINITY,
+        gcTime: 10 * 60_000,
+      })),
     });
-    observer.observe(containerEl);
-    return () => observer.disconnect();
-  }, [containerEl]);
 
-  useEffect(() => {
-    if (!signal || duration <= 0) return;
-    // 长记录默认展示前 12 秒；整段 30 分钟压成 650px 只会是一条实心带。
-    setView([0, Math.min(duration, 12)]);
-  }, [signal, duration]);
+    const dataFor = useCallback(
+      (name: string): SignalData | undefined => {
+        const index = availableLeads.indexOf(name);
+        return index >= 0 ? leadQueries[index]?.data : undefined;
+      },
+      [availableLeads, leadQueries],
+    );
 
-  const applyView = useCallback(
-    (nextStart: number, nextEnd: number) => {
-      if (!duration) return;
-      setView(clampView(nextStart, nextEnd, duration));
-    },
-    [duration],
-  );
+    const primarySignal = dataFor(primaryLead);
+    const currentSignal = dataFor(lead);
+    const duration =
+      primarySignal && primarySignal.fs > 0
+        ? primarySignal.sampleCount / primarySignal.fs
+        : currentSignal && currentSignal.fs > 0
+          ? currentSignal.sampleCount / currentSignal.fs
+          : 0;
+    const fs = currentSignal?.fs ?? primarySignal?.fs ?? 0;
+    const primaryIndex = Math.max(0, availableLeads.indexOf(primaryLead));
+    const primaryQuery = leadQueries[primaryIndex];
 
-  const resetView = useCallback(() => {
-    applyView(0, Math.min(duration, 12));
-  }, [applyView, duration]);
+    const [view, setView] = useState<[number, number]>([0, 0]);
+    const viewRef = useRef(view);
+    viewRef.current = view;
+    const rafRef = useRef<number | null>(null);
+    const pendingRef = useRef<[number, number] | null>(null);
 
-  const zoomAt = useCallback(
-    (factor: number, ratio = 0.5) => {
-      const [start, end] = viewRef.current;
-      const span = end - start;
-      const nextSpan = Math.min(duration, Math.max(0.2, span * factor));
-      const cursor = start + span * ratio;
-      applyView(cursor - nextSpan * ratio, cursor + nextSpan * (1 - ratio));
-    },
-    [applyView, duration],
-  );
+    useEffect(() => {
+      if (duration <= 0) return;
+      // 长记录默认展示前 12 秒；整段 30 分钟压成一条实心带没有复查价值。
+      setView([0, Math.min(duration, 12)]);
+    }, [recordId, duration]);
 
-  const pan = useCallback(
-    (fraction: number) => {
-      const [start, end] = viewRef.current;
-      const span = end - start;
-      applyView(start + span * fraction, end + span * fraction);
-    },
-    [applyView],
-  );
+    useEffect(
+      () => () => {
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      },
+      [],
+    );
 
-  /* uPlot 实例：只在数据/尺寸/主题变化时重建，视图变化走 setData。 */
-  useEffect(() => {
-    const element = containerEl;
-    if (!element || !signal || fs <= 0 || width <= 0) return;
-    element.replaceChildren();
-
-    const [start, end] = viewRef.current;
-    const target = Math.max(240, width * 2);
-    const decimated = minMaxDecimate(signal.samples, fs, start, end, target);
-    const data: uPlot.AlignedData = [decimated.x, decimated.y];
-
-    const signalColor = cssToken("--eh-signal", "#2f6a63");
-    const gridColor = cssToken("--eh-grid-line", "rgba(0,0,0,0.08)");
-    const borderColor = cssToken("--eh-border-strong", "rgba(0,0,0,0.2)");
-    const mutedColor = cssToken("--eh-text-muted", "#5e6974");
-    const warningColor = cssToken("--eh-warning", "#8a5a00");
-    const dangerColor = cssToken("--eh-danger", "#b4363f");
-    const accentColor = cssToken("--eh-accent", "#4f6b6b");
-
-    const drawAnnotations: uPlot.Plugin = {
-      hooks: {
-        draw: (plot) => {
-          const current = analysisRef.current;
-          const bbox = plot.bbox;
-          if (!current || bbox.width <= 0) return;
-          const { ctx } = plot;
-          const xMin = plot.scales.x.min ?? 0;
-          const xMax = plot.scales.x.max ?? duration;
-
-          ctx.save();
-          const drawBand = (fromSec: number, toSec: number, color: string, alpha: number) => {
-            const left = plot.valToPos(Math.max(xMin, fromSec), "x", true);
-            const right = plot.valToPos(Math.min(xMax, toSec), "x", true);
-            if (right <= left) return;
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = color;
-            ctx.fillRect(left, bbox.top, right - left, bbox.height);
-          };
-
-          for (const segment of current.quality.segments ?? []) {
-            if (segment.quality < 0.7) {
-              drawBand(segment.startSec, segment.endSec, dangerColor, 0.12);
-            } else if (segment.quality < 0.82) {
-              drawBand(segment.startSec, segment.endSec, warningColor, 0.11);
-            }
-          }
-          for (const warning of current.quality.warnings ?? []) {
-            if (
-              warning.startSec !== null &&
-              warning.startSec !== undefined &&
-              warning.endSec !== null &&
-              warning.endSec !== undefined
-            ) {
-              drawBand(
-                warning.startSec,
-                warning.endSec,
-                warning.severity === "error" ? dangerColor : warningColor,
-                0.1,
-              );
-            }
-          }
-
-          const selected = selectedRef.current;
-          current.beats.forEach((beat, index) => {
-            const seconds = beat.rPeakSample / fs;
-            if (seconds < xMin || seconds > xMax) return;
-            const x = plot.valToPos(seconds, "x", true);
-            const isSelected = selected === index;
-            const abnormal = beat.label !== "N";
-            ctx.globalAlpha = isSelected ? 0.95 : 0.35;
-            ctx.strokeStyle = isSelected
-              ? accentColor
-              : abnormal
-                ? warningColor
-                : signalColor;
-            ctx.lineWidth = isSelected ? 2 : 1;
-            ctx.beginPath();
-            ctx.moveTo(x, bbox.top);
-            ctx.lineTo(x, bbox.top + bbox.height);
-            ctx.stroke();
-
-            if (isSelected) {
-              ctx.globalAlpha = 0.12;
-              ctx.fillStyle = accentColor;
-              ctx.fillRect(x - 3, bbox.top, 6, bbox.height);
-            }
-            if (abnormal) {
-              ctx.globalAlpha = 0.9;
-              ctx.fillStyle = warningColor;
-              ctx.font = "10px ui-monospace, monospace";
-              ctx.fillText(beat.label.slice(0, 4), x + 2, bbox.top + 10);
-            }
+    const applyView = useCallback(
+      (nextStart: number, nextEnd: number) => {
+        if (!duration) return;
+        const next = clampView(nextStart, nextEnd, duration);
+        viewRef.current = next;
+        pendingRef.current = next;
+        if (rafRef.current === null) {
+          rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            if (pendingRef.current) setView(pendingRef.current);
           });
-          ctx.restore();
-        },
-      },
-    };
-
-    const plot = new uPlot(
-      {
-        width,
-        height,
-        padding: [8, 12, 4, 4],
-        legend: { show: false },
-        cursor: { show: false },
-        scales: {
-          x: { time: false, min: start, max: end },
-          y: { auto: true },
-        },
-        axes: [
-          {
-            stroke: mutedColor,
-            grid: { stroke: gridColor, width: 1 },
-            ticks: { stroke: borderColor, width: 1, size: 4 },
-            font: "11px ui-monospace, monospace",
-            values: (_u, splits) => splits.map((value) => formatClock(value)),
-          },
-          {
-            stroke: mutedColor,
-            grid: { stroke: gridColor, width: 1 },
-            ticks: { stroke: borderColor, width: 1, size: 4 },
-            font: "11px ui-monospace, monospace",
-            size: 52,
-            values: (_u, splits) =>
-              splits.map((value) => `${value.toFixed(2)} mV`),
-          },
-        ],
-        series: [
-          {},
-          {
-            stroke: signalColor,
-            width: 1.5,
-            fill: "transparent",
-            points: { show: false },
-          },
-        ],
-        plugins: [drawAnnotations],
-      },
-      data,
-      element,
-    );
-    plotRef.current = plot;
-
-    const over = plot.over;
-    over.style.cursor = compact ? "default" : "crosshair";
-
-    const rectOf = () => over.getBoundingClientRect();
-    const xToSeconds = (clientX: number) => {
-      const rect = rectOf();
-      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const [viewStart, viewEnd] = viewRef.current;
-      return viewStart + ratio * (viewEnd - viewStart);
-    };
-
-    const onWheel = (event: WheelEvent) => {
-      if (compact) return;
-      event.preventDefault();
-      const rect = rectOf();
-      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-      zoomAt(event.deltaY > 0 ? 1.25 : 0.8, ratio);
-    };
-    over.addEventListener("wheel", onWheel, { passive: false });
-
-    let dragging = false;
-    let moved = false;
-    let startX = 0;
-    let startView: [number, number] = [0, 0];
-
-    const selectAt = (clientX: number) => {
-      const current = analysisRef.current;
-      const callback = onBeatSelectRef.current;
-      if (!current || !callback) return;
-      const index = nearestPeakIndex(current.beats, fs, xToSeconds(clientX));
-      callback(index === null ? null : current.beats[index]);
-    };
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (compact || event.button !== 0) return;
-      dragging = true;
-      moved = false;
-      startX = event.clientX;
-      startView = [...viewRef.current] as [number, number];
-      try {
-        over.setPointerCapture(event.pointerId);
-      } catch {
-        // 某些嵌入式 webview 不支持指针捕获；拖拽仍通过 over 上的事件完成
-      }
-      over.style.cursor = "grabbing";
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      if (!dragging) return;
-      const dx = event.clientX - startX;
-      if (Math.abs(dx) > 3) moved = true;
-      if (!moved) return;
-      const rect = rectOf();
-      const span = startView[1] - startView[0];
-      const shift = (-dx / Math.max(rect.width, 1)) * span;
-      applyView(startView[0] + shift, startView[1] + shift);
-    };
-
-    const onPointerUp = (event: PointerEvent) => {
-      if (!dragging) return;
-      dragging = false;
-      over.style.cursor = compact ? "default" : "crosshair";
-      try {
-        if (over.hasPointerCapture(event.pointerId)) {
-          over.releasePointerCapture(event.pointerId);
         }
-      } catch {
-        // 忽略指针捕获失败
-      }
-    };
-
-    const onClick = (event: MouseEvent) => {
-      if (compact) return;
-      if (moved) {
-        moved = false;
-        return;
-      }
-      selectAt(event.clientX);
-    };
-
-    over.addEventListener("pointerdown", onPointerDown);
-    over.addEventListener("pointermove", onPointerMove);
-    over.addEventListener("pointerup", onPointerUp);
-    over.addEventListener("pointercancel", onPointerUp);
-    over.addEventListener("click", onClick);
-
-    return () => {
-      over.removeEventListener("wheel", onWheel);
-      over.removeEventListener("pointerdown", onPointerDown);
-      over.removeEventListener("pointermove", onPointerMove);
-      over.removeEventListener("pointerup", onPointerUp);
-      over.removeEventListener("pointercancel", onPointerUp);
-      over.removeEventListener("click", onClick);
-      plot.destroy();
-      plotRef.current = null;
-    };
-  }, [
-    signal,
-    fs,
-    width,
-    height,
-    compact,
-    resolved,
-    palette,
-    duration,
-    zoomAt,
-    applyView,
-    containerEl,
-  ]);
-
-  /* 视图变化：重新做像素级 min/max，而不是缩放大数组。 */
-  useEffect(() => {
-    const plot = plotRef.current;
-    if (!plot || !signal || fs <= 0) return;
-    const [start, end] = view;
-    const target = Math.max(240, width * 2);
-    const decimated = minMaxDecimate(signal.samples, fs, start, end, target);
-    plot.batch(() => {
-      plot.setData([decimated.x, decimated.y]);
-      plot.setScale("x", { min: start, max: end });
-    });
-  }, [view, signal, fs, width]);
-
-  useEffect(() => {
-    plotRef.current?.redraw(false);
-  }, [analysis, selectedBeatIndex, resolved, palette]);
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (compact) return;
-    if (event.key === "+" || event.key === "=") {
-      event.preventDefault();
-      zoomAt(0.8);
-    } else if (event.key === "-") {
-      event.preventDefault();
-      zoomAt(1.25);
-    } else if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      pan(-0.1);
-    } else if (event.key === "ArrowRight") {
-      event.preventDefault();
-      pan(0.1);
-    } else if (event.key === "0" || event.key === "Home") {
-      event.preventDefault();
-      resetView();
-    }
-  };
-
-  if (signalQuery.isLoading) {
-    return <Skeleton className={cn("w-full rounded-lg", className)} style={{ height }} />;
-  }
-
-  if (signalQuery.isError || !signal) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center rounded-lg border border-dashed border-border px-4 text-center",
-          className,
-        )}
-        style={{ height }}
-      >
-        <p className="eh-small text-muted-foreground">
-          {signalQuery.isError ? t("waveform.loadError") : t("waveform.empty")}
-        </p>
-      </div>
+      },
+      [duration],
     );
-  }
 
-  const beatCount = analysis?.beats.length ?? 0;
+    const zoomAt = useCallback(
+      (factor: number, ratio = 0.5) => {
+        const [start, end] = viewRef.current;
+        const span = end - start;
+        const nextSpan = Math.min(duration, Math.max(0.2, span * factor));
+        const cursor = start + span * ratio;
+        applyView(cursor - nextSpan * ratio, cursor + nextSpan * (1 - ratio));
+      },
+      [applyView, duration],
+    );
 
-  return (
-    <div className={className}>
-      {!compact ? (
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div
-            className="flex flex-wrap items-center gap-1"
-            role="group"
-            aria-label={t("waveform.lead")}
-          >
-            {availableLeads.map((item) => (
-              <Button
-                key={item}
-                variant={item === lead ? "secondary" : "ghost"}
-                size="xs"
-                aria-pressed={item === lead}
-                onClick={() => setLead(item)}
-              >
-                {item}
-              </Button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("waveform.zoomIn")}
-              onClick={() => zoomAt(0.8)}
-            >
-              <ZoomIn aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("waveform.zoomOut")}
-              onClick={() => zoomAt(1.25)}
-            >
-              <ZoomOut aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("waveform.reset")}
-              onClick={resetView}
-            >
-              <RotateCcw aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("waveform.showFull")}
-              onClick={() => applyView(0, duration)}
-              disabled={duration <= 12}
-            >
-              <Maximize2 aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      ) : null}
+    const pan = useCallback(
+      (fraction: number) => {
+        const [start, end] = viewRef.current;
+        const span = end - start;
+        applyView(start + span * fraction, end + span * fraction);
+      },
+      [applyView],
+    );
 
-      <div
-        ref={attachContainer}
-        role="group"
-        tabIndex={compact ? -1 : 0}
-        aria-label={t("waveform.ariaLabel", {
-          lead,
-          duration: formatSeconds(duration),
-          beats: beatCount,
-        })}
-        aria-describedby={compact ? undefined : "waveform-instructions"}
-        onKeyDown={onKeyDown}
-        className={cn(
-          "w-full overflow-hidden rounded-lg border border-border bg-surface",
-          !compact && "focus-visible:ring-2 focus-visible:ring-ring",
-        )}
-        style={{ height }}
-      />
+    const resetView = useCallback(() => {
+      applyView(0, Math.min(duration, 12));
+    }, [applyView, duration]);
 
-      {!compact ? (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <p id="waveform-instructions" className="eh-caption text-muted-foreground">
-            {t("waveform.instructions")}
+    const focusBeat = useCallback(
+      (index: number) => {
+        const beat = analysis?.beats[index];
+        if (!beat || fs <= 0) return;
+        const center = beat.rPeakSample / fs;
+        const [start, end] = viewRef.current;
+        const span = Math.min(6, Math.max(2, end - start));
+        applyView(center - span / 2, center + span / 2);
+      },
+      [analysis, fs, applyView],
+    );
+
+    const focusRange = useCallback(
+      (startSec: number, endSec: number) => {
+        if (!duration) return;
+        const nextSpan = Math.min(
+          duration,
+          Math.max(0.5, (endSec - startSec) * 1.2),
+        );
+        const center = (startSec + endSec) / 2;
+        applyView(center - nextSpan / 2, center + nextSpan / 2);
+      },
+      [applyView, duration],
+    );
+
+    const envelope = useMemo(
+      () =>
+        primarySignal && primarySignal.fs > 0
+          ? buildEnvelope(primarySignal.samples, primarySignal.fs)
+          : null,
+      [primarySignal],
+    );
+
+    const [exporting, setExporting] = useState(false);
+
+    const exportPng = useCallback(
+      async (mode: "view" | "full") => {
+        const names = layout === "grid" ? availableLeads : [lead];
+        const pngLeads: PngLead[] = names.flatMap((name) => {
+          const signal = dataFor(name);
+          if (!signal) return [];
+          const meta = signalsQuery.data?.find((item) => item.lead === name);
+          return [
+            {
+              lead: name,
+              unit: meta?.unit ?? signal.unit ?? "mV",
+              samples: signal.samples,
+              fs: signal.fs,
+            },
+          ];
+        });
+        if (!pngLeads.length) {
+          toast.error(t("waveform.controls.exportFailed"));
+          return;
+        }
+        const [start, end] =
+          mode === "full" ? [0, duration] : viewRef.current;
+        const colors = waveColors();
+        const stamp =
+          (recordDate ?? "").replace(/[^\d]/g, "").slice(0, 12) || "record";
+        const leadPart =
+          layout === "grid"
+            ? `${pngLeads.length}-leads`
+            : lead.replace(/[^\w.-]+/g, "_");
+        const joined =
+          pngLeads
+            .slice(0, 3)
+            .map((item) => item.lead)
+            .join(", ") +
+          (pngLeads.length > 3 ? ` +${pngLeads.length - 3}` : "");
+        setExporting(true);
+        try {
+          await exportWaveformPng({
+            leads: pngLeads,
+            view: [start, end],
+            duration,
+            layout,
+            recordDate: recordDate ?? "",
+            beats: analysis?.beats ?? [],
+            selectedBeatIndex,
+            quality: analysis?.quality ?? null,
+            labels: {
+              title: t("waveform.png.title"),
+              date: t("waveform.png.date", { date: recordDate ?? "—" }),
+              meta: t("waveform.png.meta", {
+                lead: joined,
+                fs: (fs || pngLeads[0]?.fs || 0).toFixed(0),
+                start: formatClock(start),
+                end: formatClock(end),
+              }),
+              watermark: t("waveform.png.watermark"),
+              duration: t("waveform.png.duration", {
+                duration: formatSeconds(duration),
+              }),
+              layout: t(`waveform.png.layouts.${layout}`),
+            },
+            colors,
+            filename: `ecg-${leadPart}-${stamp}.png`,
+          });
+          toast.success(t("waveform.controls.exported"));
+        } catch (error) {
+          toast.error(t("waveform.controls.exportFailed"), {
+            description: error instanceof Error ? error.message : undefined,
+          });
+        } finally {
+          setExporting(false);
+        }
+      },
+      [
+        analysis,
+        availableLeads,
+        dataFor,
+        duration,
+        fs,
+        layout,
+        lead,
+        recordDate,
+        selectedBeatIndex,
+        signalsQuery.data,
+        t,
+      ],
+    );
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        zoomIn: () => zoomAt(0.8),
+        zoomOut: () => zoomAt(1.25),
+        pan,
+        reset: resetView,
+        focusBeat,
+        focusRange,
+        exportPng,
+        getView: () => viewRef.current,
+      }),
+      [zoomAt, pan, resetView, focusBeat, focusRange, exportPng],
+    );
+
+    if (signalsQuery.isLoading) {
+      return <Skeleton className={cn("w-full rounded-lg", className)} style={{ height }} />;
+    }
+
+    if (signalsQuery.isError || !availableLeads.length) {
+      return (
+        <div
+          className={cn(
+            "flex items-center justify-center rounded-lg border border-dashed border-border px-4 text-center",
+            className,
+          )}
+          style={{ height }}
+        >
+          <p className="eh-small text-muted-foreground">
+            {signalsQuery.isError ? t("waveform.loadError") : t("waveform.empty")}
           </p>
-          <p className="eh-caption text-muted-foreground">
-            {t("waveform.summary", {
-              duration: formatSeconds(duration),
-              fs: fs.toFixed(0),
-              beats: beatCount,
+        </div>
+      );
+    }
+
+    if (!currentSignal && (layout === "single" || !primarySignal)) {
+      if (primaryQuery?.isError) {
+        return (
+          <div
+            className={cn(
+              "flex items-center justify-center rounded-lg border border-dashed border-border px-4 text-center",
+              className,
+            )}
+            style={{ height }}
+          >
+            <p className="eh-small text-muted-foreground">{t("waveform.loadError")}</p>
+          </div>
+        );
+      }
+      return <Skeleton className={cn("w-full rounded-lg", className)} style={{ height }} />;
+    }
+
+    const beatCount = analysis?.beats.length ?? 0;
+    const gridLeadCount = availableLeads.length;
+    const loadedGridLeads = availableLeads.filter((name) => dataFor(name)).length;
+
+    const controls = !compact ? (
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1">
+          {layout === "single" ? (
+            <div
+              className="flex flex-wrap items-center gap-1"
+              role="group"
+              aria-label={t("waveform.lead")}
+            >
+              {availableLeads.map((item) => (
+                <Button
+                  key={item}
+                  variant={item === lead ? "secondary" : "ghost"}
+                  size="xs"
+                  aria-pressed={item === lead}
+                  onClick={() => setLead(item)}
+                >
+                  {item}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <span className="eh-caption text-muted-foreground">
+              {t("waveform.controls.grid")} ·{" "}
+              {loadedGridLeads < gridLeadCount
+                ? t("waveform.multiLead.partial", {
+                    loaded: loadedGridLeads,
+                    total: gridLeadCount,
+                  })
+                : t("waveform.multiLead.count", { count: gridLeadCount })}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {availableLeads.length > 1 ? (
+            <div className="flex items-center gap-0.5" role="group" aria-label={t("waveform.controls.layout")}>
+              <Button
+                variant={layout === "single" ? "secondary" : "ghost"}
+                size="icon-xs"
+                aria-label={t("waveform.controls.single")}
+                aria-pressed={layout === "single"}
+                onClick={() => setLayout("single")}
+              >
+                <Waves aria-hidden="true" />
+              </Button>
+              <Button
+                variant={layout === "grid" ? "secondary" : "ghost"}
+                size="icon-xs"
+                aria-label={t("waveform.controls.grid")}
+                aria-pressed={layout === "grid"}
+                onClick={() => setLayout("grid")}
+              >
+                <LayoutGrid aria-hidden="true" />
+              </Button>
+            </div>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("waveform.zoomIn")}
+            onClick={() => zoomAt(0.8)}
+          >
+            <ZoomIn aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("waveform.zoomOut")}
+            onClick={() => zoomAt(1.25)}
+          >
+            <ZoomOut aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("waveform.reset")}
+            onClick={resetView}
+          >
+            <RotateCcw aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("waveform.showFull")}
+            onClick={() => applyView(0, duration)}
+            disabled={duration <= 12}
+          >
+            <Maximize2 aria-hidden="true" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("waveform.controls.export")}
+                disabled={exporting}
+              >
+                {exporting ? (
+                  <Loader2 className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Download aria-hidden="true" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => void exportPng("view")}>
+                {t("waveform.controls.exportView")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void exportPng("full")}>
+                {t("waveform.controls.exportFull")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    ) : null;
+
+    return (
+      <div className={className}>
+        {controls}
+
+        {availableLeads.length > 1 && !compact ? (
+          <p className="eh-caption mb-2 text-muted-foreground">
+            {t("waveform.multiLead.note", {
+              lead: primaryLead,
+              count: availableLeads.length - 1,
             })}
           </p>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+        ) : null}
+
+        {!compact && envelope && duration > 0 ? (
+          <OverviewStrip
+            envelope={envelope}
+            duration={duration}
+            view={view}
+            quality={analysis?.quality ?? null}
+            onViewChange={([start, end]) => applyView(start, end)}
+            height={40}
+            className="mb-2"
+            hint={`${t("waveform.overview.label")} · ${t("waveform.overview.hint")}`}
+            ariaLabel={t("waveform.overview.aria", {
+              duration: formatSeconds(duration),
+              start: formatSeconds(view[0]),
+              end: formatSeconds(view[1]),
+            })}
+          />
+        ) : null}
+
+        {layout === "grid" && availableLeads.length > 1 ? (
+          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+            {availableLeads.map((name) => {
+              const signal = dataFor(name);
+              const meta = signalsQuery.data?.find((item) => item.lead === name);
+              if (!signal) {
+                return (
+                  <div
+                    key={name}
+                    className="flex items-center justify-center rounded-md border border-dashed border-border text-[11px] text-muted-foreground"
+                    style={{ height: GRID_CELL_HEIGHT + 20 }}
+                  >
+                    {t("waveform.multiLead.loading")}
+                  </div>
+                );
+              }
+              return (
+                <LeadStrip
+                  key={name}
+                  samples={signal.samples}
+                  fs={signal.fs}
+                  lead={name}
+                  unit={meta?.unit ?? signal.unit ?? "mV"}
+                  view={view}
+                  duration={duration}
+                  height={GRID_CELL_HEIGHT}
+                  showHeader
+                  showTimeAxis
+                  showScale
+                  isPrimary={name === primaryLead}
+                  interactive
+                  analysis={analysis}
+                  selectedBeatIndex={selectedBeatIndex}
+                  onBeatSelect={onBeatSelect}
+                  onViewChange={([start, end]) => applyView(start, end)}
+                />
+              );
+            })}
+          </div>
+        ) : currentSignal ? (
+          <LeadStrip
+            samples={currentSignal.samples}
+            fs={currentSignal.fs}
+            lead={lead}
+            unit={
+              signalsQuery.data?.find((item) => item.lead === lead)?.unit ??
+              currentSignal.unit ??
+              "mV"
+            }
+            view={view}
+            duration={duration}
+            height={height}
+            showTimeAxis
+            showScale
+            interactive={!compact}
+            analysis={analysis}
+            selectedBeatIndex={selectedBeatIndex}
+            onBeatSelect={onBeatSelect}
+            onViewChange={([start, end]) => applyView(start, end)}
+            ariaLabel={t("waveform.ariaLabel", {
+              lead,
+              duration: formatSeconds(duration),
+              fs: (currentSignal.fs || 0).toFixed(0),
+              beats: beatCount,
+            })}
+          />
+        ) : (
+          <Skeleton className="w-full rounded-lg" style={{ height }} />
+        )}
+
+        {!compact ? (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="eh-caption text-muted-foreground">
+              {t("shortcuts.hint")}
+            </p>
+            <p className="eh-caption text-muted-foreground">
+              {t("waveform.summary", {
+                duration: formatSeconds(duration),
+                fs: fs.toFixed(0),
+                beats: beatCount,
+              })}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    );
+  },
+);

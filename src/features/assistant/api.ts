@@ -9,7 +9,7 @@ import type { RecordPage } from "@/lib/api/types";
 import type {
   AssistantProvider,
   AssistantSession,
-  ChatMessage,
+  MessagePage,
   ProviderInput,
   ProviderTestResult,
   SendMessageBody,
@@ -103,8 +103,19 @@ export const assistantApi = {
   },
 
   sessions: {
-    list: async (): Promise<AssistantSession[]> => {
-      const body = await request<{ items: AssistantSession[] }>("/assistant/sessions");
+    list: async (params: {
+      q?: string;
+      limit?: number;
+      offset?: number;
+    } = {}): Promise<AssistantSession[]> => {
+      const query = new URLSearchParams();
+      if (params.q && params.q.trim()) query.set("q", params.q.trim());
+      if (params.limit) query.set("limit", String(params.limit));
+      if (params.offset) query.set("offset", String(params.offset));
+      const suffix = query.toString() ? `?${query.toString()}` : "";
+      const body = await request<{ items: AssistantSession[] }>(
+        `/assistant/sessions${suffix}`,
+      );
       return Array.isArray(body.items) ? body.items : [];
     },
     create: (input: {
@@ -114,13 +125,53 @@ export const assistantApi = {
       recordId?: string | null;
     }): Promise<AssistantSession> =>
       requestJson<AssistantSession>("/assistant/sessions", "POST", input),
+    rename: (id: string, title: string): Promise<AssistantSession> =>
+      requestJson<AssistantSession>(
+        `/assistant/sessions/${encodeURIComponent(id)}`,
+        "PATCH",
+        { title },
+      ),
     remove: (id: string): Promise<void> =>
       requestJson<void>(`/assistant/sessions/${encodeURIComponent(id)}`, "DELETE"),
-    messages: async (id: string): Promise<ChatMessage[]> => {
-      const body = await request<{ items: ChatMessage[] }>(
-        `/assistant/sessions/${encodeURIComponent(id)}/messages`,
+    messages: async (
+      id: string,
+      options: { limit?: number; offset?: number; order?: "asc" | "desc" } = {},
+    ): Promise<MessagePage> => {
+      const query = new URLSearchParams();
+      if (options.limit) query.set("limit", String(options.limit));
+      if (options.offset !== undefined) query.set("offset", String(options.offset));
+      if (options.order) query.set("order", options.order);
+      const suffix = query.toString() ? `?${query.toString()}` : "";
+      const body = await request<MessagePage>(
+        `/assistant/sessions/${encodeURIComponent(id)}/messages${suffix}`,
       );
-      return Array.isArray(body.items) ? body.items : [];
+      return {
+        items: Array.isArray(body.items) ? body.items : [],
+        total: typeof body.total === "number" ? body.total : 0,
+        limit: typeof body.limit === "number" ? body.limit : 200,
+        offset: typeof body.offset === "number" ? body.offset : 0,
+        hasMore: Boolean(body.hasMore),
+      };
+    },
+    /** 导出 Markdown 文本；调用方负责触发下载（避免 api 层碰 DOM）。 */
+    exportMarkdown: async (
+      id: string,
+      options: { includeToolArgs?: boolean } = {},
+    ): Promise<{ text: string; filename: string }> => {
+      const query = new URLSearchParams();
+      if (options.includeToolArgs) query.set("includeToolArgs", "true");
+      const suffix = query.toString() ? `?${query.toString()}` : "";
+      const response = await fetch(
+        `${baseUrl}/assistant/sessions/${encodeURIComponent(id)}/export${suffix}`,
+        { credentials: "omit", headers: { Accept: "text/markdown" } },
+      );
+      if (!response.ok) throw await responseError(response);
+      const disposition = response.headers.get("content-disposition") ?? "";
+      const match = /filename="([^"]+)"/.exec(disposition);
+      return {
+        text: await response.text(),
+        filename: match?.[1] ?? "eclipse-health-assistant.md",
+      };
     },
   },
 
@@ -128,6 +179,11 @@ export const assistantApi = {
     transparency: (id: string): Promise<Transparency> =>
       request<Transparency>(
         `/assistant/messages/${encodeURIComponent(id)}/transparency`,
+      ),
+    cancel: (id: string): Promise<{ messageId: string; cancelled: boolean; status: string }> =>
+      requestJson<{ messageId: string; cancelled: boolean; status: string }>(
+        `/assistant/messages/${encodeURIComponent(id)}/cancel`,
+        "POST",
       ),
   },
 

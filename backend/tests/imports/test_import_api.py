@@ -20,7 +20,6 @@ from import_helpers import (
 
 from eclipse_health_backend.importers import limits, store
 from eclipse_health_backend.importers.errors import ImportNotFoundError
-from eclipse_health_backend.importers.registry import build_default_registry
 
 VALUES = [float(value) for value in range(50)]
 CSV = csv_text(VALUES, header="time,MLII", time_step=0.002)
@@ -51,22 +50,17 @@ def test_unknown_format_is_unsupported(client, data_dir) -> None:
     assert {path.name for path in root.iterdir()} == before
 
 
-@pytest.mark.parametrize("fmt", ["samsung", "huawei", "apple", "scp-ecg"])
-def test_vendor_placeholders_are_explicitly_unsupported(client, fmt: str) -> None:
+@pytest.mark.parametrize("fmt", ["samsung", "huawei", "apple", "scp-ecg", "edf"])
+def test_vendor_hint_without_marker_falls_back_to_csv(client, fmt: str) -> None:
     response = upload_preview(client, "ecg.csv", CSV, hintFormat=fmt)
-    assert response.status_code == 422
-    error = response.json()
-    assert error["code"] == "unsupported_format"
-    assert error["details"]["supported"] is False
-    assert error["details"]["format"] == fmt
+    assert response.status_code == 200, response.text
+    assert response.json()["format"] == "csv"
 
 
-def test_vendor_placeholders_registered_but_unsupported() -> None:
-    registry = build_default_registry()
-    for fmt in ("samsung", "huawei", "apple", "scp-ecg"):
-        adapter = registry.find(fmt)
-        assert adapter is not None
-        assert adapter.supported is False
+def test_no_unimplemented_placeholders_remain() -> None:
+    from eclipse_health_backend.importers.placeholders import placeholder_adapters
+
+    assert placeholder_adapters() == []
 
 
 def test_unknown_hint_is_rejected(client) -> None:

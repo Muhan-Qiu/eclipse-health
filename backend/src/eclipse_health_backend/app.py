@@ -54,6 +54,13 @@ def configure_logging(level_name: str) -> None:
         level=getattr(logging, level_name.upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+    # H6：诊断包读取 data/logs；日志失败不能阻断启动。
+    try:
+        from .diagnostics.logging_setup import install_file_logging
+
+        install_file_logging(get_settings())
+    except Exception:
+        logger.exception("file logging setup failed")
 
 
 @asynccontextmanager

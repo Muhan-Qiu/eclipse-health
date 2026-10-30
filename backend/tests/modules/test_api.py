@@ -93,4 +93,9 @@ def test_error_codes(api_client: TestClient, demo_package: Path, tmp_path: Path)
 def test_audit_route_not_shadowed(api_client: TestClient) -> None:
     response = api_client.get(f"{PREFIX}/audit")
     assert response.status_code == 200
-    assert response.json() == {"events": [], "count": 0}
+    body = response.json()
+    assert body["events"] == []
+    assert body["count"] == 0
+    assert body["limit"] == 100
+    assert body["offset"] == 0
+    assert body["hasMore"] is False

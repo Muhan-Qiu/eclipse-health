@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Column, literal_column
+from sqlalchemy import JSON, Column, literal_column, or_, text
 from sqlmodel import Field, Session, select
 
 from ..domain.common import to_storage_dt, utc_now
@@ -143,6 +143,53 @@ def list_session_rows(
     return list(session.exec(statement))
 
 
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def search_session_rows(
+    session: Session, member_id: str, query: str, *, limit: int = 50, offset: int = 0
+) -> list[AssistantSessionTable]:
+    """按标题或**首条用户消息**搜索；``%``/``_`` 按字面匹配，不当通配符。"""
+    term = query.strip()
+    if not term:
+        return list_session_rows(session, member_id, limit=limit, offset=offset)
+    pattern = f"%{_escape_like(term)}%"
+
+    # 首条用户消息用 rowid 定位：同微秒插入时 UUIDv7 不能保证顺序。
+    rows = session.connection().execute(
+        text(
+            """
+            SELECT m.session_id
+            FROM assistant_messages AS m
+            WHERE m.role = :role
+              AND m.rowid = (
+                  SELECT MIN(m2.rowid) FROM assistant_messages AS m2
+                  WHERE m2.session_id = m.session_id AND m2.role = :role
+              )
+              AND m.content LIKE :pattern ESCAPE '\\'
+            """
+        ),
+        {"role": ROLE_USER, "pattern": pattern},
+    )
+    matched_ids = [row[0] for row in rows]
+
+    statement = (
+        select(AssistantSessionTable)
+        .where(
+            AssistantSessionTable.member_id == member_id,
+            or_(
+                AssistantSessionTable.title.like(pattern, escape="\\"),
+                AssistantSessionTable.id.in_(matched_ids),
+            ),
+        )
+        .order_by(AssistantSessionTable.updated_at.desc(), AssistantSessionTable.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(session.exec(statement))
+
+
 def count_messages(session: Session, session_id: str) -> int:
     from sqlalchemy import func
 
@@ -219,6 +266,9 @@ def message_to_dict(
         "citations": data.get("citations") or [],
         "error": data.get("error"),
         "toolCalls": [tool_call_to_dict(call) for call in tool_calls],
+        "usage": data.get("usage"),
+        "durationMs": data.get("durationMs"),
+        "model": data.get("model"),
         "createdAt": row.created_at.isoformat(),
     }
 
@@ -289,17 +339,44 @@ def get_message_row(session: Session, message_id: str) -> AssistantMessageTable 
 
 
 def list_message_rows(
-    session: Session, session_id: str, *, limit: int = 200, offset: int = 0
+    session: Session,
+    session_id: str,
+    *,
+    limit: int = 200,
+    offset: int = 0,
+    order: str = "asc",
 ) -> list[AssistantMessageTable]:
     # user/assistant 可能落在同一微秒且 UUIDv7 同毫秒，用 rowid 保证严格的插入顺序。
+    if order == "desc":
+        ordering = (
+            AssistantMessageTable.created_at.desc(),
+            literal_column("assistant_messages.rowid").desc(),
+        )
+    else:
+        ordering = (
+            AssistantMessageTable.created_at,
+            literal_column("assistant_messages.rowid"),
+        )
     statement = (
         select(AssistantMessageTable)
         .where(AssistantMessageTable.session_id == session_id)
-        .order_by(AssistantMessageTable.created_at, literal_column("assistant_messages.rowid"))
+        .order_by(*ordering)
         .limit(limit)
         .offset(offset)
     )
     return list(session.exec(statement))
+
+
+def rename_session(session: Session, row: AssistantSessionTable, title: str) -> AssistantSessionTable:
+    cleaned = (title or "").strip()[:120]
+    if not cleaned:
+        raise ValueError("title must not be empty")
+    row.title = cleaned
+    row.updated_at = to_storage_dt(utc_now())
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
 
 
 def list_tool_calls(session: Session, message_id: str) -> list[AssistantToolCallTable]:
@@ -386,6 +463,8 @@ __all__ = [
     "new_message_id",
     "new_session_id",
     "new_tool_call_id",
+    "rename_session",
+    "search_session_rows",
     "session_to_dict",
     "tool_call_to_dict",
     "touch_session",

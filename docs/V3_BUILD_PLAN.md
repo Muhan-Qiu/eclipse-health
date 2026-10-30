@@ -310,3 +310,28 @@
 
 - 接线检查、全量 pytest/ruff/build、真机冒烟、路由懒加载、`pyproject` 依赖声明、README、git checkpoint。
 - 如果某格式确实拿不到样本：在报告中明确「代码完成但未真机验证」，由用户决定是否补样本。
+
+## 21. 第三方模块接入现状（2026-10-30）
+
+详见 `docs/MODULE_DEVELOPER_GUIDE_V1.md` 与 `prompts/40-module-author-template.md`。
+
+**结论：**
+
+- **能装、能启停、能授权、能审计、能通过 `/api/v1/modules/{id}/rpc` 调用**：已成立。
+- **自动接进主界面/导入/分析/报告/LLM 工具**：除内置 Cardia 分析外，尚未接线。
+  - `analysis-model`：`analysis_service/bridge.py` 写死 Cardia 模块 ID/引擎/方法，无通用引擎注册。
+  - `device-adapter`：`importers/registry.py` 只注册内置适配器，manifest `importFormats` 未消费。
+  - `exporter` / `ai-tool` / UI / theme / locale：无 contribution loader。
+- 当前模块与核心共用 Python 环境、无 OS 沙箱、签名未验证；只应安装可信模块。
+
+**要把第三方功能真正接进 UI/流水线，核心还缺（按优先级）：**
+
+1. 通用 `analysis-model` loader + 引擎选择（1–2 天）
+2. `device-adapter` 模块桥（1–2 天）
+3. `ai-tool` registry（0.5–1 天）
+4. `exporter` registry（约 1 天）
+5. 模块数据目录/核心数据回调（`records.*` 目前返回 `NOT_IMPLEMENTED`）
+6. per-module venv / 沙箱 / 签名 / 在线注册表
+7. 声明式 UI 渲染器（3–5 天）
+
+**给第三方的现成路径：** 先写纯 RPC 模块（安装/启动/调用闭环），按 `prompts/40-module-author-template.md` 自测；需要出现在 UI 时再由核心补对应 loader。

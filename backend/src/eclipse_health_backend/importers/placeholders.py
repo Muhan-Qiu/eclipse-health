@@ -1,6 +1,9 @@
-"""厂商格式占位：只为接口与注册表留位，不做任何猜测性解析。
+"""厂商格式占位。
 
-真实解析需要样本与文档，计划 B3/B4 实现；在此之前显式返回 422 ``unsupported_format``。
+EDF / SCP-ECG / Apple / Samsung / 华为已在 B4-03 接入真实适配器，
+因此这里不再保留它们的占位。``PlaceholderAdapter`` 保留给后续格式
+（例如 DICOM）：在拿到样本与文档前只返回「等待样本」的明确错误，
+不做任何猜测性解析。
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ class PlaceholderAdapter(ImportAdapter):
         self.adapter_id = adapter_id
         self.format = fmt
         self.label = label
-        self.waiting_reason = f"{label} 格式等待真实样本与文档，计划 B3 实现"
+        self.waiting_reason = f"{label} 格式等待真实样本与文档"
 
     def detect(self, source: ImportSource) -> Detection | None:
         return None
@@ -35,12 +38,7 @@ class PlaceholderAdapter(ImportAdapter):
 
 
 def placeholder_adapters() -> list[PlaceholderAdapter]:
-    return [
-        PlaceholderAdapter("org.eclipsehealth.samsung", "samsung", "Samsung Health"),
-        PlaceholderAdapter("org.eclipsehealth.huawei", "huawei", "华为运动健康"),
-        PlaceholderAdapter("org.eclipsehealth.apple", "apple", "Apple Health"),
-        PlaceholderAdapter("org.eclipsehealth.scp-ecg", "scp-ecg", "SCP-ECG"),
-    ]
+    return []
 
 
 __all__ = ["PlaceholderAdapter", "placeholder_adapters"]

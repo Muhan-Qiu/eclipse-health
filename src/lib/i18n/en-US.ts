@@ -658,7 +658,8 @@ const enUS: typeof zhCN = {
   settings: {
     eyebrow: "Settings",
     title: "Settings",
-    description: "Appearance, language and version. Choices are stored locally.",
+    description:
+      "Appearance, language, backups and privacy. Choices are stored locally.",
     appearance: {
       title: "Appearance",
       description: "Follows the system by default, falling back to light.",
@@ -675,6 +676,19 @@ const enUS: typeof zhCN = {
       zh: "中文",
       en: "English",
     },
+    desktop: {
+      title: "Desktop",
+      description: "Window and startup behaviour. Choices are stored locally.",
+      closeToTray: "Minimize to tray when closed",
+      closeToTrayDesc: "Hide the window instead of quitting when you click close.",
+      splash: "Show startup animation",
+      splashDesc: "Play the eclipse animation on launch.",
+      saved: "Settings saved",
+      savedRestart: "Saved, takes effect after restart",
+      saveFailed: "Could not save settings",
+      browserHint:
+        "Browser preview: desktop toggles apply in the desktop app after a restart.",
+    },
     about: {
       title: "About",
       version: "Version",
@@ -682,6 +696,74 @@ const enUS: typeof zhCN = {
       storage: "Storage",
       storageValue: "Local first · no telemetry",
     },
+  },
+  export: {
+    title: "Data & backup",
+    description:
+      "Export your local data or restore a backup. File names never include member names or notes.",
+    localOnly: "Everything is processed on this device and never uploaded.",
+    downloadTitle: "Export",
+    zip: "Full backup (ZIP)",
+    zipDesc: "Records, waveforms, analyses, measurements and reports — fully restorable.",
+    json: "Structured data (JSON)",
+    jsonDesc: "Records and analysis metadata; waveforms are kept as hashes and references.",
+    csv: "Flat table (CSV)",
+    csvDesc: "Records and measurements for spreadsheet tools; no waveforms.",
+    downloading: "Preparing download…",
+    downloadDone: "Download started",
+    downloadFailed: "Export failed",
+    restoreTitle: "Restore backup",
+    restoreDesc:
+      "Only ZIP backups created by this app can be restored. Your current data is backed up first.",
+    chooseFile: "Choose backup file",
+    restoreConfirmTitle: "Restore this backup?",
+    restoreConfirmDesc:
+      "Records in {{name}} are imported with new IDs and will not overwrite existing data. Your current data is backed up first.",
+    restore: "Restore",
+    restoring: "Restoring…",
+    restoreFailed: "Restore failed",
+    restoreDone: "Restore complete",
+    restoreResult:
+      "Imported {{records}} records, {{signals}} signals, {{analyses}} analyses, {{measurements}} measurements and {{reports}} reports.",
+    autoBackup: "Automatic backup before restore: {{name}}",
+    invalidFile: "Please choose a .zip backup file.",
+  },
+  privacy: {
+    title: "Privacy",
+    description: "See how much space data uses and clear local records at any time.",
+    storageTitle: "Local storage",
+    dataDir: "Data directory",
+    records: "Records",
+    signals: "Signals",
+    analyses: "Analyses",
+    reports: "Reports",
+    size: "Signals {{signals}} · reports {{reports}} · database {{database}}",
+    localOnly: "All data stays on this computer. No telemetry, no uploads.",
+    refresh: "Refresh storage usage",
+    telemetryTitle: "Telemetry",
+    telemetryDesc:
+      "The app has no telemetry or analytics channel; this switch is always off.",
+    clearTitle: "Clear all data",
+    clearDesc:
+      "Delete all records, waveforms, analyses, measurements and reports. Members and settings are kept. This cannot be undone.",
+    clearHint: "Type {{word}} to confirm",
+    clearAction: "Clear all",
+    clearing: "Clearing…",
+    clearConfirmTitle: "Clear all data?",
+    clearConfirmDesc:
+      "Records, waveforms, analyses, measurements and reports will be permanently deleted. Members and settings are kept.",
+    clearDone: "Cleared {{records}} records and {{signals}} signals",
+    clearFailed: "Could not clear data",
+    storageError: "Could not load storage information",
+  },
+  diagnostics: {
+    title: "Diagnostics",
+    description:
+      "Create a troubleshooting ZIP. It excludes waveforms, notes, payloads, member names and usernames.",
+    download: "Download diagnostics",
+    preparing: "Packaging…",
+    done: "Diagnostics download started",
+    failed: "Could not create diagnostics bundle",
   },
   modules: {
     eyebrow: "Modules",

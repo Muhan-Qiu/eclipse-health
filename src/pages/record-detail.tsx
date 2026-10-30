@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,7 +28,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnalysisPanel } from "@/components/records/analysis-panel";
 import { BeatDetails } from "@/components/records/beat-details";
-import { WaveformViewer } from "@/components/records/waveform-viewer";
+import { BeatList } from "@/components/records/beat-list";
+import { QualityLegend } from "@/components/records/quality-legend";
+import {
+  WaveformViewer,
+  type WaveformViewerHandle,
+} from "@/components/records/waveform-viewer";
 import { DemoBadge } from "@/components/common/demo-badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
@@ -40,8 +45,10 @@ import {
   useEngineStatus,
   useRecord,
   useRecordAnalyses,
+  useRecords,
   useStartAnalysis,
 } from "@/lib/api/queries";
+import "@/features/waveform/i18n";
 import { toRecordSummary } from "@/lib/api/adapters";
 import {
   formatDate,
@@ -65,6 +72,9 @@ export function RecordDetailPage() {
   const engineQuery = useEngineStatus();
   const startMutation = useStartAnalysis(id);
   const deleteMutation = useDeleteRecord(id);
+  // 只用于 [ / ] 在相邻记录间跳转；列表按 capturedAt 倒序。
+  const recordsQuery = useRecords({ limit: 100, offset: 0 });
+  const waveformRef = useRef<WaveformViewerHandle | null>(null);
 
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [selectedBeat, setSelectedBeat] = useState<Beat | null>(null);
@@ -95,6 +105,94 @@ export function RecordDetailPage() {
     () => (analysisQuery.data?.status === "completed" ? analysisQuery.data : null),
     [analysisQuery.data],
   );
+
+  const selectBeat = useCallback((beat: Beat | null) => {
+    setSelectedBeat(beat);
+    if (beat) waveformRef.current?.focusBeat(beat.index);
+  }, []);
+
+  const moveBeatOrRecord = useCallback(
+    (direction: -1 | 1) => {
+      const beats = completedAnalysis?.beats ?? [];
+      const current = selectedBeat?.index ?? null;
+      if (beats.length && current !== null) {
+        const next = current + direction;
+        if (next >= 0 && next < beats.length) {
+          selectBeat(beats[next]);
+          return;
+        }
+      }
+      if (!record) return;
+      const items = recordsQuery.data?.items ?? [];
+      const index = items.findIndex((item) => item.id === record.id);
+      if (index < 0) return;
+      // 记录列表按采集时间倒序：'[' 上一条（更早）= index + 1，']' 下一条（更新）= index - 1。
+      const target = items[index - direction];
+      if (target) navigate(`/records/${target.id}`);
+    },
+    [completedAnalysis, selectedBeat, selectBeat, record, recordsQuery.data, navigate],
+  );
+
+  useEffect(() => {
+    if (!record) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        return;
+      }
+      const viewer = waveformRef.current;
+      switch (event.key) {
+        case "+":
+        case "=":
+          event.preventDefault();
+          viewer?.zoomIn();
+          break;
+        case "-":
+          event.preventDefault();
+          viewer?.zoomOut();
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          viewer?.pan(-0.1);
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          viewer?.pan(0.1);
+          break;
+        case "0":
+        case "Home":
+          event.preventDefault();
+          viewer?.reset();
+          break;
+        case "[":
+          event.preventDefault();
+          moveBeatOrRecord(-1);
+          break;
+        case "]":
+          event.preventDefault();
+          moveBeatOrRecord(1);
+          break;
+        case "Escape":
+          if (selectedBeat) {
+            event.preventDefault();
+            setSelectedBeat(null);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [record, selectedBeat, moveBeatOrRecord]);
 
   const backButton = (
     <Button variant="outline" size="sm" asChild>
@@ -266,12 +364,14 @@ export function RecordDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <WaveformViewer
+                ref={waveformRef}
                 recordId={record.id}
                 leads={record.leads}
                 analysis={completedAnalysis}
                 selectedBeatIndex={selectedBeat?.index ?? null}
-                onBeatSelect={setSelectedBeat}
+                onBeatSelect={selectBeat}
                 height={320}
+                recordDate={formatDateTime(record.capturedAt, locale)}
               />
               <p className="eh-caption flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
                 <span>{t("waveform.legend.rPeak")}</span>
@@ -291,6 +391,21 @@ export function RecordDetailPage() {
                     : t("waveform.beatHintDisabled")}
                 </p>
               )}
+
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
+                <BeatList
+                  beats={completedAnalysis?.beats ?? []}
+                  fs={record.samplingRate ?? 360}
+                  selectedIndex={selectedBeat?.index ?? null}
+                  onSelect={selectBeat}
+                  height={240}
+                />
+                <QualityLegend
+                  quality={completedAnalysis?.quality ?? record.quality ?? null}
+                  onFocus={(start, end) => waveformRef.current?.focusRange(start, end)}
+                  height={164}
+                />
+              </div>
             </CardContent>
           </Card>
 

@@ -34,6 +34,18 @@ export interface ProviderTestResult {
   model: string;
   latencyMs: number | null;
   message: string;
+  /** 模型是否已安装/可用；无法判断时为 null。 */
+  available: boolean | null;
+  /** 是否声明支持 tool calling；无法判断时为 null。 */
+  supportsTools: boolean | null;
+  models: string[];
+}
+
+export interface Usage {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  source: "provider" | "estimate" | string;
 }
 
 export interface AssistantSession {
@@ -78,6 +90,7 @@ export interface Transparency {
   analysisIds: string[];
   includeNotes: boolean;
   toolCalls: number;
+  usage?: Usage | null;
   localOnly: boolean;
 }
 
@@ -93,7 +106,20 @@ export interface ChatMessage {
   error?: { code: string; message: string } | null;
   toolCalls: ToolCallTrace[];
   transparency?: Transparency | null;
+  usage?: Usage | null;
+  durationMs?: number | null;
+  model?: string | null;
+  /** 服务端消息 ID（流式开始时由 start 事件带回）。 */
+  serverId?: string;
   createdAt: string;
+}
+
+export interface MessagePage {
+  items: ChatMessage[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
 }
 
 export interface SendMessageBody {
@@ -105,6 +131,15 @@ export interface SendMessageBody {
 }
 
 export type StreamEvent =
+  | {
+      event: "start";
+      data: {
+        sessionId: string;
+        userMessageId: string;
+        assistantMessageId: string;
+        provider: { id: string; kind: ProviderKind; label: string; model: string };
+      };
+    }
   | { event: "token"; data: { text: string } }
   | {
       event: "tool_call";
@@ -128,6 +163,8 @@ export type StreamEvent =
         citations: Citation[];
         toolCalls: number;
         transparency?: Transparency;
+        usage?: Usage | null;
+        durationMs?: number;
         cancelled?: boolean;
       };
     }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { cn } from "cn";
@@ -9,6 +10,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/page-header";
+import { DiagnosticsPanel } from "@/features/export/diagnostics-panel";
+import { ExportPanel } from "@/features/export/export-panel";
+import { DesktopPanel } from "@/features/privacy/desktop-panel";
+import { PrivacyPanel } from "@/features/privacy/privacy-panel";
 import { APP_LICENSE, APP_VERSION } from "@/lib/app-info";
 import { changeLocale } from "@/lib/i18n";
 import { PALETTE_PREVIEWS } from "@/lib/palettes";
@@ -33,6 +38,7 @@ export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const { mode, palette, setMode, setPalette } = useAppTheme();
   const currentLocale = i18n.language.startsWith("en") ? "en-US" : "zh-CN";
+  const [dataVersion, setDataVersion] = useState(0);
 
   return (
     <>
@@ -131,7 +137,7 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="desk:col-span-4 xl:col-span-6">
+        <Card className="desk:col-span-4 xl:col-span-4">
           <CardHeader>
             <CardTitle className="eh-h3">
               {t("settings.language.title")}
@@ -165,6 +171,21 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <ExportPanel
+          className="desk:col-span-8 xl:col-span-8"
+          onDataChanged={() => setDataVersion((value) => value + 1)}
+        />
+
+        <PrivacyPanel
+          className="desk:col-span-4 xl:col-span-6"
+          refreshSignal={dataVersion}
+          onPurged={() => setDataVersion((value) => value + 1)}
+        />
+
+        <DesktopPanel className="desk:col-span-4 xl:col-span-6" />
+
+        <DiagnosticsPanel className="desk:col-span-4 xl:col-span-6" />
 
         <Card className="desk:col-span-4 xl:col-span-6">
           <CardHeader>

@@ -3,8 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
+  ChevronUp,
   CircleAlert,
   FileText,
+  LoaderCircle,
   MessageSquare,
   Send,
   ShieldCheck,
@@ -79,6 +81,33 @@ function CitationChips({ message }: { message: ChatMessage }) {
   );
 }
 
+function MessageMeta({ message }: { message: ChatMessage }) {
+  const { t } = useTranslation();
+  const parts: string[] = [];
+  if (message.model) parts.push(message.model);
+  if (typeof message.durationMs === "number") {
+    parts.push(t("assistant.chat.metaLatency", { ms: message.durationMs }));
+  }
+  const usage = message.usage;
+  if (usage && (usage.promptTokens !== null || usage.completionTokens !== null)) {
+    parts.push(
+      t("assistant.chat.metaTokens", {
+        prompt: usage.promptTokens ?? "—",
+        completion: usage.completionTokens ?? "—",
+        source: t(`assistant.chat.usageSource.${usage.source}`, {
+          defaultValue: usage.source,
+        }),
+      }),
+    );
+  }
+  if (parts.length === 0) return null;
+  return (
+    <p className="eh-caption mt-2 text-muted-foreground">
+      {parts.join(" · ")}
+    </p>
+  );
+}
+
 interface MessageBubbleProps {
   message: ChatMessage;
   onOpenTransparency: (message: ChatMessage) => void;
@@ -139,6 +168,7 @@ function MessageBubble({ message, onOpenTransparency }: MessageBubbleProps) {
 
         <ToolTrace calls={message.toolCalls} />
         <CitationChips message={message} />
+        <MessageMeta message={message} />
 
         <div className="mt-3 flex items-center gap-1">
           <Button
@@ -179,6 +209,10 @@ export interface ChatPanelProps {
   onRecordIdChange: (id: string | null) => void;
   includeNotes: boolean;
   onIncludeNotesChange: (value: boolean) => void;
+  hasMoreMessages: boolean;
+  loadingEarlier: boolean;
+  messageTotal: number;
+  onLoadEarlier: () => void;
 }
 
 export function ChatPanel({
@@ -199,6 +233,10 @@ export function ChatPanel({
   onRecordIdChange,
   includeNotes,
   onIncludeNotesChange,
+  hasMoreMessages,
+  loadingEarlier,
+  messageTotal,
+  onLoadEarlier,
 }: ChatPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
@@ -256,6 +294,24 @@ export function ChatPanel({
               aria-live="polite"
               aria-relevant="additions text"
             >
+              {hasMoreMessages ? (
+                <div className="flex justify-center pb-1">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="text-muted-foreground"
+                    onClick={onLoadEarlier}
+                    disabled={loadingEarlier}
+                  >
+                    {loadingEarlier ? (
+                      <LoaderCircle className="animate-spin" data-icon="inline-start" />
+                    ) : (
+                      <ChevronUp data-icon="inline-start" />
+                    )}
+                    {t("assistant.chat.loadEarlier", { count: messageTotal })}
+                  </Button>
+                </div>
+              ) : null}
               {messages.length === 0 ? (
                 <EmptyState
                   icon={MessageSquare}
@@ -281,7 +337,7 @@ export function ChatPanel({
                   {error}
                 </span>
                 <Button variant="ghost" size="xs" onClick={onDismissError}>
-                  {t("assistant.privacy.cancel")}
+                  {t("assistant.chat.dismiss")}
                 </Button>
               </div>
             ) : null}

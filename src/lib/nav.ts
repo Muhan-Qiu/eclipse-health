@@ -8,6 +8,7 @@ import {
   Settings,
   Sparkles,
   TrendingUp,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ export interface NavItem {
 export const primaryNav: NavItem[] = [
   { path: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, end: true },
   { path: "/records", labelKey: "nav.records", icon: FileText },
+  { path: "/profile", labelKey: "nav.profile", icon: UserRound },
   { path: "/trends", labelKey: "nav.trends", icon: TrendingUp },
   { path: "/reports", labelKey: "nav.reports", icon: FileChartColumn },
   { path: "/assistant", labelKey: "nav.assistant", icon: Sparkles },

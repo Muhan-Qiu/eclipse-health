@@ -13,7 +13,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-UNIT_TO_MV: dict[str, float] = {"mV": 1.0, "uV": 0.001, "V": 1000.0}
+UNIT_TO_MV: dict[str, float] = {"mV": 1.0, "uV": 0.001, "nV": 0.000001, "V": 1000.0}
 
 LEAD_ALIASES: dict[str, str] = {
     "mlii": "MLII",
@@ -37,7 +37,9 @@ LEAD_ALIASES: dict[str, str] = {
     "心电": "ECG",
 }
 
-_UNIT_RE = re.compile(r"[\(\[]\s*(mv|uv|µv|μv|v|millivolt|microvolt|volt)\s*[\)\]]", re.IGNORECASE)
+_UNIT_RE = re.compile(
+    r"[\(\[]\s*(mv|uv|µv|μv|nv|v|millivolt|microvolt|nanovolt|volt)\s*[\)\]]", re.IGNORECASE
+)
 _LEAD_SANITIZE_RE = re.compile(r"[^A-Za-z0-9+\-]")
 
 TARGET_FS = 360.0
@@ -56,6 +58,8 @@ def normalize_unit(unit: str | None) -> str | None:
         return "mV"
     if key in {"uv", "µv", "μv", "microvolt", "microvolts"}:
         return "uV"
+    if key in {"nv", "nanovolt", "nanovolts"}:
+        return "nV"
     if key in {"v", "volt", "volts"}:
         return "V"
     return None
