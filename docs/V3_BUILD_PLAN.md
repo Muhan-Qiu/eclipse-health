@@ -605,4 +605,27 @@
 - C2 不改生产代码，只写测试/报告；发现问题进 C1 或后续。
 - C3 不做图表/睡眠会话合并；华为/Zepp/Samsung 等样本。
 - 本轮结束后指挥官重打 NSIS 候选包，交用户安装试用；随后进入 Stage D（动画/视觉 + 反馈修复 + 最终包）。
+- H5/G3 仍为外部阻塞。
+
+### Stage C 验收结果（2026-10-31）
+
+- 三份报告：`reports/C1`–`C3`；checkpoint `130de66`。
+- 全量：ruff 通过；`pytest backend/tests` **594 passed / 11 skipped**；`npm run build` 通过。
+- C1：schema 补 `widget.link` / page `format`；LLM 网络错误归类、流式 usage、离线 cost map；进度条 aria；模块启停刷新。
+- C2：`scripts/e2e_stage_c.py` 三次 43 项 PASS；真实安装→卡片/工具/页面→禁用/卸载。
+- C3：`/health-data` 页面；`recordTypePrefix` 过滤；Apple/小米导入记录可见、可筛选、可翻页。
+- 候选包：Stage C 重打 NSIS，交用户安装试用。
+
+## 31. Stage D：动画基线 + 视觉 QA（2026-10-31 启动）
+
+| 编号 | 任务 | 难度 | 思考强度 | 关键产出 |
+|---|---|---|---|---|
+| D1 | 动画系统基线 | 中等 2/4 | high | 120/200/320ms 令牌、切页/卡片/波形反馈、reduced-motion |
+| D2 | 视觉/可用性 QA | 中等 2/4 | high | 亮暗/对比度/间距/焦点/窄窗问题清单与修复 |
+| D3 | 用户反馈修复 | 待定 | high | 等用户安装候选包后按反馈写提示词 |
+
+**边界：**
+
+- D1/D2 只做通用基线，不猜用户动画偏好；用户意见进 D3。
+- D3 后重打最终包，填 release notes/校验和。
 - H5/G3 仍为外部阻塞。 
