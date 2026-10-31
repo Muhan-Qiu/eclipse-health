@@ -18,7 +18,7 @@ export function BeatDetails({
   const { t } = useTranslation();
   const abnormal = beat.label !== "N";
   return (
-    <div className="rounded-lg border border-border bg-subtle/60 p-3">
+    <div className="eh-fade-in rounded-lg border border-border bg-subtle/60 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={abnormal ? "destructive" : "secondary"}>
           {t(`analysis.classes.${beat.label}`, { defaultValue: beat.label })}

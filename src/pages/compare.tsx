@@ -192,7 +192,11 @@ export function ComparePage() {
       {!hasBoth ? (
         <EmptyState
           icon={GitCompare}
-          title={t("compare.needTwoTitle")}
+          title={
+            ids.length === 0
+              ? t("compare.pickTwoTitle")
+              : t("compare.needTwoTitle")
+          }
           description={t("compare.needTwoDesc")}
         >
           {backButton}

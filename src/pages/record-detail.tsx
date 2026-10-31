@@ -389,6 +389,7 @@ export function RecordDetailPage() {
                 onBeatSelect={selectBeat}
                 height={320}
                 recordDate={formatDateTime(record.capturedAt, locale)}
+                className="eh-reveal"
               />
               <p className="eh-caption flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
                 <span>{t("waveform.legend.rPeak")}</span>
@@ -397,6 +398,7 @@ export function RecordDetailPage() {
               </p>
               {selectedBeat ? (
                 <BeatDetails
+                  key={selectedBeat.index}
                   beat={selectedBeat}
                   fs={record.samplingRate ?? 360}
                   onClose={() => setSelectedBeat(null)}

@@ -13,6 +13,8 @@ export interface LogoProps {
   /** 无障碍名称；装饰性场景请设 decorative。 */
   title?: string;
   decorative?: boolean;
+  /** 常驻 logo：缓慢呼吸循环（侧栏/顶栏），减少动效时自动静止。 */
+  loop?: boolean;
 }
 
 /**
@@ -25,6 +27,7 @@ export function Logo({
   className,
   title = "eclipse health",
   decorative = false,
+  loop = false,
 }: LogoProps) {
   // SVG 渐变 id 必须页内唯一，React 19 的 useId 含冒号，去掉后再用于 url(#...)。
   const gradientId = `eh-corona-${useId().replace(/:/g, "")}`;
@@ -51,16 +54,18 @@ export function Logo({
         </radialGradient>
       </defs>
       <circle cx="64" cy="64" r="64" fill={`url(#${gradientId})`} />
-      <circle cx="64" cy="64" r="52" stroke="var(--eh-brand-ring)" strokeWidth="3.2" />
-      <circle cx="64" cy="64" r="40" fill="var(--eh-brand-disk)" />
-      <circle
-        cx="64"
-        cy="64"
-        r="40"
-        stroke="var(--eh-brand-ring)"
-        strokeWidth="1"
-        opacity={mono ? 0 : 0.3}
-      />
+      <g className={loop ? "eh-brand-logo__loop" : undefined}>
+        <circle cx="64" cy="64" r="52" stroke="var(--eh-brand-ring)" strokeWidth="3.2" />
+        <circle cx="64" cy="64" r="40" fill="var(--eh-brand-disk)" />
+        <circle
+          cx="64"
+          cy="64"
+          r="40"
+          stroke="var(--eh-brand-ring)"
+          strokeWidth="1"
+          opacity={mono ? 0 : 0.3}
+        />
+      </g>
     </svg>
   );
 }

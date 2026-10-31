@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "./command-palette";
+import { PageTransition } from "./page-transition";
 import { ImportProvider } from "@/components/import/import-provider";
 import { findNavItem } from "@/lib/nav";
 
@@ -75,9 +76,9 @@ export function AppShell() {
           tabIndex={-1}
           className="flex-1 overflow-y-auto outline-none"
         >
-          <div key={location.pathname} className="eh-page eh-page-enter">
+          <PageTransition>
             <Outlet />
-          </div>
+          </PageTransition>
         </main>
       </div>
 

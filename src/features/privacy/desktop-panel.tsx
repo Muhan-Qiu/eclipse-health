@@ -102,7 +102,7 @@ export function DesktopPanel({ className }: DesktopPanelProps) {
               : "settings.desktop.splashDesc";
           return (
             <div key={preference} className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <Label htmlFor={`desktop-${preference}`}>{t(labelKey)}</Label>
                 <p className="eh-caption text-muted-foreground">{t(descKey)}</p>
               </div>
@@ -117,7 +117,7 @@ export function DesktopPanel({ className }: DesktopPanelProps) {
           );
         })}
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <Label htmlFor="desktop-analysis-notifications">
               {t("settings.desktop.notifications")}
             </Label>

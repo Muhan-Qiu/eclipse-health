@@ -68,7 +68,7 @@ export function RecordRow({
   const StatusIcon = status.icon;
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-accent focus-within:bg-accent">
+    <div className="flex items-center gap-3 px-5 py-3 transition-colors duration-[120ms] hover:bg-accent focus-within:bg-accent">
       {selection ? (
         <input
           type="checkbox"
@@ -167,10 +167,13 @@ export function RecordRow({
             favorite: !record.favorite,
           })
         }
-        className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-[background-color,color,transform] duration-[120ms] hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-90"
       >
         <Star
-          className={cn("size-4", record.favorite && "fill-current text-primary")}
+          className={cn(
+            "size-4 transition-colors",
+            record.favorite && "eh-star-pop fill-current text-primary",
+          )}
           aria-hidden="true"
         />
       </button>

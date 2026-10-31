@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EclipseMark } from "@/components/common/eclipse-mark";
+import { markNavOrigin } from "@/lib/motion";
 import { primaryNav, secondaryNav, type NavItem } from "@/lib/nav";
 
 interface SidebarProps {
@@ -32,8 +33,15 @@ function NavEntry({
     <NavLink
       to={item.path}
       end={item.end}
+      onClick={(event) => {
+        // 只记录普通左键点击；修饰键/中键保持浏览器默认行为。
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+          return;
+        }
+        markNavOrigin(event.currentTarget);
+      }}
       className={cn(
-        "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors",
+        "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-[background-color,color] duration-200",
         "hover:bg-accent hover:text-foreground",
         "aria-[current=page]:bg-subtle aria-[current=page]:font-medium aria-[current=page]:text-foreground aria-[current=page]:[&_svg]:text-primary",
         collapsed && "justify-center px-0",
@@ -63,7 +71,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside
       aria-label={t("nav.primary")}
       className={cn(
-        "flex h-full shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-200",
+        "flex h-full shrink-0 flex-col border-r border-border bg-sidebar transition-[width,background-color,border-color] duration-200",
         collapsed ? "w-16" : "w-[232px]",
       )}
     >
@@ -73,7 +81,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           collapsed && "justify-center px-0",
         )}
       >
-        <EclipseMark className="size-7" />
+        <EclipseMark className="size-7" loop />
         {collapsed ? null : (
           <div className="min-w-0">
             <p className="truncate font-heading text-[15px] leading-tight font-semibold">

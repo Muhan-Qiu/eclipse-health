@@ -30,6 +30,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DemoBadge } from "@/components/common/demo-badge";
 import { EmptyState } from "@/components/common/empty-state";
+import { AnimatedNumber } from "@/components/common/animated-number";
 import { PageHeader } from "@/components/common/page-header";
 import { RecordListSkeleton } from "@/components/common/loading";
 import { Sparkline } from "@/components/common/sparkline";
@@ -85,7 +86,7 @@ function GuideCard({
   children: ReactNode;
 }) {
   return (
-    <Card className="gap-0 p-5">
+    <Card className="eh-lift gap-0 p-5">
       <div
         className="flex size-9 items-center justify-center rounded-lg bg-accent-soft text-primary"
         aria-hidden="true"
@@ -103,11 +104,13 @@ function MetricRow({
   label,
   value,
   unit,
+  format,
   children,
 }: {
   label: string;
-  value: string;
+  value: number | null;
   unit: string;
+  format: (value: number) => string;
   children?: ReactNode;
 }) {
   return (
@@ -115,7 +118,9 @@ function MetricRow({
       <div>
         <p className="eh-caption text-muted-foreground">{label}</p>
         <p className="mt-1 flex items-baseline gap-1.5">
-          <span className="eh-num text-3xl leading-9 font-medium">{value}</span>
+          <span className="eh-num text-3xl leading-9 font-medium">
+            <AnimatedNumber value={value} format={format} />
+          </span>
           <span className="eh-caption text-muted-foreground">{unit}</span>
         </p>
       </div>
@@ -167,7 +172,7 @@ function RecentRecords() {
   }
 
   return (
-    <div className="divide-y divide-border">
+    <div className="divide-y divide-border eh-stagger">
       {records.map((record) => (
         <RecordRow key={record.id} record={record} />
       ))}
@@ -228,7 +233,7 @@ function MetricsCard({
   }, [candidates]);
 
   return (
-    <Card className="desk:col-span-3 xl:col-span-5">
+    <Card className="eh-lift desk:col-span-3 xl:col-span-5">
       <CardHeader>
         <CardTitle className="eh-h3">{t("dashboard.metrics.title")}</CardTitle>
         <CardDescription>
@@ -281,10 +286,9 @@ function MetricsCard({
           <>
             <MetricRow
               label={t("dashboard.metrics.heartRate")}
-              value={
-                heartRate === null
-                  ? "—"
-                  : formatNumber(heartRate, locale, { maximumFractionDigits: 0 })
+              value={heartRate}
+              format={(value) =>
+                formatNumber(value, locale, { maximumFractionDigits: 0 })
               }
               unit={t("dashboard.metrics.bpm")}
             >
@@ -297,26 +301,25 @@ function MetricsCard({
             </MetricRow>
             <MetricRow
               label={t("dashboard.metrics.hrv")}
-              value={
-                rmssd === null
-                  ? "—"
-                  : formatNumber(rmssd, locale, { maximumFractionDigits: 1 })
+              value={rmssd}
+              format={(value) =>
+                formatNumber(value, locale, { maximumFractionDigits: 1 })
               }
               unit={t("dashboard.metrics.ms")}
             />
             <MetricRow
               label={t("dashboard.metrics.abnormal")}
-              value={formatNumber(abnormal, locale, { maximumFractionDigits: 1 })}
+              value={abnormal}
+              format={(value) =>
+                formatNumber(value, locale, { maximumFractionDigits: 1 })
+              }
               unit={t("dashboard.metrics.percent")}
             />
             <MetricRow
               label={t("dashboard.metrics.quality")}
-              value={
-                quality === null
-                  ? "—"
-                  : formatNumber(quality * 100, locale, {
-                      maximumFractionDigits: 0,
-                    })
+              value={quality === null ? null : quality * 100}
+              format={(value) =>
+                formatNumber(value, locale, { maximumFractionDigits: 0 })
               }
               unit={t("dashboard.metrics.percent")}
             />
@@ -391,7 +394,10 @@ export function DashboardPage() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-3" aria-label={t("dashboard.eyebrow")}>
+      <section
+        className="eh-stagger grid gap-4 md:grid-cols-3"
+        aria-label={t("dashboard.eyebrow")}
+      >
         <GuideCard
           icon={FilePlus2}
           title={t("dashboard.guide.importTitle")}
@@ -446,10 +452,12 @@ export function DashboardPage() {
         </GuideCard>
       </section>
 
-      <WidgetGrid />
+      <div className="eh-widget-stagger">
+        <WidgetGrid />
+      </div>
 
-      <div className="eh-grid mt-6">
-        <Card className="desk:col-span-5 xl:col-span-7">
+      <div className="eh-grid mt-6 eh-stagger">
+        <Card className="eh-lift desk:col-span-5 xl:col-span-7">
           <CardHeader>
             <CardTitle className="eh-h3">{t("dashboard.recent.title")}</CardTitle>
             <CardDescription>{t("dashboard.recent.description")}</CardDescription>
@@ -478,7 +486,7 @@ export function DashboardPage() {
           openPicker={openPicker}
         />
 
-        <Card className="desk:col-span-8 xl:col-span-12">
+        <Card className="eh-lift desk:col-span-8 xl:col-span-12">
           <CardHeader>
             <CardTitle className="eh-h3">{t("dashboard.waveform.title")}</CardTitle>
             <CardDescription>
@@ -510,6 +518,7 @@ export function DashboardPage() {
                 analysis={latestCompleted}
                 height={160}
                 compact
+                className="eh-reveal"
               />
             ) : (
               <EmptyState

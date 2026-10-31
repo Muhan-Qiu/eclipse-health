@@ -770,6 +770,7 @@ const enUS: typeof zhCN = {
       placeholder: "Choose a record",
     },
     hint: "Tick two records in the list, or choose them here.",
+    pickTwoTitle: "Choose two records to compare",
     needTwoTitle: "One more record needed",
     needTwoDesc:
       "Choose two analyzed records to compare waveforms and metrics side by side.",

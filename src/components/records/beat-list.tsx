@@ -251,7 +251,7 @@ export function BeatList({
                   aria-label={t("beatList.select", { index: beat.index + 1 })}
                   onClick={() => onSelect(beat)}
                   className={cn(
-                    "absolute inset-x-0 grid grid-cols-[36px_64px_minmax(64px,1fr)_64px_64px] items-center gap-1 border-l-2 px-2 text-left text-[11px] eh-num tabular-nums",
+                    "absolute inset-x-0 grid grid-cols-[36px_64px_minmax(64px,1fr)_64px_64px] items-center gap-1 border-l-2 px-2 text-left text-[11px] eh-num tabular-nums transition-colors duration-[120ms]",
                     selected
                       ? "border-l-[var(--eh-accent)] bg-accent-soft"
                       : "border-l-transparent hover:bg-subtle",

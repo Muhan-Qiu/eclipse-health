@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 /** 列表加载骨架（A5）。 */
 export function RecordListSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-border" aria-hidden="true">
+    <div className="eh-fade-in divide-y divide-border" aria-hidden="true">
       {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="flex items-center gap-4 px-4 py-3.5">
           <Skeleton className="size-9 rounded-lg" />

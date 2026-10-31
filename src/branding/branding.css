@@ -26,6 +26,46 @@
   --eh-brand-ring: currentColor;
 }
 
+/* 常驻 logo：像启动动画一样缓慢收束/呼吸，8s 一轮，不抢注意力。
+ * transform-box: fill-box 让 SVG 以自身中心缩放，不依赖 viewBox 坐标。
+ * prefers-reduced-motion 由全局规则统一停用。 */
+.eh-brand-logo__loop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: eh-logo-breathe 8s var(--eh-ease-near-linear) infinite;
+}
+
+.eh-brand-mark__loop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: eh-logo-breathe 8s var(--eh-ease-near-linear) infinite;
+}
+
+/* 外圈光环单独呼吸，避免整枚标识同频缩放显得呆板 */
+.eh-brand-mark__halo {
+  animation: eh-logo-halo 8s var(--eh-ease-near-linear) infinite;
+}
+
+@keyframes eh-logo-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.955);
+  }
+}
+
+@keyframes eh-logo-halo {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
 .eh-brand-wordmark {
   display: inline-flex;
   flex-direction: column;
@@ -58,6 +98,7 @@
  * 暗色：近黑底，光环 40%→100%，字标淡入，最后整体淡出。
  * 亮色：从黑开始，黑盘缩小淡出，背景过渡到暖白，字标转墨色。
  * 总时长 1600ms（SplashScreen.tsx 常量需同步）。
+ * 收束（黑盘缩小/幕布上升）用线性或近乎线性缓动，且只动 transform/opacity。
  * ------------------------------------------------------------------ */
 
 .eh-brand-splash {
@@ -75,7 +116,7 @@
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
-  animation: eh-brand-splash-out 360ms var(--eh-ease-out) 1240ms both;
+  animation: eh-brand-splash-out 360ms linear 1240ms both;
 }
 
 .eh-brand-splash[data-mode="light"] {
@@ -85,7 +126,7 @@
     var(--eh-logo-ring, var(--eh-accent)) 55%,
     var(--eh-bg, #f7f5f1)
   );
-  animation: eh-brand-splash-out 300ms var(--eh-ease-out) 1300ms both;
+  animation: eh-brand-splash-out 300ms linear 1300ms both;
 }
 
 /* 亮色：暖白幕布从黑底上升起；放在子层，跳过场时随遮罩一起淡出，不会闪回黑色 */
@@ -97,7 +138,7 @@
 }
 
 .eh-brand-splash[data-mode="light"] .eh-brand-splash__veil {
-  animation: eh-brand-veil-light 450ms var(--eh-ease-out) 700ms both;
+  animation: eh-brand-veil-light 450ms linear 700ms both;
 }
 
 .eh-brand-splash__scene {
@@ -118,6 +159,7 @@
     color-mix(in srgb, var(--eh-brand-splash-ring) 28%, transparent) 72%,
     transparent 90%
   );
+  animation: eh-brand-glow-in 900ms var(--eh-ease-near-linear) both;
 }
 
 .eh-brand-splash__disk {
@@ -136,41 +178,40 @@
   border: 3.4px solid var(--eh-brand-splash-ring);
   box-shadow: 0 0 34px color-mix(in srgb, var(--eh-brand-splash-ring) 20%, transparent);
   opacity: 0.4;
-  animation: eh-brand-ring-in 900ms var(--eh-ease-out) both;
+  animation: eh-brand-ring-in 900ms var(--eh-ease-near-linear) both;
 }
 
 .eh-brand-splash__word {
   position: relative;
-  animation: eh-brand-word-in 500ms var(--eh-ease-out) 480ms both;
+  animation: eh-brand-word-in 500ms var(--eh-ease-near-linear) 480ms both;
 }
 
 /* 亮色：黑盘缩小淡出，像日食结束 */
 .eh-brand-splash[data-mode="light"] .eh-brand-splash__disk {
-  animation: eh-brand-disk-eclipse 450ms var(--eh-ease-out) 900ms both;
+  animation: eh-brand-disk-eclipse 450ms linear 900ms both;
 }
 
 /* 亮色：背景转暖白后，字标才出现，避免浅色文字落在白底上 */
 .eh-brand-splash[data-mode="light"] .eh-brand-splash__word {
-  animation: eh-brand-word-in 280ms var(--eh-ease-out) 820ms both;
+  animation: eh-brand-word-in 280ms var(--eh-ease-near-linear) 820ms both;
 }
 
 /* 亮色：白色底上升后收起辉光，否则会留下灰色晕圈 */
 .eh-brand-splash[data-mode="light"] .eh-brand-splash__glow {
-  animation: eh-brand-glow-out 450ms var(--eh-ease-out) 700ms both;
+  animation: eh-brand-glow-out 450ms linear 700ms both;
 }
 
-/* 亮色：背景变白时，光环从「日冕亮色」过渡回墨色品牌色，再在结尾淡出 */
+/* 亮色：背景变白时，光环只做透明度淡出（不再动画 border-color，避免逐帧重绘）。 */
 .eh-brand-splash[data-mode="light"] .eh-brand-splash__ring {
   animation:
-    eh-brand-ring-in 900ms var(--eh-ease-out) both,
-    eh-brand-ring-ink 380ms var(--eh-ease-out) 700ms both,
-    eh-brand-ring-out 260ms var(--eh-ease-out) 1300ms both;
+    eh-brand-ring-in 900ms var(--eh-ease-near-linear) both,
+    eh-brand-ring-out 380ms linear 760ms both;
 }
 
 /* 主界面在遮罩下方淡入，遮罩撤走时已经就位；包裹层常驻，避免重挂载 App */
 .eh-brand-app--intro {
   min-height: 100dvh;
-  animation: eh-brand-app-in 460ms var(--eh-ease-out) 1040ms both;
+  animation: eh-brand-app-in 460ms linear 1040ms both;
 }
 
 .eh-brand-app--reduced {
@@ -225,22 +266,23 @@
   }
 }
 
+@keyframes eh-brand-glow-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes eh-brand-glow-out {
   from {
     opacity: 1;
   }
   to {
     opacity: 0;
-  }
-}
-
-@keyframes eh-brand-ring-ink {
-  from {
-    border-color: var(--eh-brand-splash-ring);
-  }
-  to {
-    border-color: var(--eh-logo-ring, var(--eh-accent));
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   }
 }
 

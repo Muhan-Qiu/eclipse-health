@@ -21,7 +21,7 @@ export function Topbar({ onOpenCommand }: TopbarProps) {
   const { resolved, toggleMode } = useAppTheme();
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4 transition-colors duration-200">
       <nav
         aria-label={t("nav.primary")}
         className="flex min-w-0 items-center gap-2 text-sm"
@@ -43,7 +43,7 @@ export function Topbar({ onOpenCommand }: TopbarProps) {
           type="button"
           onClick={onOpenCommand}
           aria-label={t("a11y.openCommand")}
-          className="flex h-8 items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex h-8 items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted-foreground transition-[background-color,color,transform] duration-[120ms] hover:bg-accent hover:text-foreground active:translate-y-px"
         >
           <Search className="size-4" aria-hidden="true" />
           <span className="hidden md:inline">{t("topbar.search")}</span>

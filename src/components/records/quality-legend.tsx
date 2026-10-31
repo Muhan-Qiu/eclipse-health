@@ -101,7 +101,7 @@ export function QualityLegend({
                 type="button"
                 key={`${segment.startSec}-${segment.endSec}-${index}`}
                 onClick={() => onFocus?.(segment.startSec, segment.endSec)}
-                className="grid w-full grid-cols-[minmax(76px,1fr)_58px_44px] items-center gap-1 rounded-md px-1 py-1 text-left text-[11px] eh-num tabular-nums hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="grid w-full grid-cols-[minmax(76px,1fr)_58px_44px] items-center gap-1 rounded-md px-1 py-1 text-left text-[11px] eh-num tabular-nums transition-colors duration-[120ms] hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title={
                   reason ||
                   t("qualityLegend.focus", {

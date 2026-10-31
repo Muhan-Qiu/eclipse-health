@@ -693,6 +693,7 @@ const zhCN = {
       placeholder: "选择一条记录",
     },
     hint: "从记录列表勾选两条，或在页内选择。",
+    pickTwoTitle: "选择两条记录开始对比",
     needTwoTitle: "还需要一条记录",
     needTwoDesc: "选择两条已分析的记录后，就能并排比较波形与指标。",
     pick: "选择记录",

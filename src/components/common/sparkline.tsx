@@ -34,12 +34,14 @@ export function Sparkline({ values, ariaLabel, className }: SparklineProps) {
     >
       <polyline
         points={points}
+        pathLength={1}
         fill="none"
         stroke="var(--eh-signal)"
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"
+        className="eh-sparkline__line"
       />
     </svg>
   );
