@@ -652,4 +652,24 @@
 - 波形 R 峰选中脉冲/hover、模块卡内容淡入、全站时长统一整秒（`M:SS`/`H:MM:SS`）、仪表盘短列表空白、报告选择器/当前记录摘要、健康数据列表 stagger。
 - 全量：`pytest backend/tests` **594 passed / 11 skipped**；ruff 通过；`npm run build` 通过。
 - 最终包构建中；完成后填 `docs/RELEASE_NOTES_DRAFT.md` 的大小与 SHA-256。
-- 剩余外部阻塞：H5 自动更新（签名/服务器）、G3 真机格式（Apple/Samsung/华为样本）、华为/Zepp/Samsung 健康数据导入（等样本）。 
+- 剩余外部阻塞：H5 自动更新（签名/服务器）、G3 真机格式（Apple/Samsung/华为样本）、华为/Zepp/Samsung 健康数据导入（等样本）。
+
+## 33. Stage E：用户反馈修复 + 对外 API（2026-10-31 启动）
+
+> 用户安装最终包后提出第二轮意见：开屏卡顿、logo 无动画、导航转场白屏、图标丑、副标题多余、主题不足、要每日名言、要对外 API Key。
+
+| 编号 | 任务 | 难度 | 思考强度 | 关键产出 |
+|---|---|---|---|---|
+| F1 | 开屏线性 + 深绿涟漪 logo + 新应用图标 + 导航只淡入淡出 + 删副标题 | 困难 3/4 | high | branding/layout/icons |
+| F2 | 3 高饱和 + 2 玻璃主题 + 30 句中英每日名言 | 困难 3/4 | high | theme/palettes/index.css/quotes/dashboard |
+| F3 | 对外 API 后端：Key + REST + OpenAI 兼容 + MCP | 困难 3/4 | high | external router/auth/MCP/docs |
+| F4 | 设置页「外部访问」Key 管理与连接示例 | 中等 2/4 | high | external-access panel |
+
+**约束：**
+
+- 仅本机 127.0.0.1；key 只显示一次、存 hash、可撤销；默认 read+write + assistant。
+- OpenAI 兼容端点复用应用内 LLM；无 provider → 503。
+- 导航转场只做淡入淡出，不做斜向覆盖；侧栏不被覆盖。
+- 主题保留现有莫奈命名，新增高饱和与玻璃；玻璃含无 backdrop-filter 回退。
+- 名言只用可核实句子；中英双语、带作者。
+- 完成后重打安装包并交用户验收。 
