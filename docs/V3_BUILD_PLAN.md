@@ -644,4 +644,12 @@
 | D3 | 波形 R 峰反馈 + 模块卡加载态 + 时长格式统一 + 仪表盘空白 + 报告摘要 + 列表入场 + 用户反馈 | 最终代码 checkpoint |
 
 - 完成后重打 NSIS 最终包，更新 release notes/校验和，交用户验收。
-- H5/G3 仍为外部阻塞。 
+- H5/G3 仍为外部阻塞。
+
+### D3 最终打磨结果（2026-10-31）
+
+- 报告 `reports/D3-final-polish-report.md`；checkpoint `6410c97`。
+- 波形 R 峰选中脉冲/hover、模块卡内容淡入、全站时长统一整秒（`M:SS`/`H:MM:SS`）、仪表盘短列表空白、报告选择器/当前记录摘要、健康数据列表 stagger。
+- 全量：`pytest backend/tests` **594 passed / 11 skipped**；ruff 通过；`npm run build` 通过。
+- 最终包构建中；完成后填 `docs/RELEASE_NOTES_DRAFT.md` 的大小与 SHA-256。
+- 剩余外部阻塞：H5 自动更新（签名/服务器）、G3 真机格式（Apple/Samsung/华为样本）、华为/Zepp/Samsung 健康数据导入（等样本）。 
