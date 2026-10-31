@@ -214,6 +214,379 @@ html:not(.dark)[data-palette="c"] {
   --eh-chart-5: #7c8b6b;
 }
 
+/* ------------------------------------------------------------------
+ * 新增配色 5 套：高饱和（星夜 / 向日葵 / 神奈川冲浪里）
+ *              玻璃（晨雾 / 琉璃）
+ * 每套都给出完整亮/暗变量；高饱和但压低明度，正文与背景保持 WCAG AA。
+ * ------------------------------------------------------------------ */
+
+/* 星夜 · The Starry Night */
+html:not(.dark)[data-palette="starry"] {
+  --eh-bg: #eef3fb;
+  --eh-bg-subtle: #e2e9f6;
+  --eh-surface: #ffffff;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #14213d 6%, transparent);
+  --eh-border: rgba(20, 33, 61, 0.12);
+  --eh-border-strong: rgba(20, 33, 61, 0.22);
+  --eh-text: #101a2e;
+  --eh-text-muted: #4c5f80;
+  --eh-accent: #1f4fa8;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #1f4fa8 12%, transparent);
+  --eh-signal: #0b6fa4;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #1f4fa8;
+  --eh-chart-2: #b8860b;
+  --eh-chart-3: #0b6fa4;
+  --eh-chart-4: #6b4fa8;
+  --eh-chart-5: #2f8f6b;
+  --eh-grid-line: rgba(20, 33, 61, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(16, 26, 46, 0.06),
+    0 8px 24px rgba(16, 26, 46, 0.06);
+}
+
+.dark[data-palette="starry"] {
+  --eh-bg: #070b18;
+  --eh-bg-subtle: #0c1226;
+  --eh-surface: #101a33;
+  --eh-surface-raised: #16223f;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(150, 180, 255, 0.16);
+  --eh-border-strong: rgba(150, 180, 255, 0.28);
+  --eh-text: #eef3ff;
+  --eh-text-muted: #a3b4d6;
+  --eh-accent: #f2c14e;
+  --eh-accent-contrast: #1a1305;
+  --eh-accent-soft: color-mix(in srgb, #f2c14e 16%, transparent);
+  --eh-signal: #6fd3ff;
+  --eh-danger: #ff7b8a;
+  --eh-warning: #ffd166;
+  --eh-success: #7fe0a8;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #6fd3ff;
+  --eh-chart-2: #f2c14e;
+  --eh-chart-3: #9d8cff;
+  --eh-chart-4: #67e8b9;
+  --eh-chart-5: #ff9db1;
+  --eh-grid-line: rgba(150, 180, 255, 0.1);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 向日葵 · Sunflowers */
+html:not(.dark)[data-palette="sunflower"] {
+  --eh-bg: #fbf6e9;
+  --eh-bg-subtle: #f3ead3;
+  --eh-surface: #fffdf7;
+  --eh-surface-raised: #fffefb;
+  --eh-hover: color-mix(in srgb, #3a2c10 6%, transparent);
+  --eh-border: rgba(90, 70, 20, 0.14);
+  --eh-border-strong: rgba(90, 70, 20, 0.24);
+  --eh-text: #2a210f;
+  --eh-text-muted: #6a5a3a;
+  --eh-accent: #a05f00;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #a05f00 12%, transparent);
+  --eh-signal: #6a6f1a;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #a05f00;
+  --eh-chart-2: #6a7f2a;
+  --eh-chart-3: #b8860b;
+  --eh-chart-4: #4f6b6b;
+  --eh-chart-5: #8a5a00;
+  --eh-grid-line: rgba(90, 70, 20, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(42, 33, 15, 0.06),
+    0 8px 24px rgba(42, 33, 15, 0.06);
+}
+
+.dark[data-palette="sunflower"] {
+  --eh-bg: #120e06;
+  --eh-bg-subtle: #1a1409;
+  --eh-surface: #20190d;
+  --eh-surface-raised: #2a210f;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(255, 220, 140, 0.16);
+  --eh-border-strong: rgba(255, 220, 140, 0.28);
+  --eh-text: #fff6e0;
+  --eh-text-muted: #c9b78a;
+  --eh-accent: #ffcf4a;
+  --eh-accent-contrast: #241a00;
+  --eh-accent-soft: color-mix(in srgb, #ffcf4a 16%, transparent);
+  --eh-signal: #ffd45e;
+  --eh-danger: #ff7b7b;
+  --eh-warning: #ffd166;
+  --eh-success: #b8d46a;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #ffcf4a;
+  --eh-chart-2: #b8d46a;
+  --eh-chart-3: #ff9d4a;
+  --eh-chart-4: #7fd4c1;
+  --eh-chart-5: #e8a0ff;
+  --eh-grid-line: rgba(255, 220, 140, 0.09);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 神奈川冲浪里 · The Great Wave off Kanagawa */
+html:not(.dark)[data-palette="wave"] {
+  --eh-bg: #eef6f8;
+  --eh-bg-subtle: #e0eef2;
+  --eh-surface: #ffffff;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #0c2430 6%, transparent);
+  --eh-border: rgba(10, 50, 70, 0.14);
+  --eh-border-strong: rgba(10, 50, 70, 0.24);
+  --eh-text: #0c2430;
+  --eh-text-muted: #476875;
+  --eh-accent: #0b5d8a;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #0b5d8a 12%, transparent);
+  --eh-signal: #0f766e;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #0b5d8a;
+  --eh-chart-2: #b0721a;
+  --eh-chart-3: #0f766e;
+  --eh-chart-4: #5b6b8a;
+  --eh-chart-5: #2a8fa8;
+  --eh-grid-line: rgba(10, 50, 70, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(12, 36, 48, 0.06),
+    0 8px 24px rgba(12, 36, 48, 0.06);
+}
+
+.dark[data-palette="wave"] {
+  --eh-bg: #04121c;
+  --eh-bg-subtle: #071c2a;
+  --eh-surface: #0a2637;
+  --eh-surface-raised: #0e3145;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(150, 220, 255, 0.16);
+  --eh-border-strong: rgba(150, 220, 255, 0.28);
+  --eh-text: #eaf7ff;
+  --eh-text-muted: #9cc2d4;
+  --eh-accent: #4fc3f7;
+  --eh-accent-contrast: #05202e;
+  --eh-accent-soft: color-mix(in srgb, #4fc3f7 16%, transparent);
+  --eh-signal: #64e0d0;
+  --eh-danger: #ff7b8a;
+  --eh-warning: #ffd166;
+  --eh-success: #7fe0a8;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #4fc3f7;
+  --eh-chart-2: #ffd166;
+  --eh-chart-3: #64e0d0;
+  --eh-chart-4: #a8b8ff;
+  --eh-chart-5: #ff9f7a;
+  --eh-grid-line: rgba(150, 220, 255, 0.1);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 晨雾（玻璃）· Morning Mist */
+html:not(.dark)[data-palette="mist"] {
+  --eh-bg: #eef1f4;
+  --eh-bg-subtle: #e3e9ee;
+  --eh-surface: #fbfcfd;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #1e3246 5%, transparent);
+  --eh-border: rgba(30, 50, 70, 0.12);
+  --eh-border-strong: rgba(30, 50, 70, 0.22);
+  --eh-text: #16232e;
+  --eh-text-muted: #536573;
+  --eh-accent: #3d6b80;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #3d6b80 12%, transparent);
+  --eh-signal: #2f7d7a;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #3d6b80;
+  --eh-chart-2: #6d8ea0;
+  --eh-chart-3: #7f9a8a;
+  --eh-chart-4: #a08c9e;
+  --eh-chart-5: #4f7f9a;
+  --eh-grid-line: rgba(30, 50, 70, 0.07);
+  --eh-shadow-card: 0 1px 2px rgba(22, 35, 46, 0.06),
+    0 8px 24px rgba(22, 35, 46, 0.06);
+  --eh-glass-border: rgba(30, 50, 70, 0.18);
+}
+
+.dark[data-palette="mist"] {
+  --eh-bg: #0b1218;
+  --eh-bg-subtle: #111b23;
+  --eh-surface: #15212b;
+  --eh-surface-raised: #1a2934;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(200, 225, 240, 0.14);
+  --eh-border-strong: rgba(200, 225, 240, 0.26);
+  --eh-text: #eef4f7;
+  --eh-text-muted: #a8bac5;
+  --eh-accent: #8fc7db;
+  --eh-accent-contrast: #0b1a22;
+  --eh-accent-soft: color-mix(in srgb, #8fc7db 16%, transparent);
+  --eh-signal: #7fd8cf;
+  --eh-danger: #ff8a94;
+  --eh-warning: #ffd27f;
+  --eh-success: #8fe0b0;
+  --eh-info: #96b8ff;
+  --eh-chart-1: #8fc7db;
+  --eh-chart-2: #a8b8d8;
+  --eh-chart-3: #9fd8c8;
+  --eh-chart-4: #d8b8c8;
+  --eh-chart-5: #7fa8c8;
+  --eh-grid-line: rgba(200, 225, 240, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-glass-border: rgba(200, 225, 240, 0.22);
+}
+
+/* 琉璃（玻璃）· Glaze */
+html:not(.dark)[data-palette="glaze"] {
+  --eh-bg: #eef4f2;
+  --eh-bg-subtle: #e2ece9;
+  --eh-surface: #f8fcfb;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #10302a 5%, transparent);
+  --eh-border: rgba(20, 70, 60, 0.12);
+  --eh-border-strong: rgba(20, 70, 60, 0.22);
+  --eh-text: #10241f;
+  --eh-text-muted: #4b6a61;
+  --eh-accent: #176b5c;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #176b5c 12%, transparent);
+  --eh-signal: #0f7c8a;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #176b5c;
+  --eh-chart-2: #2f8f9a;
+  --eh-chart-3: #c08a3e;
+  --eh-chart-4: #5c6f9a;
+  --eh-chart-5: #6a8a4a;
+  --eh-grid-line: rgba(20, 70, 60, 0.07);
+  --eh-shadow-card: 0 1px 2px rgba(16, 36, 31, 0.06),
+    0 8px 24px rgba(16, 36, 31, 0.06);
+  --eh-glass-border: rgba(20, 70, 60, 0.18);
+}
+
+.dark[data-palette="glaze"] {
+  --eh-bg: #06110f;
+  --eh-bg-subtle: #0b1a17;
+  --eh-surface: #0f231f;
+  --eh-surface-raised: #14302a;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(170, 240, 220, 0.14);
+  --eh-border-strong: rgba(170, 240, 220, 0.26);
+  --eh-text: #eafaf5;
+  --eh-text-muted: #a2c4b9;
+  --eh-accent: #5fe0c0;
+  --eh-accent-contrast: #04201a;
+  --eh-accent-soft: color-mix(in srgb, #5fe0c0 16%, transparent);
+  --eh-signal: #7fe0ff;
+  --eh-danger: #ff8a94;
+  --eh-warning: #ffd27f;
+  --eh-success: #9fe08a;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #5fe0c0;
+  --eh-chart-2: #7fd8ff;
+  --eh-chart-3: #ffd27f;
+  --eh-chart-4: #b8a8ff;
+  --eh-chart-5: #a8e07f;
+  --eh-grid-line: rgba(170, 240, 220, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-glass-border: rgba(170, 240, 220, 0.22);
+}
+
+/* ------------------------------------------------------------------
+ * 玻璃层：只在 html[data-glass="true"]（mist / glaze）下启用。
+ * 侧栏、顶栏、卡片、弹窗使用半透明表面 + Gaussian blur；
+ * 不支持 backdrop-filter 时退回不透明表面，保证低端机可读。
+ * ------------------------------------------------------------------ */
+
+/* 给模糊层一点可感知的底色；颜色全部来自当前配色令牌。 */
+html[data-glass="true"] .eh-brand-app > div {
+  background-image:
+    radial-gradient(
+      circle at 12% 8%,
+      color-mix(in srgb, var(--eh-accent) 20%, transparent),
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 88% 0%,
+      color-mix(in srgb, var(--eh-signal) 15%, transparent),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 70% 92%,
+      color-mix(in srgb, var(--eh-chart-3) 12%, transparent),
+      transparent 45%
+    );
+  background-attachment: fixed;
+}
+
+html[data-glass="true"] aside,
+html[data-glass="true"] .eh-brand-app > div > div > header,
+html[data-glass="true"] [data-slot="card"],
+html[data-glass="true"] [data-slot="dialog-content"],
+html[data-glass="true"] [data-slot="alert-dialog-content"],
+html[data-glass="true"] [data-slot="popover-content"],
+html[data-glass="true"] [data-slot="dropdown-menu-content"] {
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+  border-color: var(--eh-glass-border);
+}
+
+html[data-glass="true"] aside {
+  background-color: color-mix(in srgb, var(--eh-surface) 62%, transparent);
+}
+
+html[data-glass="true"] .eh-brand-app > div > div > header {
+  background-color: color-mix(in srgb, var(--eh-bg) 70%, transparent);
+}
+
+html[data-glass="true"] [data-slot="card"] {
+  background-color: color-mix(in srgb, var(--eh-surface) 66%, transparent);
+  --tw-ring-color: var(--eh-glass-border);
+}
+
+html[data-glass="true"] [data-slot="dialog-content"],
+html[data-glass="true"] [data-slot="alert-dialog-content"],
+html[data-glass="true"] [data-slot="popover-content"],
+html[data-glass="true"] [data-slot="dropdown-menu-content"] {
+  background-color: color-mix(
+    in srgb,
+    var(--eh-surface-raised) 72%,
+    transparent
+  );
+  --tw-ring-color: var(--eh-glass-border);
+}
+
+/* 无 backdrop-filter（旧 WebView / 低端机）：退回不透明表面。 */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  html[data-glass="true"] aside,
+  html[data-glass="true"] [data-slot="card"] {
+    background-color: var(--eh-surface);
+  }
+  html[data-glass="true"] .eh-brand-app > div > div > header {
+    background-color: var(--eh-bg);
+  }
+  html[data-glass="true"] [data-slot="dialog-content"],
+  html[data-glass="true"] [data-slot="alert-dialog-content"],
+  html[data-glass="true"] [data-slot="popover-content"],
+  html[data-glass="true"] [data-slot="dropdown-menu-content"] {
+    background-color: var(--eh-surface-raised);
+  }
+}
+
 @theme inline {
   --breakpoint-desk: 60rem;
 

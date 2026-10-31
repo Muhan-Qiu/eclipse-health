@@ -3,12 +3,11 @@ import { Wordmark } from "./Logo";
 import "./branding.css";
 
 const PLAYED_KEY = "eh-splash-played";
-/** 与 branding.css 的动画时序保持一致（见文件末尾时间轴）。 */
+/** 与 branding.css 的动画时序保持一致（见文件顶部的启动时间轴）。 */
 const FULL_DURATION_MS = 1600;
-const REDUCED_DURATION_MS = 300;
 const LEAVE_DURATION_MS = 200;
 /** ?splash=hold 时冻结在动画最有代表性的时刻，便于截图/调试。 */
-const HOLD_AT_MS = { dark: 950, light: 1150 } as const;
+const HOLD_AT_MS = { dark: 1000, light: 1250 } as const;
 
 type SplashMode = "light" | "dark";
 
@@ -17,19 +16,39 @@ interface SplashDebug {
   force: boolean;
   /** 播放到关键时刻后冻结，等待点击关闭。 */
   hold: boolean;
+  /** ?splash=hold&at=900：冻结在指定毫秒，用于逐帧截图。 */
+  holdAt: number | null;
+}
+
+function readQueryParams(): URLSearchParams {
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+  const queryAt = hash.indexOf("?");
+  if (queryAt >= 0) {
+    const hashParams = new URLSearchParams(hash.slice(queryAt + 1));
+    hashParams.forEach((value, key) => {
+      if (!params.has(key)) params.set(key, value);
+    });
+  }
+  return params;
 }
 
 function readDebugFlag(): SplashDebug {
   try {
-    const fromHash = window.location.hash.includes("?")
-      ? window.location.hash.slice(window.location.hash.indexOf("?") + 1)
-      : "";
-    const value =
-      new URLSearchParams(window.location.search).get("splash") ??
-      new URLSearchParams(fromHash).get("splash");
-    return { force: value === "1" || value === "force" || value === "hold", hold: value === "hold" };
+    const params = readQueryParams();
+    const value = params.get("splash");
+    const rawAt = params.get("at");
+    const parsedAt = rawAt === null ? Number.NaN : Number(rawAt);
+    const holdAt = Number.isFinite(parsedAt)
+      ? Math.min(FULL_DURATION_MS, Math.max(0, parsedAt))
+      : null;
+    return {
+      force: value === "1" || value === "force" || value === "hold",
+      hold: value === "hold",
+      holdAt,
+    };
   } catch {
-    return { force: false, hold: false };
+    return { force: false, hold: false, holdAt: null };
   }
 }
 
@@ -69,7 +88,7 @@ export interface SplashScreenProps {
 
 /**
  * 日食启动动画。只包裹现有 App，不改变路由与 Provider 结构。
- * 动画期间主界面在遮罩下方正常挂载，结束后遮罩卸载。
+ * 主界面在遮罩下方始终不透明；启动只是遮罩的一次线性交叉溶解。
  */
 export function SplashScreen({ children }: SplashScreenProps) {
   const [mode] = useState<SplashMode>(currentMode);
@@ -77,16 +96,13 @@ export function SplashScreen({ children }: SplashScreenProps) {
   const [playing, setPlaying] = useState(() => !reduced && PLAY_ON_LOAD);
   const [paused, setPaused] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const splashRef = useRef<HTMLDivElement | null>(null);
   const leavingRef = useRef(false);
   const leaveTimer = useRef<number | null>(null);
-  const startedAt = useRef(performance.now());
-  // 过早跳过时主界面还没开始淡入，改走 300ms 的短淡入，避免空白等待
-  const [skippedEarly, setSkippedEarly] = useState(false);
 
   const dismiss = useCallback(() => {
     if (leavingRef.current) return;
     leavingRef.current = true;
-    if (performance.now() - startedAt.current < 1050) setSkippedEarly(true);
     setPaused(false);
     setLeaving(true);
     leaveTimer.current = window.setTimeout(() => setPlaying(false), LEAVE_DURATION_MS);
@@ -99,11 +115,21 @@ export function SplashScreen({ children }: SplashScreenProps) {
     return () => window.clearTimeout(timer);
   }, [playing]);
 
-  // hold 模式：到达关键帧后暂停所有动画
+  // hold 模式：用 Web Animations API 把整棵遮罩精确冻结在目标毫秒。
+  // setTimeout 受主线程启动耗时影响，逐帧截图会偏移；直接设置 currentTime 才能复现。
   useEffect(() => {
     if (!playing || !DEBUG.hold) return;
-    const timer = window.setTimeout(() => setPaused(true), HOLD_AT_MS[mode]);
-    return () => window.clearTimeout(timer);
+    const at = DEBUG.holdAt ?? HOLD_AT_MS[mode];
+    const frame = requestAnimationFrame(() => {
+      const element = splashRef.current;
+      if (!element) return;
+      for (const animation of element.getAnimations({ subtree: true })) {
+        animation.currentTime = at;
+        animation.pause();
+      }
+      setPaused(true);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [mode, playing]);
 
   // 点击/任意按键跳过
@@ -132,19 +158,14 @@ export function SplashScreen({ children }: SplashScreenProps) {
 
   // 包裹层始终保留：若启动结束后移除它，React 会整棵卸载重挂载 App，
   // 导致 Provider / 查询状态丢失。
-  const animated = reduced || skippedEarly;
-  const appClassName =
-    playing || reduced
-      ? `eh-brand-app ${animated ? "eh-brand-app--reduced" : "eh-brand-app--intro"}`
-      : "eh-brand-app";
-
   return (
     <>
-      <div className={appClassName} inert={playing || undefined}>
+      <div className="eh-brand-app" inert={playing || undefined}>
         {children}
       </div>
       {playing ? (
         <div
+          ref={splashRef}
           className="eh-brand-splash"
           data-mode={mode}
           data-paused={paused || undefined}
@@ -169,5 +190,5 @@ export function SplashScreen({ children }: SplashScreenProps) {
 
 export const splashTiming = {
   fullDurationMs: FULL_DURATION_MS,
-  reducedDurationMs: REDUCED_DURATION_MS,
+  reducedDurationMs: 0,
 } as const;

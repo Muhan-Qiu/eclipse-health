@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
@@ -76,9 +76,7 @@ export function AppShell() {
           tabIndex={-1}
           className="flex-1 overflow-y-auto outline-none"
         >
-          <PageTransition>
-            <Outlet />
-          </PageTransition>
+          <PageTransition />
         </main>
       </div>
 

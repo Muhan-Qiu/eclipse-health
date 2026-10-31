@@ -31,7 +31,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DemoBadge } from "@/components/common/demo-badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { AnimatedNumber } from "@/components/common/animated-number";
-import { PageHeader } from "@/components/common/page-header";
 import { RecordListSkeleton } from "@/components/common/loading";
 import { Sparkline } from "@/components/common/sparkline";
 import { WaveformViewer } from "@/components/records/waveform-viewer";
@@ -48,6 +47,7 @@ import {
 import type { AnalysisResult, RecordSummary } from "@/lib/api/types";
 import { formatFullDate, formatNumber, greetingKey } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
+import { quoteOfDay } from "@/lib/quotes";
 
 const FORMAT_GROUPS = [
   {
@@ -341,6 +341,11 @@ export function DashboardPage() {
   const importSample = useImportSample();
   const [formatsOpen, setFormatsOpen] = useState(false);
   const now = new Date();
+  // 同一天内多次渲染取到同一句；跨天（本地日期变化）自动轮换。
+  const quote = quoteOfDay(now);
+  const english = i18n.language.startsWith("en");
+  const quoteText = english ? quote.en : quote.zh;
+  const quoteAuthor = english ? quote.authorEn : quote.author;
 
   const recentQuery = useRecords({
     limit: 5,
@@ -383,16 +388,30 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={t("dashboard.eyebrow")}
-        title={t(greetingKey(now))}
-        description={t("dashboard.description")}
-        actions={
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <p className="eh-caption tracking-[0.14em] text-muted-foreground uppercase">
+            {t("dashboard.eyebrow")}
+          </p>
+          <h1 className="eh-h1 mt-1">{t(greetingKey(now))}</h1>
+          <figure className="mt-2 max-w-[72ch]">
+            <blockquote className="eh-small text-foreground">
+              “{quoteText}”
+            </blockquote>
+            <figcaption className="eh-caption mt-1 text-muted-foreground">
+              {t("dashboard.quote.attribution", { author: quoteAuthor })}
+            </figcaption>
+          </figure>
+          <p className="eh-caption mt-1 text-muted-foreground">
+            {t("dashboard.description")}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <p className="eh-caption text-muted-foreground">
             {formatFullDate(now, locale)}
           </p>
-        }
-      />
+        </div>
+      </header>
 
       <section
         className="eh-stagger grid gap-4 md:grid-cols-3"

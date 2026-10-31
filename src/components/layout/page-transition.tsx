@@ -1,115 +1,64 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
-import {
-  consumeNavOrigin,
-  EASE_STANDARD,
-  MOTION,
-  prefersReducedMotion,
-} from "@/lib/motion";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useLocation, useOutlet } from "react-router-dom";
+import { MOTION, prefersReducedMotion } from "@/lib/motion";
+import "./page-transition.css";
 
-const SWEEP_MS = MOTION.sweep;
-const SWEEP_FADE_MS = 160;
-/** 展开快完成时新页面才开始淡入，避免两层动画同时抢注意力。 */
-const CONTENT_DELAY_MS = 300;
+interface Layer {
+  key: string;
+  node: ReactNode;
+}
 
 /**
- * 页面转场：从侧栏导航项的矩形位置斜向展开遮罩，再让新页面淡入。
+ * 页面转场：纯交叉淡入淡出，不再使用 clip-path 斜向 sweep。
  *
- * 路由切换本身不被阻塞；遮罩只是覆盖在新页面之上。
- * 浏览器不支持 / 减少动效 / 非导航来源的跳转，都回退为普通淡入。
+ * 这里用 useOutlet() 拿到「当前匹配到的路由元素」而不是 <Outlet /> 占位符：
+ * 占位符会跟随新 location 重新渲染，旧层就失去意义；拿到的元素是静态的，
+ * 放到旧层后仍保持已挂载的子树与数据，因此不会出现空白白页或重复请求。
+ * 旧层绝对定位、pointer-events:none、aria-hidden，只负责淡出。
+ * 侧栏位于 main 之外，始终不被覆盖；导航本身从不被阻塞。
+ * prefers-reduced-motion 时直接切换，不保留旧层。
  */
-export function PageTransition({ children }: { children: ReactNode }) {
+export function PageTransition() {
   const location = useLocation();
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const sweepRef = useRef<HTMLDivElement | null>(null);
-  const timers = useRef<number[]>([]);
-  const frame = useRef<number | null>(null);
-  const runId = useRef(0);
+  const outlet = useOutlet();
+  // 渲染期记录「当前已渲染的层」；路由变化时把它转存为旧层，保证旧页面不卸载。
+  const latest = useRef<Layer>({ key: location.key, node: outlet });
+  const [previous, setPrevious] = useState<Layer | null>(null);
 
-  useLayoutEffect(() => {
-    const content = contentRef.current;
-    const sweep = sweepRef.current;
-    const origin = consumeNavOrigin();
-    const id = ++runId.current;
+  if (latest.current.key !== location.key) {
+    const old = latest.current;
+    latest.current = { key: location.key, node: outlet };
+    setPrevious(prefersReducedMotion() ? null : old);
+  } else {
+    latest.current.node = outlet;
+  }
 
-    for (const timer of timers.current) window.clearTimeout(timer);
-    timers.current = [];
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = null;
+  useEffect(() => {
+    if (!previous) return;
+    const timer = window.setTimeout(() => setPrevious(null), MOTION.pageFade + 60);
+    return () => window.clearTimeout(timer);
+  }, [previous]);
 
-    if (!content || !sweep) return;
-
-    sweep.style.display = "none";
-    sweep.style.opacity = "0";
-
-    if (!origin || prefersReducedMotion()) return;
-
-    const main = document.getElementById("main");
-    const box = main?.getBoundingClientRect();
-    if (!box || box.width < 1 || box.height < 1) return;
-
-    // 遮罩从导航项左边缘开始，覆盖到内容区右边缘。
-    const left = Math.min(origin.left, box.left);
-    const width = Math.max(1, box.right - left);
-    const height = box.height;
-    const ox = origin.left - left;
-    const oy = origin.top - box.top;
-    const start = `polygon(${ox}px ${oy}px, ${ox + origin.width}px ${oy}px, ${
-      ox + origin.width
-    }px ${oy + origin.height}px, ${ox}px ${oy + origin.height}px)`;
-    // 右侧保留明显斜边；顶部多 80px 保证展开后完全覆盖内容区（超出部分被视口裁掉）。
-    const end = `polygon(0px 0px, ${width + 80}px 0px, ${width}px ${height}px, 0px ${height}px)`;
-
-    Object.assign(sweep.style, {
-      left: `${left}px`,
-      top: `${box.top}px`,
-      width: `${width}px`,
-      height: `${height}px`,
-      display: "block",
-      opacity: "1",
-      transition: "none",
-      clipPath: start,
-    });
-    content.style.animationDelay = `${CONTENT_DELAY_MS}ms`;
-
-    // 强制一次样式计算，让 clip-path 的初始值生效后再开始过渡。
-    void sweep.offsetWidth;
-
-    frame.current = requestAnimationFrame(() => {
-      if (runId.current !== id) return;
-      sweep.style.transition = `clip-path ${SWEEP_MS}ms ${EASE_STANDARD}`;
-      sweep.style.clipPath = end;
-
-      timers.current.push(
-        window.setTimeout(() => {
-          if (runId.current !== id) return;
-          sweep.style.transition = `opacity ${SWEEP_FADE_MS}ms linear`;
-          sweep.style.opacity = "0";
-          timers.current.push(
-            window.setTimeout(() => {
-              if (runId.current !== id) return;
-              sweep.style.display = "none";
-              content.style.animationDelay = "";
-            }, SWEEP_FADE_MS),
-          );
-        }, SWEEP_MS),
-      );
-    });
-
-    return () => {
-      if (frame.current !== null) cancelAnimationFrame(frame.current);
-      frame.current = null;
-      for (const timer of timers.current) window.clearTimeout(timer);
-      timers.current = [];
-    };
-  }, [location.key]);
+  const reduced = prefersReducedMotion();
 
   return (
-    <>
-      <div key={location.key} ref={contentRef} className="eh-page eh-page-enter">
-        {children}
+    <div className="eh-page-stack">
+      {previous ? (
+        <div
+          key={previous.key}
+          className="eh-page eh-page-layer eh-page-layer--out"
+          aria-hidden="true"
+          inert
+        >
+          {previous.node}
+        </div>
+      ) : null}
+      <div
+        key={location.key}
+        className={`eh-page eh-page-layer${reduced ? "" : " eh-page-layer--in"}`}
+      >
+        {outlet}
       </div>
-      <div ref={sweepRef} className="eh-nav-sweep" aria-hidden="true" />
-    </>
+    </div>
   );
 }

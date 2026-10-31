@@ -54,7 +54,11 @@ const enUS: typeof zhCN = {
   dashboard: {
     eyebrow: "Overview",
     description:
-      "Take a moment for your heart. Records and analysis stay on this device.",
+      "Records and analysis stay on this device and are never uploaded.",
+    quote: {
+      attribution: "— {{author}}",
+      anonymous: "Anonymous",
+    },
     guide: {
       importTitle: "Import an ECG",
       importDesc: "Choose or drop a record to start a full analysis.",
@@ -854,6 +858,72 @@ const enUS: typeof zhCN = {
       browserHint:
         "Browser preview: desktop toggles apply in the desktop app after a restart.",
     },
+    external: {
+      title: "External access",
+      description:
+        "Local only; API keys are shown once and can be revoked at any time.",
+      refresh: "Refresh key list",
+      create: "Create key",
+      loading: "Loading keys…",
+      unavailableTitle: "External access is not enabled",
+      unavailableDesc:
+        "This backend does not expose the external access API. Update the backend and retry.",
+      emptyTitle: "No API keys yet",
+      emptyDesc:
+        "Create a key first, then configure it in an external agent or script.",
+      listTitle: "Created keys",
+      revoked: "Revoked",
+      createdAt: "Created {{time}}",
+      lastUsed: "Last used {{time}}",
+      neverUsed: "Never used",
+      revoke: "Revoke",
+      revokeConfirm: "Confirm revoke",
+      revokeDone: "Key revoked",
+      revokeFailed: "Could not revoke key",
+      createTitle: "Create API key",
+      createDesc:
+        "The name identifies the caller; the full token is shown only once after creation.",
+      nameLabel: "Name",
+      namePlaceholder: "e.g. Claude Desktop",
+      nameRequired: "Enter a name",
+      nameTooLong: "Name must be 64 characters or fewer",
+      scopesLabel: "Permissions",
+      scope: {
+        read: "Read records / analyses / health data",
+        write: "Write health data",
+        assistant: "Call the in-app agent",
+      },
+      scopeDesc: {
+        read: "View records, waveforms, analysis results and health metrics.",
+        write: "Import or modify local health data.",
+        assistant: "Start conversations and tool calls with the in-app agent.",
+      },
+      scopeLabel: {
+        read: "Read",
+        write: "Write",
+        assistant: "Agent",
+      },
+      scopeRequired: "Select at least one permission",
+      createAction: "Create",
+      creating: "Creating…",
+      tokenTitle: "Copy key",
+      tokenDesc: "This is the full token. Copy it now and store it safely.",
+      tokenWarning: "You cannot view it again after closing.",
+      copy: "Copy",
+      copied: "Copied",
+      copyFailed: "Could not copy; select the text manually",
+      tokenDone: "I saved it, close",
+      examplesTitle: "Connection examples",
+      examplesDesc: "Replace **** with the key you just created.",
+      mcpTitle: "MCP",
+      mcpDesc: "Start the local stdio server in an MCP client.",
+      restTitle: "REST",
+      restDesc: "Read local records with a Bearer token.",
+      openaiTitle: "OpenAI compatible",
+      openaiDesc:
+        "Point the base URL at this machine to use it as an OpenAI-compatible model.",
+      copyExample: "Copy {{name}} example",
+    },
     about: {
       title: "About",
       version: "Version",
@@ -998,6 +1068,28 @@ const enUS: typeof zhCN = {
     c: {
       name: "The Japanese Footbridge",
       description: "Moss green and ivory — a calm, green stillness.",
+    },
+    starry: {
+      name: "The Starry Night",
+      description: "Cobalt, gold and cool white — a saturated night sky.",
+    },
+    sunflower: {
+      name: "Sunflowers",
+      description: "Golden amber and olive — a luminous warm palette.",
+    },
+    wave: {
+      name: "The Great Wave off Kanagawa",
+      description: "Prussian blue and foam white — a high-contrast sea.",
+    },
+    mist: {
+      name: "Morning Mist (Glass)",
+      description:
+        "Mist grey-blue with Gaussian blur and translucent surfaces.",
+    },
+    glaze: {
+      name: "Glaze (Glass)",
+      description:
+        "Jade and cobalt glaze with Gaussian blur and translucent surfaces.",
     },
   },
   themeMode: {

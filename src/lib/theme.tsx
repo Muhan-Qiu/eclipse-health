@@ -11,15 +11,30 @@ import {
 export const THEME_STORAGE_KEY = "eh-theme";
 export const PALETTE_STORAGE_KEY = "eh-palette";
 
-export const PALETTES = ["a", "b", "c"] as const;
+export const PALETTES = [
+  "a",
+  "b",
+  "c",
+  "starry",
+  "sunflower",
+  "wave",
+  "mist",
+  "glaze",
+] as const;
 export type PaletteId = (typeof PALETTES)[number];
 export type ThemeMode = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
+
+/** 玻璃主题需要半透明表面与 backdrop-filter；其余主题保持不透明。 */
+export function isGlassPalette(palette: PaletteId): boolean {
+  return palette === "mist" || palette === "glaze";
+}
 
 interface ThemeContextValue {
   mode: ThemeMode;
   resolved: ResolvedTheme;
   palette: PaletteId;
+  glass: boolean;
   setMode: (mode: ThemeMode) => void;
   setPalette: (palette: PaletteId) => void;
   toggleMode: () => void;
@@ -28,7 +43,7 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function isPaletteId(value: string | null): value is PaletteId {
-  return value === "a" || value === "b" || value === "c";
+  return value !== null && (PALETTES as readonly string[]).includes(value);
 }
 
 function isThemeMode(value: string | null): value is ThemeMode {
@@ -89,7 +104,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [resolved]);
 
   useEffect(() => {
-    document.documentElement.dataset.palette = palette;
+    const root = document.documentElement;
+    root.dataset.palette = palette;
+    if (isGlassPalette(palette)) {
+      root.dataset.glass = "true";
+    } else {
+      delete root.dataset.glass;
+    }
     try {
       localStorage.setItem(PALETTE_STORAGE_KEY, palette);
     } catch {
@@ -111,6 +132,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mode,
       resolved,
       palette,
+      glass: isGlassPalette(palette),
       setMode,
       setPalette,
       toggleMode: () => setMode(resolved === "dark" ? "light" : "dark"),

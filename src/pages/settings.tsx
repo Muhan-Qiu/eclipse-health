@@ -12,6 +12,7 @@ import {
 import { PageHeader } from "@/components/common/page-header";
 import { DiagnosticsPanel } from "@/features/export/diagnostics-panel";
 import { ExportPanel } from "@/features/export/export-panel";
+import { ExternalAccessPanel } from "@/features/external-access/external-access-panel";
 import { DesktopPanel } from "@/features/privacy/desktop-panel";
 import { PrivacyPanel } from "@/features/privacy/privacy-panel";
 import { APP_LICENSE, APP_VERSION } from "@/lib/app-info";
@@ -184,6 +185,8 @@ export function SettingsPage() {
         />
 
         <DesktopPanel className="desk:col-span-4 xl:col-span-6" />
+
+        <ExternalAccessPanel className="desk:col-span-8 xl:col-span-6" />
 
         <DiagnosticsPanel className="desk:col-span-4 xl:col-span-6" />
 

@@ -107,9 +107,29 @@ class ReportTable(Base, table=True):
     created_at: datetime
 
 
+class ExternalApiKeyTable(Base, table=True):
+    """对外 API Key（F3）。
+
+    明文 token 只在创建时返回一次；这里只保存 SHA-256，泄露数据库也不能还原 key。
+    ``prefix`` 仅用于界面辨识，长度不足以暴力枚举完整 token。
+    """
+
+    __tablename__ = "external_api_keys"
+
+    id: str = Field(primary_key=True)
+    name: str = Field(max_length=80)
+    prefix: str = Field(max_length=32)
+    key_hash: str = Field(index=True, unique=True, max_length=64)
+    scopes: list[str] = Field(sa_column=Column(JSON, nullable=False))
+    created_at: datetime
+    last_used_at: datetime | None = Field(default=None)
+    revoked_at: datetime | None = Field(default=None)
+
+
 __all__ = [
     "AnalysisTable",
     "AnnotationTable",
+    "ExternalApiKeyTable",
     "MeasurementTable",
     "MemberTable",
     "RecordTable",

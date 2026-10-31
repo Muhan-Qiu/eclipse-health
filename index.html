@@ -29,8 +29,10 @@
           root.classList.toggle("dark", dark);
           root.style.colorScheme = dark ? "dark" : "light";
           var palette = localStorage.getItem("eh-palette");
-          root.dataset.palette =
-            palette === "b" || palette === "c" ? palette : "a";
+          var palettes = ["a", "b", "c", "starry", "sunflower", "wave", "mist", "glaze"];
+          var next = palettes.indexOf(palette) >= 0 ? palette : "a";
+          root.dataset.palette = next;
+          root.dataset.glass = next === "mist" || next === "glaze" ? "true" : "false";
           root.lang = localStorage.getItem("eh-locale") === "en-US" ? "en-US" : "zh-CN";
         } catch (e) {
           /* localStorage 不可用时退回默认值 */

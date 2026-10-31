@@ -11,8 +11,10 @@ export const MOTION = {
   base: 200,
   page: 320,
   emphasis: 480,
-  /** 侧栏导航斜向展开（320–420ms 区间）。 */
+  /** 已停用：早期侧栏斜向展开（F1 起导航改为纯淡入淡出）。保留常量避免外部引用断裂。 */
   sweep: 380,
+  /** 页面交叉淡入淡出时长（F1）。 */
+  pageFade: 200,
 } as const;
 
 export const EASE_STANDARD = "cubic-bezier(0.2, 0, 0, 1)";
@@ -26,8 +28,8 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * 点击侧栏导航时记下该项的矩形，PageTransition 据此做斜向展开。
- * 用模块级变量而不是 context：点击先于路由变化，且同一时刻只可能有一个转场。
+ * 已停用（F1）：导航转场不再使用起点矩形。
+ * 这两个函数保留给后续可能的空间转场；当前没有调用方。
  */
 let navOrigin: { rect: DOMRect; at: number } | null = null;
 

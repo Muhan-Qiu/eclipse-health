@@ -14,6 +14,7 @@ from . import (
     analyses,
     diagnostics,
     export,
+    external,
     health,
     members,
     privacy,
@@ -36,6 +37,8 @@ api_router.include_router(export.router)
 api_router.include_router(privacy.router)
 api_router.include_router(diagnostics.router)
 api_router.include_router(settings.router)
+# F3：对外 API（key 管理 + 只读 REST + OpenAI 兼容），路径自带 /external。
+api_router.include_router(external.router)
 
 
 def _mount_imports_router(router: APIRouter) -> None:
