@@ -10,17 +10,24 @@ import type {
   EngineStatus,
   HealthRecord,
   HealthRecordKind,
+  HealthScores,
+  HealthSuggestion,
   ImportPreview,
   ImportRequires,
   LatestAnalysisStatus,
   Measurement,
+  MissingScore,
   Quality,
   QualitySegment,
   QualityWarning,
   RecordCompareResponse,
   RecordStatus,
   RecordSummary,
+  ScoreCategory,
+  ScoreGrade,
   SourceInfo,
+  SuggestionList,
+  SuggestionSeverity,
   TrendPoint,
   TrendSeries,
   TrendSummary,
@@ -428,6 +435,83 @@ export function analysisStatusToRecordStatus(
   if (status === "failed") return "failed";
   if (status === "completed") return "analyzed";
   return undefined;
+}
+
+/* ------------------------------------------------------------------ *
+ * 健康评分与建议（G2）
+ * ------------------------------------------------------------------ */
+
+const SCORE_GRADES: readonly ScoreGrade[] = [
+  "excellent",
+  "good",
+  "fair",
+  "attention",
+  "unknown",
+];
+
+function normalizeGrade(value: unknown): ScoreGrade {
+  return (SCORE_GRADES as readonly string[]).includes(str(value))
+    ? (str(value) as ScoreGrade)
+    : "unknown";
+}
+
+function normalizeScoreCategory(value: unknown): ScoreCategory {
+  const item = asObject(value);
+  return {
+    id: str(item.id, "unknown"),
+    label: str(item.label, str(item.id, "—")),
+    score: num(item.score, 0),
+    grade: normalizeGrade(item.grade),
+    factors: Array.isArray(item.factors)
+      ? item.factors.filter((factor): factor is string => typeof factor === "string")
+      : [],
+    missing: typeof item.missing === "string" ? item.missing : null,
+    evidenceCount: Math.trunc(num(item.evidenceCount, 0)),
+  };
+}
+
+function normalizeMissingScore(value: unknown): MissingScore {
+  const item = asObject(value);
+  return {
+    id: str(item.id, "unknown"),
+    reason: str(item.reason),
+  };
+}
+
+export function normalizeScores(value: unknown): HealthScores {
+  const item = asObject(value);
+  return {
+    overall: nullableNum(item.overall),
+    generatedAt: str(item.generatedAt),
+    categories: arr(item.categories, normalizeScoreCategory).filter(
+      (category) => category.id !== "unknown",
+    ),
+    missing: arr(item.missing, normalizeMissingScore),
+  };
+}
+
+function normalizeSuggestion(value: unknown, index: number): HealthSuggestion {
+  const item = asObject(value);
+  const severity = str(item.severity, "info");
+  return {
+    id: str(item.id, `suggestion-${index}`),
+    text: str(item.text),
+    category: str(item.category, "general"),
+    severity: (severity === "attention" ? "attention" : "info") as SuggestionSeverity,
+    prompt: str(item.prompt, str(item.text)),
+  };
+}
+
+export function normalizeSuggestions(value: unknown): SuggestionList {
+  if (Array.isArray(value)) {
+    return { items: value.map(normalizeSuggestion) };
+  }
+  const item = asObject(value);
+  return {
+    items: arr(item.items, normalizeSuggestion).filter(
+      (suggestion) => suggestion.text !== "",
+    ),
+  };
 }
 
 /* ------------------------------------------------------------------ *

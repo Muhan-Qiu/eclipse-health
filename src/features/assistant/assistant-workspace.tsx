@@ -12,8 +12,10 @@ import { ProviderCard } from "./provider-card";
 import { SessionList } from "./session-list";
 import { TransparencySheet } from "./transparency-sheet";
 import type {
+  AssistantMode,
   AssistantStyle,
   ChatMessage,
+  CoachWeather,
   SendMessageBody,
   StreamEvent,
   Transparency,
@@ -107,13 +109,25 @@ function applyEvent(message: ChatMessage, event: StreamEvent): ChatMessage {
   }
 }
 
-export function AssistantWorkspace() {
+export interface AssistantWorkspaceProps {
+  initialPrompt?: string | null;
+  initialMode?: AssistantMode;
+}
+
+export function AssistantWorkspace({
+  initialPrompt = null,
+  initialMode,
+}: AssistantWorkspaceProps = {}) {
   const { t } = useTranslation();
   const data = useAssistantData();
   const [activeProviderId, setActiveProviderId] = useState<string | null>(null);
   const [style, setStyle] = useState<AssistantStyle>("brief");
   const [recordId, setRecordId] = useState<string | null>(null);
   const [includeNotes, setIncludeNotes] = useState(false);
+  const [mode, setMode] = useState<AssistantMode>(initialMode ?? "chat");
+  const [city, setCity] = useState("");
+  const [weather, setWeather] = useState<CoachWeather | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingSend, setPendingSend] = useState<SendMessageBody | null>(null);
@@ -132,6 +146,40 @@ export function AssistantWorkspace() {
   const hasLocalProvider = providers.some(
     (provider) => provider.isLocal && provider.enabled,
   );
+
+  useEffect(() => {
+    if (initialMode) setMode(initialMode);
+  }, [initialMode]);
+
+  // 城市输入停止 600ms 后再查天气；失败只清空卡片，不弹错误。
+  useEffect(() => {
+    const trimmed = city.trim();
+    if (mode !== "coach" || !trimmed) {
+      setWeather(null);
+      setWeatherLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setWeather(null);
+    setWeatherLoading(true);
+    const timer = window.setTimeout(() => {
+      void assistantApi.coach
+        .weather(trimmed)
+        .then((value) => {
+          if (!cancelled) setWeather(value);
+        })
+        .catch(() => {
+          if (!cancelled) setWeather(null);
+        })
+        .finally(() => {
+          if (!cancelled) setWeatherLoading(false);
+        });
+    }, 600);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [city, mode]);
 
   // provider 列表变化时保持一个可用的选择
   useEffect(() => {
@@ -303,6 +351,8 @@ export function AssistantWorkspace() {
       style: AssistantStyle;
       recordId?: string;
       includeNotes: boolean;
+      mode: AssistantMode;
+      city?: string;
     }) => {
       if (!activeProvider) return;
       const body: SendMessageBody = {
@@ -312,6 +362,11 @@ export function AssistantWorkspace() {
         includeNotes: input.includeNotes,
       };
       if (input.recordId) body.recordId = input.recordId;
+      // 普通对话保持旧请求形状；只有教练模式才带 mode/city。
+      if (input.mode === "coach") {
+        body.mode = "coach";
+        if (input.city) body.city = input.city;
+      }
       if (!activeProvider.isLocal && !privacyAcknowledged(activeProvider.id)) {
         setPendingSend(body);
         return;
@@ -444,6 +499,13 @@ export function AssistantWorkspace() {
             loadingEarlier={data.loadingEarlier}
             messageTotal={data.messageTotal}
             onLoadEarlier={() => void data.loadEarlierMessages()}
+            mode={mode}
+            onModeChange={setMode}
+            seedPrompt={initialPrompt}
+            city={city}
+            onCityChange={setCity}
+            weather={weather}
+            weatherLoading={weatherLoading}
           />
         </div>
       </div>

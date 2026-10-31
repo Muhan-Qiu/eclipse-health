@@ -419,3 +419,46 @@ export interface HealthRecordPayload {
   sourceApp?: string | null;
 }
 
+/* ------------------------------------------------------------------ *
+ * 健康评分与建议（G2 · GET /scores、GET /suggestions）
+ * ------------------------------------------------------------------ */
+
+export type ScoreGrade = "excellent" | "good" | "fair" | "attention" | "unknown";
+
+export interface ScoreCategory {
+  id: "heart" | "sleep" | "weight" | "activity" | "blood-pressure" | string;
+  label: string;
+  score: number;
+  grade: ScoreGrade;
+  factors: string[];
+  missing: string | null;
+  evidenceCount: number;
+}
+
+export interface MissingScore {
+  id: string;
+  reason: string;
+}
+
+export interface HealthScores {
+  overall: number | null;
+  generatedAt: string;
+  categories: ScoreCategory[];
+  missing: MissingScore[];
+}
+
+export type SuggestionSeverity = "info" | "attention";
+
+export interface HealthSuggestion {
+  id: string;
+  text: string;
+  category: string;
+  severity: SuggestionSeverity;
+  /** 点击「和教练聊聊」时预置到助手输入框的问题。 */
+  prompt: string;
+}
+
+export interface SuggestionList {
+  items: HealthSuggestion[];
+}
+

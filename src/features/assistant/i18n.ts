@@ -132,6 +132,64 @@ const zhCN = {
         estimate: "估算",
       },
     },
+    coach: {
+      modeLabel: "助手模式",
+      modes: {
+        chat: "对话",
+        coach: "教练 Coach",
+      },
+      title: "健康教练",
+      description:
+        "结合评分、健康数据、运动、记忆和天气，给出渐进、可执行的生活方式建议。",
+      disclaimer: "非诊断：教练建议不替代医生；出现胸痛、晕厥等红旗症状请及时就医。",
+      presetsLabel: "教练预设",
+      presets: {
+        sleep: {
+          label: "睡眠改善",
+          prompt: "请结合我最近的睡眠数据，给出 3 个可以逐步改善睡眠的小建议。",
+        },
+        heart: {
+          label: "心脏数据解读",
+          prompt:
+            "请用通俗语言解读我最近的静息心率、HRV 和异常搏动数据，并说明哪些变化值得关注。",
+        },
+        exercise: {
+          label: "运动计划",
+          prompt:
+            "根据我最近的步数、心率与运动记录，帮我制定一个循序渐进的每周运动计划。",
+        },
+        stress: {
+          label: "压力与呼吸",
+          prompt:
+            "我想缓解压力，请给我一个每天 5 分钟的呼吸或放松练习，并说明注意事项。",
+        },
+        weight: {
+          label: "体重管理",
+          prompt:
+            "结合我的体重/BMI、活动量和睡眠，给我 3 个温和、可持续的体重管理建议。",
+        },
+      },
+      placeholder: "描述你想改善的健康习惯或问题…",
+      cityLabel: "城市",
+      cityPlaceholder: "城市（可选，用于天气）",
+      weather: {
+        hint: "填写城市可查看天气；不填不影响教练回答。",
+        loading: "查询天气…",
+        unavailable: "天气暂不可用，不影响回答。",
+        precipitation: "降水 {{value}}%",
+        codes: {
+          clear: "晴",
+          cloudy: "多云",
+          fog: "雾",
+          drizzle: "毛毛雨",
+          rain: "雨",
+          snow: "雪",
+          showers: "阵雨",
+          thunderstorm: "雷暴",
+          unknown: "—",
+        },
+      },
+    },
     tools: {
       title: "工具调用",
       callCount: "{{count}} 次调用",
@@ -332,6 +390,66 @@ const enUS = {
       usageSource: {
         provider: "provider",
         estimate: "estimated",
+      },
+    },
+    coach: {
+      modeLabel: "Assistant mode",
+      modes: {
+        chat: "Chat",
+        coach: "Coach",
+      },
+      title: "Health coach",
+      description:
+        "Uses scores, health data, exercise, memory, and weather to suggest gradual, actionable lifestyle steps.",
+      disclaimer:
+        "Non-diagnostic: coaching does not replace a clinician. Seek medical care for red flags such as chest pain or fainting.",
+      presetsLabel: "Coach presets",
+      presets: {
+        sleep: {
+          label: "Improve sleep",
+          prompt:
+            "Using my recent sleep data, give me 3 small, gradual steps to improve my sleep.",
+        },
+        heart: {
+          label: "Explain heart data",
+          prompt:
+            "Explain my recent resting heart rate, HRV, and abnormal-beat data in plain language, and tell me which changes are worth watching.",
+        },
+        exercise: {
+          label: "Exercise plan",
+          prompt:
+            "Using my recent steps, heart-rate, and exercise records, build a gradual weekly exercise plan.",
+        },
+        stress: {
+          label: "Stress and breathing",
+          prompt:
+            "I want to reduce stress. Give me one 5-minute breathing or relaxation practice for each day, with cautions.",
+        },
+        weight: {
+          label: "Weight management",
+          prompt:
+            "Using my weight/BMI, activity, and sleep, give me 3 gentle and sustainable weight-management suggestions.",
+        },
+      },
+      placeholder: "Describe the health habit or issue you want to improve…",
+      cityLabel: "City",
+      cityPlaceholder: "City (optional, for weather)",
+      weather: {
+        hint: "Enter a city to see weather; leaving it empty does not affect coaching.",
+        loading: "Checking weather…",
+        unavailable: "Weather is unavailable; coaching still works.",
+        precipitation: "{{value}}% rain",
+        codes: {
+          clear: "Clear",
+          cloudy: "Cloudy",
+          fog: "Fog",
+          drizzle: "Drizzle",
+          rain: "Rain",
+          snow: "Snow",
+          showers: "Showers",
+          thunderstorm: "Thunderstorm",
+          unknown: "—",
+        },
       },
     },
     tools: {

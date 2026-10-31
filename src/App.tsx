@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardPage } from "@/pages/dashboard";
 import { AnalysisNotificationsWatcher } from "@/features/profile/notifications";
+import { LlmKeyPrompt } from "@/features/onboarding/llm-key-prompt";
 
 /**
  * 首屏只保留 Dashboard 与外壳，其余页面各自分包：
@@ -78,6 +79,7 @@ export default function App() {
   return (
     <HashRouter>
       <AnalysisNotificationsWatcher />
+      <LlmKeyPrompt />
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<DashboardPage />} />

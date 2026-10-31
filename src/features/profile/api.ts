@@ -1,7 +1,11 @@
 import { ApiError, api, baseUrl, useMock } from "@/lib/api/client";
 import type { Member } from "@/lib/api/types";
 import type {
+  Exercise,
+  ExerciseInput,
+  ExercisePage,
   MemberPatch,
+  MemoryDocument,
   Metric,
   MetricInput,
   MetricKind,
@@ -163,6 +167,111 @@ export async function deleteMetric(id: string): Promise<void> {
     return;
   }
   await request<void>(`/metrics/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/* ------------------------------------------------------------------ *
+ * 运动记录（G3）
+ * ------------------------------------------------------------------ */
+
+let mockExerciseSeq = 0;
+const mockExercises: Exercise[] = [];
+
+function mockExercise(input: ExerciseInput): Exercise {
+  mockExerciseSeq += 1;
+  const timestamp = nowIso();
+  return {
+    id: `rec_mock_exercise_${mockExerciseSeq}`,
+    memberId: input.memberId ?? "mem_mock",
+    activity: input.activity,
+    durationSec: input.durationSec,
+    distanceKm: input.distanceKm ?? null,
+    intensity: input.intensity ?? null,
+    subjective: input.subjective ?? null,
+    notes: input.notes ?? "",
+    startAt: input.startAt,
+    source: "manual",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export interface ExerciseListParams {
+  activity?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listExercises(
+  params: ExerciseListParams = {},
+): Promise<ExercisePage> {
+  if (useMock) {
+    const filtered = params.activity
+      ? mockExercises.filter((item) => item.activity === params.activity)
+      : mockExercises;
+    return {
+      items: filtered.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 20)),
+      total: filtered.length,
+      limit: params.limit ?? 20,
+      offset: params.offset ?? 0,
+    };
+  }
+  return request<ExercisePage>(
+    `/exercises${query({
+      activity: params.activity,
+      from: params.from,
+      to: params.to,
+      limit: params.limit,
+      offset: params.offset,
+    })}`,
+  );
+}
+
+export async function createExercise(input: ExerciseInput): Promise<Exercise> {
+  if (useMock) {
+    const exercise = mockExercise(input);
+    mockExercises.unshift(exercise);
+    return exercise;
+  }
+  return request<Exercise>("/exercises", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteExercise(id: string): Promise<void> {
+  if (useMock) {
+    const index = mockExercises.findIndex((item) => item.id === id);
+    if (index >= 0) mockExercises.splice(index, 1);
+    return;
+  }
+  await request<void>(`/exercises/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/* ------------------------------------------------------------------ *
+ * 个性化记忆（G3）
+ * ------------------------------------------------------------------ */
+
+let mockMemory: MemoryDocument = { content: "", enabled: false, updatedAt: null };
+
+export async function getMemory(): Promise<MemoryDocument> {
+  if (useMock) return mockMemory;
+  return request<MemoryDocument>("/memory");
+}
+
+export async function putMemory(input: {
+  content: string;
+  enabled: boolean;
+}): Promise<MemoryDocument> {
+  if (useMock) {
+    mockMemory = { ...input, updatedAt: nowIso() };
+    return mockMemory;
+  }
+  return request<MemoryDocument>("/memory", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }
 
 export async function updateMember(

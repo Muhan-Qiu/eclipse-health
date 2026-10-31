@@ -5,6 +5,8 @@ import {
   ArrowUpRight,
   ChevronUp,
   CircleAlert,
+  CloudSun,
+  Droplets,
   FileText,
   LoaderCircle,
   MessageSquare,
@@ -22,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/empty-state";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -35,9 +38,30 @@ import { cn } from "cn";
 import { intlLocale } from "@/lib/i18n";
 import type { HealthRecord } from "@/lib/api/types";
 import { ToolTrace } from "./tool-trace";
-import type { AssistantProvider, AssistantStyle, ChatMessage } from "./types";
+import type {
+  AssistantMode,
+  AssistantProvider,
+  AssistantStyle,
+  ChatMessage,
+  CoachWeather,
+} from "./types";
 
 const STYLES: AssistantStyle[] = ["brief", "detailed", "doctor"];
+const COACH_PRESETS = ["sleep", "heart", "exercise", "stress", "weight"] as const;
+
+function weatherKey(code: number | null): string {
+  if (code === null) return "unknown";
+  if (code === 0) return "clear";
+  if (code <= 3) return "cloudy";
+  if (code === 45 || code === 48) return "fog";
+  if (code >= 51 && code <= 57) return "drizzle";
+  if (code >= 61 && code <= 67) return "rain";
+  if (code >= 71 && code <= 77) return "snow";
+  if (code >= 80 && code <= 82) return "showers";
+  if (code === 85 || code === 86) return "snow";
+  if (code >= 95) return "thunderstorm";
+  return "unknown";
+}
 
 function recordLabel(record: HealthRecord, locale: string): string {
   const when = new Intl.DateTimeFormat(locale, {
@@ -46,6 +70,59 @@ function recordLabel(record: HealthRecord, locale: string): string {
   }).format(new Date(record.capturedAt));
   const seconds = record.durationSec ? `${Math.round(record.durationSec)}s` : "";
   return [when, seconds, record.leads.join("/")].filter(Boolean).join(" · ");
+}
+
+function WeatherSummary({
+  city,
+  weather,
+  loading,
+}: {
+  city: string;
+  weather: CoachWeather | null;
+  loading: boolean;
+}) {
+  const { t } = useTranslation();
+  if (!city.trim()) {
+    return (
+      <p className="eh-caption text-muted-foreground">
+        {t("assistant.coach.weather.hint")}
+      </p>
+    );
+  }
+  if (loading) {
+    return (
+      <span className="eh-caption inline-flex items-center gap-1.5 text-muted-foreground">
+        <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+        {t("assistant.coach.weather.loading")}
+      </span>
+    );
+  }
+  const today = weather?.days?.[0];
+  if (!weather || !today) {
+    return (
+      <p className="eh-caption text-muted-foreground">
+        {t("assistant.coach.weather.unavailable")}
+      </p>
+    );
+  }
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border/70 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground">
+      <CloudSun className="size-3.5 text-foreground/70" aria-hidden="true" />
+      <span className="font-medium text-foreground">{weather.city}</span>
+      <span>{t(`assistant.coach.weather.codes.${weatherKey(today.weatherCode)}`)}</span>
+      <span className="inline-flex items-center gap-1">
+        {today.tempMin ?? "—"}–{today.tempMax ?? "—"}°C
+      </span>
+      {today.precipitationProbability !== null ? (
+        <span className="inline-flex items-center gap-1">
+          <Droplets className="size-3" aria-hidden="true" />
+          {t("assistant.coach.weather.precipitation", {
+            value: today.precipitationProbability,
+          })}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function CitationChips({ message }: { message: ChatMessage }) {
@@ -200,6 +277,8 @@ export interface ChatPanelProps {
     style: AssistantStyle;
     recordId?: string;
     includeNotes: boolean;
+    mode: AssistantMode;
+    city?: string;
   }) => void;
   onStop: () => void;
   onOpenTransparency: (message: ChatMessage) => void;
@@ -213,6 +292,13 @@ export interface ChatPanelProps {
   loadingEarlier: boolean;
   messageTotal: number;
   onLoadEarlier: () => void;
+  mode: AssistantMode;
+  onModeChange: (mode: AssistantMode) => void;
+  seedPrompt: string | null;
+  city: string;
+  onCityChange: (city: string) => void;
+  weather: CoachWeather | null;
+  weatherLoading: boolean;
 }
 
 export function ChatPanel({
@@ -237,6 +323,13 @@ export function ChatPanel({
   loadingEarlier,
   messageTotal,
   onLoadEarlier,
+  mode,
+  onModeChange,
+  seedPrompt,
+  city,
+  onCityChange,
+  weather,
+  weatherLoading,
 }: ChatPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
@@ -246,6 +339,10 @@ export function ChatPanel({
     providers.find((provider) => provider.id === activeProviderId) ?? null;
   const canSend =
     Boolean(activeProvider) && !streaming && content.trim().length > 0;
+
+  useEffect(() => {
+    if (seedPrompt && seedPrompt.trim()) setContent(seedPrompt);
+  }, [seedPrompt]);
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -260,25 +357,84 @@ export function ChatPanel({
       style,
       recordId: recordId ?? undefined,
       includeNotes,
+      mode,
+      city: mode === "coach" && city.trim() ? city.trim() : undefined,
     });
     setContent("");
   };
 
-  const presets = [
-    t("assistant.chat.presets.abnormal"),
-    t("assistant.chat.presets.care"),
-    t("assistant.chat.presets.hrv"),
-    t("assistant.chat.presets.compare"),
-  ];
+  const presets =
+    mode === "coach"
+      ? COACH_PRESETS.map((key) => ({
+          key,
+          label: t(`assistant.coach.presets.${key}.label`),
+          prompt: t(`assistant.coach.presets.${key}.prompt`),
+        }))
+      : [
+          { key: "abnormal", label: t("assistant.chat.presets.abnormal"), prompt: t("assistant.chat.presets.abnormal") },
+          { key: "care", label: t("assistant.chat.presets.care"), prompt: t("assistant.chat.presets.care") },
+          { key: "hrv", label: t("assistant.chat.presets.hrv"), prompt: t("assistant.chat.presets.hrv") },
+          { key: "compare", label: t("assistant.chat.presets.compare"), prompt: t("assistant.chat.presets.compare") },
+        ];
 
   return (
     <Card className="flex h-full min-h-[560px] flex-col">
       <CardHeader>
-        <CardTitle className="eh-h3">{t("assistant.chat.title")}</CardTitle>
-        <CardDescription>{t("assistant.chat.description")}</CardDescription>
+        <CardTitle className="eh-h3">
+          {mode === "coach" ? t("assistant.coach.title") : t("assistant.chat.title")}
+        </CardTitle>
+        <CardDescription>
+          {mode === "coach"
+            ? t("assistant.coach.description")
+            : t("assistant.chat.description")}
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div
+            className="inline-flex rounded-lg border border-border p-0.5"
+            role="group"
+            aria-label={t("assistant.coach.modeLabel")}
+          >
+            {(["chat", "coach"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => onModeChange(item)}
+                aria-pressed={mode === item}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs transition-colors",
+                  mode === item
+                    ? "bg-accent-soft font-medium text-foreground"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {t(`assistant.coach.modes.${item}`)}
+              </button>
+            ))}
+          </div>
+          {mode === "coach" ? (
+            <p className="eh-caption text-muted-foreground">
+              {t("assistant.coach.disclaimer")}
+            </p>
+          ) : null}
+        </div>
+
+        {mode === "coach" ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={city}
+              onChange={(event) => onCityChange(event.target.value)}
+              placeholder={t("assistant.coach.cityPlaceholder")}
+              aria-label={t("assistant.coach.cityLabel")}
+              maxLength={80}
+              className="h-8 max-w-56"
+            />
+            <WeatherSummary city={city} weather={weather} loading={weatherLoading} />
+          </div>
+        ) : null}
+
         {!activeProvider ? (
           <EmptyState
             icon={MessageSquare}
@@ -345,16 +501,18 @@ export function ChatPanel({
             <div className="space-y-2 border-t border-border pt-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="eh-caption mr-1 text-muted-foreground">
-                  {t("assistant.chat.presetLabel")}
+                  {mode === "coach"
+                    ? t("assistant.coach.presetsLabel")
+                    : t("assistant.chat.presetLabel")}
                 </span>
                 {presets.map((preset) => (
                   <button
-                    key={preset}
+                    key={preset.key}
                     type="button"
-                    onClick={() => setContent(preset)}
+                    onClick={() => setContent(preset.prompt)}
                     className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
-                    {preset}
+                    {preset.label}
                   </button>
                 ))}
               </div>
@@ -368,10 +526,16 @@ export function ChatPanel({
                     submit();
                   }
                 }}
-                placeholder={t("assistant.chat.placeholder")}
+                placeholder={
+                  mode === "coach"
+                    ? t("assistant.coach.placeholder")
+                    : t("assistant.chat.placeholder")
+                }
                 rows={3}
                 maxLength={8000}
-                aria-label={t("assistant.chat.title")}
+                aria-label={
+                  mode === "coach" ? t("assistant.coach.title") : t("assistant.chat.title")
+                }
               />
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

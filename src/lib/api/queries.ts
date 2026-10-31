@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api, fetchRecordCompare, fetchTrends } from "./client";
+import { api, fetchRecordCompare, fetchScores, fetchSuggestions, fetchTrends } from "./client";
 import type { TrendsParams } from "./client";
 import { isRetryableNetworkError } from "./error";
 import { toRecordSummary } from "./adapters";
@@ -30,6 +30,8 @@ export const queryKeys = {
   members: ["members"] as const,
   trends: (params: TrendsParams) => ["trends", params] as const,
   compare: (ids: string[]) => ["compare", ids] as const,
+  scores: ["scores"] as const,
+  suggestions: ["suggestions"] as const,
 };
 
 const retryNetwork = (failureCount: number, error: unknown) =>
@@ -265,6 +267,28 @@ export function useRecentAnalyses(records: RecordSummary[] | undefined) {
       staleTime: 30_000,
       retry: retryNetwork,
     })),
+  });
+}
+
+/**
+ * 首页评分/建议：后端未提供（404）或未启动时保持静默，
+ * 页面据此隐藏或显示轻量的「数据不足」，而不是红屏。
+ */
+export function useHealthScores() {
+  return useQuery({
+    queryKey: queryKeys.scores,
+    queryFn: () => fetchScores(),
+    staleTime: 60_000,
+    retry: retryNetwork,
+  });
+}
+
+export function useHealthSuggestions() {
+  return useQuery({
+    queryKey: queryKeys.suggestions,
+    queryFn: () => fetchSuggestions(),
+    staleTime: 60_000,
+    retry: retryNetwork,
   });
 }
 

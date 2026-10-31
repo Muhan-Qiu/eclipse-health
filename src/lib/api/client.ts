@@ -1,5 +1,5 @@
 import { ApiError } from "./error";
-import { mockApi } from "./mock";
+import { mockApi, mockScores, mockSuggestions } from "./mock";
 import type { ApiClient, PreviewSource, RecordListParams } from "./contract";
 import type {
   AnalysisListResponse,
@@ -8,6 +8,7 @@ import type {
   AnalysisStartResponse,
   EngineStatus,
   HealthRecord,
+  HealthScores,
   HealthStatus,
   ImportCommitBody,
   ImportCommitResponse,
@@ -18,6 +19,7 @@ import type {
   RecordPage,
   SignalData,
   SignalMetadata,
+  SuggestionList,
   TrendsResponse,
 } from "./types";
 import {
@@ -26,6 +28,8 @@ import {
   normalizeCompare,
   normalizeEngine,
   normalizeImportPreview,
+  normalizeScores,
+  normalizeSuggestions,
   normalizeTrends,
 } from "./adapters";
 
@@ -385,4 +389,21 @@ export async function fetchRecordCompare(
   return normalizeCompare(
     await requestJson<unknown>(`/records/compare${query}`),
   );
+}
+
+/* ------------------------------------------------------------------ *
+ * 健康评分与建议（G2）
+ *
+ * 与趋势/对比一样不挂到 `ApiClient`：后端缺失时（404/网络错误）由
+ * 调用方静默降级，不影响首页其他内容。
+ * ------------------------------------------------------------------ */
+
+export async function fetchScores(): Promise<HealthScores> {
+  if (useMock) return mockScores();
+  return normalizeScores(await requestJson<unknown>("/scores"));
+}
+
+export async function fetchSuggestions(): Promise<SuggestionList> {
+  if (useMock) return mockSuggestions();
+  return normalizeSuggestions(await requestJson<unknown>("/suggestions"));
 }

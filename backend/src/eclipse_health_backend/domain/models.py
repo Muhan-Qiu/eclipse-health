@@ -8,10 +8,12 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import (
+    AfterValidator,
     AwareDatetime,
     BaseModel,
     ConfigDict,
@@ -76,6 +78,34 @@ def _validate_timezone(value: str) -> str:
     return value
 
 
+SLEEP_CLOCK_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+# 允许日期时间或时间部分；时区偏移可省略（此时由 sleepTimezone 补齐）。
+SLEEP_ISO_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d"
+    r"(?::[0-5]\d(?:\.\d{1,6})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$"
+)
+
+
+def _validate_sleep_time(value: str) -> str:
+    """睡眠时间接受 ``HH:MM`` 或带可选偏移的 ISO 8601 时间。"""
+    if SLEEP_CLOCK_PATTERN.match(value):
+        return value
+    if SLEEP_ISO_PATTERN.match(value):
+        try:
+            datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("sleep time is not a valid ISO 8601 datetime") from exc
+        return value
+    raise ValueError("sleep time must be HH:MM or an ISO 8601 datetime")
+
+
+SleepTime = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=5, max_length=32),
+    AfterValidator(_validate_sleep_time),
+]
+
+
 class SourceInfo(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -131,11 +161,20 @@ class Member(BaseModel):
     sex: Literal["female", "male", "other", "unknown"] = "unknown"
     heightCm: float | None = Field(default=None, ge=30, le=300)
     weightKg: float | None = Field(default=None, ge=2, le=500)
+    restingHeartRate: int | None = Field(default=None, ge=30, le=200)
+    sleepStart: SleepTime | None = None
+    sleepEnd: SleepTime | None = None
+    sleepTimezone: str | None = None
     conditions: list[ShortText] = Field(default_factory=list, max_length=32)
     medications: list[ShortText] = Field(default_factory=list, max_length=32)
     notes: Notes = ""
     createdAt: AwareDatetime
     updatedAt: AwareDatetime
+
+    @field_validator("sleepTimezone")
+    @classmethod
+    def _check_sleep_timezone(cls, value: str | None) -> str | None:
+        return None if value is None else _validate_timezone(value)
 
 
 class SignalStorage(BaseModel):
@@ -339,9 +378,18 @@ class MemberCreate(BaseModel):
     sex: Literal["female", "male", "other", "unknown"] = "unknown"
     heightCm: float | None = Field(default=None, ge=30, le=300)
     weightKg: float | None = Field(default=None, ge=2, le=500)
+    restingHeartRate: int | None = Field(default=None, ge=30, le=200)
+    sleepStart: SleepTime | None = None
+    sleepEnd: SleepTime | None = None
+    sleepTimezone: str | None = None
     conditions: list[ShortText] = Field(default_factory=list, max_length=32)
     medications: list[ShortText] = Field(default_factory=list, max_length=32)
     notes: Notes = ""
+
+    @field_validator("sleepTimezone")
+    @classmethod
+    def _check_sleep_timezone(cls, value: str | None) -> str | None:
+        return None if value is None else _validate_timezone(value)
 
 
 class MemberUpdate(BaseModel):
@@ -352,9 +400,18 @@ class MemberUpdate(BaseModel):
     sex: Literal["female", "male", "other", "unknown"] | None = None
     heightCm: float | None = Field(default=None, ge=30, le=300)
     weightKg: float | None = Field(default=None, ge=2, le=500)
+    restingHeartRate: int | None = Field(default=None, ge=30, le=200)
+    sleepStart: SleepTime | None = None
+    sleepEnd: SleepTime | None = None
+    sleepTimezone: str | None = None
     conditions: list[ShortText] | None = Field(default=None, max_length=32)
     medications: list[ShortText] | None = Field(default=None, max_length=32)
     notes: Notes | None = None
+
+    @field_validator("sleepTimezone")
+    @classmethod
+    def _check_sleep_timezone(cls, value: str | None) -> str | None:
+        return None if value is None else _validate_timezone(value)
 
 
 __all__ = [

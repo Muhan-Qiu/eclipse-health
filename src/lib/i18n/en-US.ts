@@ -8,7 +8,7 @@ const enUS: typeof zhCN = {
   },
   nav: {
     primary: "Primary navigation",
-    dashboard: "Dashboard",
+    dashboard: "Overview",
     records: "Records",
     healthData: "Health data",
     profile: "Health profile",
@@ -58,6 +58,52 @@ const enUS: typeof zhCN = {
     quote: {
       attribution: "— {{author}}",
       anonymous: "Anonymous",
+    },
+    scores: {
+      title: "Health score",
+      description: "Based on your latest data · not a diagnosis",
+      overall: "Overall",
+      overallHint: "Average of available categories",
+      generatedAt: "Updated {{time}}",
+      insufficient: "Not enough data",
+      insufficientDesc:
+        "Import health data or finish an analysis to see your score here.",
+      missing: "Missing data: {{items}}",
+      missingSeparator: ", ",
+      grades: {
+        excellent: "Excellent",
+        good: "Good",
+        fair: "Fair",
+        attention: "Needs attention",
+        unknown: "Not enough data",
+      },
+      categories: {
+        heart: "Heart",
+        sleep: "Sleep",
+        weight: "Weight",
+        activity: "Activity",
+        "blood-pressure": "Blood pressure",
+      },
+    },
+    suggestions: {
+      title: "Suggestions",
+      description: "Actionable suggestions from your recent data",
+      talkToCoach: "Talk to coach",
+      emptyTitle: "No suggestions yet",
+      emptyDesc: "Import health data or finish an analysis and check back.",
+      severity: {
+        info: "Tip",
+        attention: "Needs attention",
+      },
+    },
+    healthSummary: {
+      title: "Health data",
+      description: "Recorded steps, heart rate, sleep, weight and blood pressure",
+      viewAll: "View all",
+      emptyTitle: "No health data yet",
+      emptyDesc:
+        "Import Apple Health or Xiaomi data to see the latest metrics here.",
+      import: "Import health data",
     },
     guide: {
       importTitle: "Import an ECG",
@@ -141,6 +187,17 @@ const enUS: typeof zhCN = {
         pending: "Waiting for samples",
         planned: "Planned",
       },
+    },
+  },
+  onboarding: {
+    llm: {
+      title: "Set up an AI provider",
+      description:
+        "Configure an AI provider to use score suggestions and the coach.",
+      note: "Keys stay on this device. You can also set this up later in the assistant.",
+      configure: "Set up",
+      later: "Later",
+      never: "Don't ask again",
     },
   },
   records: {
@@ -923,6 +980,53 @@ const enUS: typeof zhCN = {
       openaiDesc:
         "Point the base URL at this machine to use it as an OpenAI-compatible model.",
       copyExample: "Copy {{name}} example",
+    },
+    ohs: {
+      title: "Open Health Sync (optional)",
+      description:
+        "Sync daily summaries from your own Open Health Sync server into local health records.",
+      requirement:
+        "Requires you to run OHS yourself (Docker + Postgres). Most users do not need it; the built-in Apple / Xiaomi import keeps working.",
+      loading: "Loading OHS settings…",
+      unavailableTitle: "This backend does not expose the OHS API",
+      unavailableDesc:
+        "Update the backend and reopen settings; built-in imports are unaffected.",
+      baseUrlLabel: "OHS base URL",
+      baseUrlPlaceholder: "http://127.0.0.1:8080",
+      baseUrlInvalid: "The address must start with http:// or https://",
+      tokenLabel: "Token",
+      tokenPlaceholder: "tenant key or user token",
+      tokenStoredPlaceholder: "Saved; leave empty to keep it",
+      tokenHint:
+        "The token is encrypted with Windows DPAPI and stored locally; it never appears in logs or the UI.",
+      userIdLabel: "OHS user id (optional)",
+      userIdPlaceholder: "With a tenant key the first user is used automatically",
+      save: "Save",
+      saving: "Saving…",
+      saved: "OHS settings saved",
+      saveFailed: "Could not save OHS settings",
+      test: "Test connection",
+      testing: "Connecting…",
+      testOk: "Connected",
+      testTenant: "tenant key · {{n}} users",
+      testUser: "user token · {{n}} users",
+      testFailed: "Connection test failed",
+      sync: "Sync last 30 days",
+      syncing: "Syncing…",
+      syncDone: "Sync complete: created {{created}}, skipped {{skipped}}, failed {{failed}}",
+      syncFailed: "Sync failed",
+      lastSync:
+        "Last sync: {{time}} (created {{created}} · skipped {{skipped}} · failed {{failed}})",
+      neverSynced: "Not synced yet",
+      warningsTitle: "Warnings",
+      noWarnings: "No warnings",
+      notConfigured: "Save a base URL and token before testing or syncing.",
+      unsavedHint: "Save changes before testing or syncing.",
+      syncHint:
+        "Reads daily summaries only (steps, resting heart rate, sleep duration, weight, blood pressure) and dedupes by date.",
+      exampleTitle: "Connection example",
+      docsHint:
+        "Setup and field mapping: docs/INTEGRATIONS/OPEN_HEALTH_SYNC.md.",
     },
     about: {
       title: "About",

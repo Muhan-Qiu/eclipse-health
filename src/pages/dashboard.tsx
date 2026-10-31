@@ -38,8 +38,13 @@ import { RecordRow } from "@/components/records/record-row";
 import { useImport } from "@/components/import/import-provider";
 import { measurementsByCode } from "@/components/records/measurement-list";
 import { WidgetGrid } from "@/features/modules/widgets/widget-grid";
+import { HealthScoreGrid } from "@/features/scores/health-score-grid";
+import { SuggestionCard } from "@/features/scores/suggestion-card";
+import { HealthSummaryCard } from "@/features/scores/health-summary-card";
 import {
   useAnalysis,
+  useHealthScores,
+  useHealthSuggestions,
   useImportSample,
   useRecentAnalyses,
   useRecords,
@@ -351,6 +356,8 @@ export function DashboardPage() {
     limit: 5,
     recordType: "org.eclipsehealth.ecg",
   });
+  const scoresQuery = useHealthScores();
+  const suggestionsQuery = useHealthSuggestions();
   const recent = recentQuery.data?.items ?? [];
   const analysesQueries = useRecentAnalyses(recent);
   const sampleRecord = recent.find((record) => record.isSample);
@@ -413,9 +420,29 @@ export function DashboardPage() {
         </div>
       </header>
 
+      {/* 健康评分/建议放在首屏最前，ECG 引导与波形整体下移。 */}
       <section
-        className="eh-stagger grid gap-4 md:grid-cols-3"
-        aria-label={t("dashboard.eyebrow")}
+        className="eh-stagger grid gap-4 desk:grid-cols-3"
+        aria-label={t("dashboard.scores.title")}
+      >
+        <HealthScoreGrid
+          className="desk:col-span-2"
+          scores={scoresQuery.data}
+          loading={scoresQuery.isLoading}
+          error={scoresQuery.isError}
+        />
+        <SuggestionCard
+          className="desk:col-span-1"
+          suggestions={suggestionsQuery.data}
+          loading={suggestionsQuery.isLoading}
+          error={suggestionsQuery.isError}
+        />
+        <HealthSummaryCard className="desk:col-span-3" />
+      </section>
+
+      <section
+        className="eh-stagger mt-6 grid gap-4 md:grid-cols-3"
+        aria-label={t("dashboard.guide.importTitle")}
       >
         <GuideCard
           icon={FilePlus2}

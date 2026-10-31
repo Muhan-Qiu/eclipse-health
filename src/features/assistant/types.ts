@@ -2,7 +2,27 @@
 
 export type ProviderKind = "openai" | "anthropic" | "ollama" | "mock";
 export type AssistantStyle = "brief" | "detailed" | "doctor";
+export type AssistantMode = "chat" | "coach";
 export type MessageStatus = "streaming" | "completed" | "error" | "cancelled";
+
+export interface CoachWeatherDay {
+  date: string;
+  tempMax: number | null;
+  tempMin: number | null;
+  precipitationProbability: number | null;
+  weatherCode: number | null;
+}
+
+export interface CoachWeather {
+  city: string;
+  country?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  timezone?: string | null;
+  days: CoachWeatherDay[];
+  source?: string;
+  fetchedAt?: string;
+}
 
 export interface AssistantProvider {
   id: string;
@@ -128,6 +148,10 @@ export interface SendMessageBody {
   providerId: string;
   recordId?: string;
   includeNotes?: boolean;
+  /** 教练模式；缺省为普通对话，保持旧行为。 */
+  mode?: AssistantMode;
+  /** 可选城市，仅教练模式用于天气。 */
+  city?: string | null;
 }
 
 export type StreamEvent =

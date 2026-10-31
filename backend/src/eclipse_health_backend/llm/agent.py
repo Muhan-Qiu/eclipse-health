@@ -57,6 +57,18 @@ SYSTEM_PROMPT = """你是 eclipse health 的本地分析助手，帮助用户理
 6. 以 m_ 开头的工具由已安装的第三方模块提供，结果仅供参考；与内置工具冲突时以内置结果为准。
 7. 回答末尾用一句话提醒：以上为数据解读，不构成医学诊断。"""
 
+COACH_SYSTEM_PROMPT = """你是 eclipse health 的本地健康教练，用数据与用户偏好帮助其建立可持续的生活方式。
+
+规则：
+1. 不做诊断、不开处方、不替代医生；不把评分或数据解释成疾病结论。
+2. 只使用下方「教练上下文」与工具结果中的评分、健康数据、运动记录、记忆和天气；缺失的数据就明说没有，绝不编造。
+3. 建议必须渐进、可执行：一次给 1–3 个小步骤，说明频率与如何判断是否适合自己。
+4. 出现红旗症状——胸痛或胸闷伴出汗、晕厥或接近晕厥、明显呼吸困难、心悸伴头晕、运动中胸痛——立即建议停止活动并尽快就医/急诊。
+5. 个人记忆只作为背景和偏好，不主动复述敏感细节；用户要求忘记时，提示到健康档案页关闭记忆。
+6. 天气只用于调整户外活动建议，不据此做医学判断。
+7. 用简体中文回答；用户使用其他语言时跟随用户语言。
+8. 回答末尾用一句话提醒：以上为健康建议，不构成医学诊断。"""
+
 SENT_FIELDS_BASE = [
     "system.instructions",
     "tools.definitions",
@@ -337,12 +349,25 @@ def build_messages(
     history: list[dict[str, Any]],
     content: str,
     style: str,
+    mode: str | None = None,
+    coach_context: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     style_instruction = STYLE_INSTRUCTIONS.get(style, STYLE_INSTRUCTIONS["brief"])
-    system = (
-        f"{SYSTEM_PROMPT}\n\n回答风格：{style_instruction}\n\n"
-        f"本地上下文（只读，可能为空）：\n{context_text}"
-    )
+    if mode == "coach":
+        # 惰性导入：普通对话不多加载教练模块，G2/G3 缺失也不影响启动。
+        from ..coach.context import render_coach_context
+
+        system = (
+            f"{COACH_SYSTEM_PROMPT}\n\n回答风格：{style_instruction}\n\n"
+            "教练上下文（只读，缺失段落已省略）：\n"
+            f"{render_coach_context(coach_context)}\n\n"
+            f"本地记录上下文（只读，可能为空）：\n{context_text}"
+        )
+    else:
+        system = (
+            f"{SYSTEM_PROMPT}\n\n回答风格：{style_instruction}\n\n"
+            f"本地上下文（只读，可能为空）：\n{context_text}"
+        )
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     messages.extend(history[-MAX_HISTORY_MESSAGES:])
     messages.append({"role": "user", "content": content})
@@ -1140,6 +1165,7 @@ def sanitize_error(kind: str, exc: BaseException, *, status: int | None = None) 
 
 
 __all__ = [
+    "COACH_SYSTEM_PROMPT",
     "MAX_TOOL_CALLS",
     "MAX_TOOL_ROUNDS",
     "SYSTEM_PROMPT",

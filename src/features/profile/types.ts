@@ -86,7 +86,74 @@ export interface MemberPatch {
   sex?: MemberSex;
   heightCm?: number | null;
   weightKg?: number | null;
+  restingHeartRate?: number | null;
+  sleepStart?: string | null;
+  sleepEnd?: string | null;
+  sleepTimezone?: string | null;
   conditions?: string[];
   medications?: string[];
   notes?: string;
+}
+
+/** 共享 `Member` 类型尚未包含 G3 字段，这里做局部扩展，避免改 lib/api/types。 */
+export interface ProfileMember {
+  restingHeartRate?: number | null;
+  sleepStart?: string | null;
+  sleepEnd?: string | null;
+  sleepTimezone?: string | null;
+}
+
+export const EXERCISE_ACTIVITIES = [
+  "walk",
+  "run",
+  "cycle",
+  "swim",
+  "strength",
+  "yoga",
+  "other",
+] as const;
+
+export type ExerciseActivity = (typeof EXERCISE_ACTIVITIES)[number];
+export type ExerciseIntensity = "low" | "moderate" | "vigorous";
+export type ExerciseSubjective = "轻松" | "适中" | "吃力";
+export type ExerciseSource = "manual" | "import";
+
+export interface Exercise {
+  id: string;
+  memberId: string;
+  activity: ExerciseActivity;
+  durationSec: number;
+  distanceKm: number | null;
+  intensity: ExerciseIntensity | null;
+  subjective: ExerciseSubjective | null;
+  notes: string;
+  startAt: string;
+  source: ExerciseSource;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExercisePage {
+  items: Exercise[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ExerciseInput {
+  activity: ExerciseActivity;
+  durationSec: number;
+  distanceKm?: number | null;
+  intensity?: ExerciseIntensity | null;
+  subjective?: ExerciseSubjective | null;
+  notes?: string;
+  startAt: string;
+  timezone?: string;
+  memberId?: string;
+}
+
+export interface MemoryDocument {
+  content: string;
+  enabled: boolean;
+  updatedAt: string | null;
 }

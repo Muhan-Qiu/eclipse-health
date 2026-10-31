@@ -234,3 +234,7 @@ Samsung Health → 右上角 ⋮ → 设置 → 滑到 **Download personal data*
 - 未映射类型（如活动能量、站立）跳过并计数，不猜测。
 - 小米 `Value` 为列表的行跳过；未知 Key 与坏 JSON 逐行计入警告。
 - 不做 AES 解密、不做 Health Connect、不做 Huawei/Zepp/Samsung 健康数据。
+
+---
+
+可选外部服务连接见 [OPEN_HEALTH_SYNC.md](./OPEN_HEALTH_SYNC.md)（Open Health Sync，需自行运行，默认不启用）。

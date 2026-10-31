@@ -9,6 +9,7 @@ import type { RecordPage } from "@/lib/api/types";
 import type {
   AssistantProvider,
   AssistantSession,
+  CoachWeather,
   MessagePage,
   ProviderInput,
   ProviderTestResult,
@@ -190,6 +191,18 @@ export const assistantApi = {
   records: {
     list: async (): Promise<RecordPage> =>
       request<RecordPage>("/records?limit=30&recordType=org.eclipsehealth.ecg"),
+  },
+
+  coach: {
+    /** 天气失败/接口未挂载时返回 null；调用方不要把它当成错误。 */
+    weather: async (city: string): Promise<CoachWeather | null> => {
+      const trimmed = city.trim();
+      if (!trimmed) return null;
+      const body = await request<{ weather: CoachWeather | null }>(
+        `/coach/weather?city=${encodeURIComponent(trimmed)}`,
+      );
+      return body.weather ?? null;
+    },
   },
 
   /** POST + SSE；`onEvent` 逐条回调，解析失败的帧会被忽略。 */

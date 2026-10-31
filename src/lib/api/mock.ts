@@ -8,6 +8,7 @@ import type {
   Beat,
   EngineStatus,
   HealthRecord,
+  HealthScores,
   HealthStatus,
   ImportCommitBody,
   ImportCommitResponse,
@@ -23,6 +24,7 @@ import type {
   SignalData,
   SignalMetadata,
   SourceInfo,
+  SuggestionList,
 } from "./types";
 
 /* ------------------------------------------------------------------ *
@@ -1010,3 +1012,75 @@ const mockApi: ApiClient = {
 };
 
 export { mockApi };
+
+/* ------------------------------------------------------------------ *
+ * 健康评分/建议的演示数据（G1）：固定示例，便于离线预览三种状态。
+ * 与真实评分无关，仅用于界面演示。
+ * ------------------------------------------------------------------ */
+
+export function mockScores(): HealthScores {
+  return {
+    overall: 78,
+    generatedAt: new Date().toISOString(),
+    categories: [
+      {
+        id: "heart",
+        label: "心脏",
+        score: 82,
+        grade: "excellent",
+        factors: ["静息心率 62 bpm", "心率变异性正常"],
+        missing: null,
+        evidenceCount: 3,
+      },
+      {
+        id: "sleep",
+        label: "睡眠",
+        score: 74,
+        grade: "good",
+        factors: ["昨夜睡眠 7 小时 30 分"],
+        missing: null,
+        evidenceCount: 5,
+      },
+      {
+        id: "activity",
+        label: "活动",
+        score: 68,
+        grade: "fair",
+        factors: ["日均 6800 步"],
+        missing: null,
+        evidenceCount: 4,
+      },
+      {
+        id: "blood-pressure",
+        label: "血压",
+        score: 88,
+        grade: "excellent",
+        factors: ["118/76 mmHg"],
+        missing: null,
+        evidenceCount: 2,
+      },
+    ],
+    missing: [{ id: "weight", reason: "缺少身高或体重" }],
+  };
+}
+
+export function mockSuggestions(): SuggestionList {
+  return {
+    items: [
+      {
+        id: "sleep",
+        text: "最近睡眠略短，今晚试着提前 30 分钟上床。",
+        category: "sleep",
+        severity: "info",
+        prompt: "观察我最近的睡眠数据，分析可以改善的点。",
+      },
+      {
+        id: "activity",
+        text: "日均步数偏低，饭后散步 15 分钟会有帮助。",
+        category: "activity",
+        severity: "attention",
+        prompt: "根据我最近的活动数据，给我一个可执行的运动建议。",
+      },
+    ],
+  };
+}

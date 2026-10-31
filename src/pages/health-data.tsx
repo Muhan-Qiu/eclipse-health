@@ -370,16 +370,13 @@ export function HealthDataPage() {
 
           {!query.isLoading && !query.isError && total === 0 && !hasFilters ? (
             <div className="px-5 py-6">
+              {/* 顶部 PageHeader 已有唯一的「导入健康数据」入口，这里不再重复。 */}
               <EmptyState
                 icon={FilePlus2}
                 title={t("healthData.emptyTitle")}
                 description={t("healthData.emptyDesc")}
                 className="border-0 bg-transparent"
-              >
-                <Button size="sm" onClick={openPicker}>
-                  {t("healthData.emptyAction")}
-                </Button>
-              </EmptyState>
+              />
             </div>
           ) : null}
 
