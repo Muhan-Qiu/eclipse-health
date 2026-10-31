@@ -25,6 +25,8 @@ export interface RecordListParams {
   capturedFrom?: string;
   capturedTo?: string;
   recordType?: string;
+  /** 按 recordType 前缀筛选（如 `org.eclipsehealth.health.`）；与 recordType 互斥。 */
+  recordTypePrefix?: string;
   moduleId?: string;
   favorite?: boolean;
 }

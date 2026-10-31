@@ -256,12 +256,22 @@ def list_records(
     offset: Annotated[int, Query(ge=0)] = 0,
     member_id: Annotated[str | None, Query(alias="memberId")] = None,
     record_type: Annotated[str | None, Query(alias="recordType")] = None,
+    record_type_prefix: Annotated[str | None, Query(alias="recordTypePrefix")] = None,
     module_id: Annotated[str | None, Query(alias="moduleId")] = None,
     captured_from: Annotated[datetime | None, Query(alias="capturedFrom")] = None,
     captured_to: Annotated[datetime | None, Query(alias="capturedTo")] = None,
     favorite: Annotated[bool | None, Query()] = None,
     include_deleted: Annotated[bool, Query(alias="includeDeleted")] = False,
 ) -> RecordPage:
+    # 前缀过滤用于「健康数据」页一次性取出 org.eclipsehealth.health.*；
+    # 与精确 recordType 同时给出会让结果含义不明确，直接拒绝。
+    if record_type and record_type_prefix:
+        raise InvalidInputError(
+            "recordType and recordTypePrefix are mutually exclusive",
+            code="invalid_query",
+            details={"recordType": record_type, "recordTypePrefix": record_type_prefix},
+        )
+
     conditions = []
     if not include_deleted:
         conditions.append(RecordTable.deleted_at.is_(None))
@@ -269,6 +279,8 @@ def list_records(
         conditions.append(RecordTable.member_id == member_id)
     if record_type:
         conditions.append(RecordTable.record_type == record_type)
+    if record_type_prefix:
+        conditions.append(RecordTable.record_type.startswith(record_type_prefix))
     if module_id:
         conditions.append(RecordTable.module_id == module_id)
     if favorite is not None:

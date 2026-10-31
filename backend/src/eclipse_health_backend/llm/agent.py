@@ -368,8 +368,36 @@ _HTTP_STATUS_MAP: dict[int, tuple[str, str]] = {
 TRANSIENT_CODE_SUFFIXES = ("_rate_limited", "_server_error", "_network_error")
 
 
+def _is_connection_error(exc: BaseException) -> bool:
+    """沿异常链识别连接失败；LiteLLM 常把 ``ConnectError`` 包成 500。"""
+    pending: list[BaseException] = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if isinstance(current, httpx.ConnectError):
+            return True
+        name = type(current).__name__.lower()
+        if ("connect" in name or "connection" in name) and (
+            "error" in name or "exception" in name
+        ):
+            return True
+        for attr in ("__cause__", "__context__", "original_exception"):
+            nested = getattr(current, attr, None)
+            if isinstance(nested, BaseException):
+                pending.append(nested)
+        for arg in getattr(current, "args", ()):
+            if isinstance(arg, BaseException):
+                pending.append(arg)
+    return False
+
+
 def _sanitize(kind: str, exc: BaseException, *, status: int | None = None) -> LLMError:
     """只保留 provider 类型与 HTTP 状态；绝不透传原始异常文本。"""
+    if _is_connection_error(exc):
+        return LLMError(f"{kind}_network_error", f"{kind} connection failed")
     if status is not None:
         if 500 <= status <= 599:
             return LLMError(
@@ -675,20 +703,19 @@ class LiteLLMAdapter(ChatAdapter):
             kwargs["stream_options"] = {"include_usage": True}
 
         calls: dict[int, dict[str, Any]] = {}
-        usage: dict[str, Any] | None = None
+        usage_parts: dict[str, int | None] = {
+            "promptTokens": None,
+            "completionTokens": None,
+            "totalTokens": None,
+        }
         try:
             response = await litellm.acompletion(**kwargs)
             async for chunk in response:
                 if cancel.is_set():
                     return
-                raw_usage = getattr(chunk, "usage", None)
-                if raw_usage is not None:
-                    candidate = make_usage(
-                        _usage_value(raw_usage, "prompt_tokens"),
-                        _usage_value(raw_usage, "completion_tokens"),
-                    )
-                    if candidate["totalTokens"] is not None:
-                        usage = candidate
+                raw_usage = _iter_usage_payloads(chunk)
+                for payload in raw_usage:
+                    _merge_usage_parts(usage_parts, payload)
                 choices = getattr(chunk, "choices", None) or []
                 if not choices:
                     continue
@@ -727,13 +754,97 @@ class LiteLLMAdapter(ChatAdapter):
                     if item["name"]
                 ],
             }
+        usage = _usage_from_parts(usage_parts)
         if usage is not None:
             yield {"type": "usage", "usage": usage}
 
 
+def _raw_usage_value(raw: Any, key: str) -> Any:
+    if isinstance(raw, dict):
+        return raw.get(key)
+    value = getattr(raw, key, None)
+    if value is not None:
+        return value
+    extra = getattr(raw, "model_extra", None)
+    if isinstance(extra, dict):
+        return extra.get(key)
+    return None
+
+
 def _usage_value(raw: Any, key: str) -> int | None:
-    value = raw.get(key) if isinstance(raw, dict) else getattr(raw, key, None)
+    value = _raw_usage_value(raw, key)
     return int(value) if isinstance(value, (int, float)) else None
+
+
+_USAGE_FIELDS: dict[str, tuple[str, ...]] = {
+    "promptTokens": ("prompt_tokens", "input_tokens"),
+    "completionTokens": ("completion_tokens", "output_tokens"),
+}
+
+
+def _usage_number(raw: Any, keys: tuple[str, ...]) -> int | None:
+    """优先 provider 的规范字段；为 0 时回退到 Anthropic 的 *input_tokens。"""
+    fallback: int | None = None
+    for key in keys:
+        value = _usage_value(raw, key)
+        if value is None:
+            continue
+        if value > 0:
+            return value
+        if fallback is None:
+            fallback = value
+    return fallback
+
+
+def _iter_usage_payloads(chunk: Any) -> list[Any]:
+    """LiteLLM 不同版本把 usage 放在不同位置；只读已知容器，不做递归。"""
+    payloads: list[Any] = []
+    if isinstance(chunk, dict):
+        payloads.append(chunk.get("usage"))
+    else:
+        payloads.append(getattr(chunk, "usage", None))
+    for attr in ("model_extra", "_hidden_params", "provider_specific_fields"):
+        container = getattr(chunk, attr, None)
+        if isinstance(container, dict):
+            for key in ("usage", "anthropic_usage", "token_usage"):
+                payloads.append(container.get(key))
+    for choice in getattr(chunk, "choices", None) or []:
+        delta = getattr(choice, "delta", None)
+        if delta is None:
+            continue
+        payloads.append(getattr(delta, "usage", None))
+        for attr in ("model_extra", "provider_specific_fields"):
+            container = getattr(delta, attr, None)
+            if isinstance(container, dict):
+                payloads.append(container.get("usage"))
+    return [item for item in payloads if item is not None]
+
+
+def _merge_usage_parts(parts: dict[str, int | None], raw: Any) -> None:
+    for target, keys in _USAGE_FIELDS.items():
+        value = _usage_number(raw, keys)
+        # 空 usage 对象（全 0）不能覆盖已知的真实值。
+        if value is not None and (value > 0 or parts[target] is None):
+            parts[target] = value
+    total = _usage_value(raw, "total_tokens")
+    if total is not None and total > 0:
+        parts["totalTokens"] = total
+
+
+def _usage_from_parts(parts: dict[str, int | None]) -> dict[str, Any] | None:
+    prompt = parts.get("promptTokens")
+    completion = parts.get("completionTokens")
+    total = parts.get("totalTokens")
+    if prompt is None and completion is None and total is None:
+        return None
+    if (total is None or total == 0) and prompt is not None and completion is not None:
+        total = prompt + completion
+    return {
+        "promptTokens": prompt,
+        "completionTokens": completion,
+        "totalTokens": total,
+        "source": "provider",
+    }
 
 
 def adapter_for(provider: Provider, api_key: str | None) -> ChatAdapter:

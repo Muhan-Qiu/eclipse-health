@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   MODULE_AUDIT_KEY,
+  MODULE_CONTRIBUTIONS_KEY,
   getModuleManifest,
   getPermissions,
   grantPermission,
@@ -93,6 +94,9 @@ export function ModuleDetail({
   function afterPermissionChange(state: PermissionsState) {
     queryClient.setQueryData(["modules", "permissions", moduleId], state);
     void queryClient.invalidateQueries({ queryKey: MODULE_AUDIT_KEY });
+    // 授予/撤销 llm 会影响模块工具是否出现在助手目录，必须同步刷新贡献点。
+    void queryClient.invalidateQueries({ queryKey: MODULE_CONTRIBUTIONS_KEY });
+    void queryClient.invalidateQueries({ queryKey: PAGE_CONTRIBUTIONS_KEY });
     onChanged();
   }
 

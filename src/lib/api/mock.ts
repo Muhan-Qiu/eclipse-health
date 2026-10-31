@@ -361,6 +361,138 @@ function makeRecord(input: {
   return record;
 }
 
+type MockHealthKind =
+  | "steps"
+  | "heart-rate"
+  | "sleep"
+  | "body-mass"
+  | "blood-pressure";
+
+const HEALTH_SOURCE_APP = {
+  "apple-health": "Apple 健康",
+  "xiaomi-mi-fitness": "小米运动",
+} as const;
+
+type MockHealthSource = keyof typeof HEALTH_SOURCE_APP;
+
+/** 健康数据（无波形）示例记录；payload 与 B4 导入的真实记录同形。 */
+function makeHealthRecord(input: {
+  kind: MockHealthKind;
+  value: number | string | { systolic: number; diastolic: number };
+  unit: string;
+  startAt: string;
+  endAt?: string;
+  durationSec?: number | null;
+  importSource: MockHealthSource;
+  stage?: string;
+}): HealthRecord {
+  const createdAt = new Date(Date.parse(input.startAt) + 86_400_000).toISOString();
+  const record: HealthRecord = {
+    schema: "org.eclipsehealth.record/1",
+    id: uid("rec"),
+    memberId: MEMBER_ID,
+    recordType: `org.eclipsehealth.health.${input.kind}`,
+    moduleId: "org.eclipsehealth.health",
+    capturedAt: input.startAt,
+    timezone: "Asia/Shanghai",
+    source: { kind: "import", app: HEALTH_SOURCE_APP[input.importSource] },
+    samplingRate: null,
+    leads: [],
+    durationSec: input.durationSec ?? null,
+    unit: input.unit,
+    signalIds: [],
+    quality: null,
+    tags: [],
+    notes: "",
+    favorite: false,
+    metadata: {
+      demo: true,
+      importSource: input.importSource,
+      externalId: `${input.importSource}:${input.kind}:${input.startAt}`,
+      ...(input.stage ? { sleepCategory: input.stage } : {}),
+    },
+    payload: {
+      value: input.value,
+      unit: input.unit,
+      startAt: input.startAt,
+      ...(input.endAt ? { endAt: input.endAt } : {}),
+      sourceApp: HEALTH_SOURCE_APP[input.importSource],
+    },
+    provenance: { adapterVersion: "demo" },
+    createdAt,
+    updatedAt: createdAt,
+    deletedAt: null,
+  };
+  records.push(record);
+  return record;
+}
+
+function seedHealthData(now: number) {
+  const DAY = 86_400_000;
+  for (let day = 0; day < 7; day += 1) {
+    const base = new Date(now - day * DAY);
+    const at = (hour: number, minute: number) => {
+      const moment = new Date(base);
+      moment.setHours(hour, minute, 0, 0);
+      return moment;
+    };
+
+    const stepsStart = at(9, 0);
+    makeHealthRecord({
+      kind: "steps",
+      value: 6_200 + day * 420,
+      unit: "count",
+      startAt: stepsStart.toISOString(),
+      endAt: new Date(stepsStart.getTime() + 30 * 60_000).toISOString(),
+      durationSec: 1_800,
+      importSource: day % 2 === 0 ? "apple-health" : "xiaomi-mi-fitness",
+    });
+
+    makeHealthRecord({
+      kind: "heart-rate",
+      value: 68 + (day % 5) * 3,
+      unit: "count/min",
+      startAt: at(10, 4).toISOString(),
+      importSource: "apple-health",
+    });
+
+    makeHealthRecord({
+      kind: "body-mass",
+      value: Math.round((68.4 + day * 0.1) * 10) / 10,
+      unit: "kg",
+      startAt: at(8, 12).toISOString(),
+      importSource: "xiaomi-mi-fitness",
+    });
+
+    makeHealthRecord({
+      kind: "blood-pressure",
+      value: { systolic: 116 + (day % 4) * 2, diastolic: 76 + (day % 3) },
+      unit: "mm[Hg]",
+      startAt: at(9, 10).toISOString(),
+      importSource: "apple-health",
+    });
+
+    const sleepStart = new Date(base);
+    sleepStart.setDate(sleepStart.getDate() - 1);
+    sleepStart.setHours(23, 0, 0, 0);
+    const sleepEnd = new Date(base);
+    sleepEnd.setHours(6, 30, 0, 0);
+    makeHealthRecord({
+      kind: "sleep",
+      value: day % 6 === 5 ? "awake" : "asleep-core",
+      unit: "1",
+      startAt: sleepStart.toISOString(),
+      endAt: sleepEnd.toISOString(),
+      durationSec: Math.max(
+        0,
+        Math.round((sleepEnd.getTime() - sleepStart.getTime()) / 1000),
+      ),
+      importSource: "xiaomi-mi-fitness",
+      stage: day % 6 === 5 ? "awake" : "asleep-core",
+    });
+  }
+}
+
 function seedDemoData() {
   const now = Date.now();
   const apple = synthesizeEcg(360, 12);
@@ -407,6 +539,8 @@ function seedDemoData() {
     samples: huawei.samples,
     withAnalysis: false,
   });
+
+  seedHealthData(now);
 }
 seedDemoData();
 
@@ -434,6 +568,10 @@ function listRecords(params: RecordListParams = {}): RecordPage {
   }
   if (params.recordType) {
     filtered = filtered.filter((record) => record.recordType === params.recordType);
+  }
+  const prefix = params.recordTypePrefix;
+  if (prefix) {
+    filtered = filtered.filter((record) => record.recordType.startsWith(prefix));
   }
   if (params.moduleId) {
     filtered = filtered.filter((record) => record.moduleId === params.moduleId);

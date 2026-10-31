@@ -29,6 +29,9 @@ from ..settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+# LiteLLM 导入时默认联网拉价格表；本地优先应用只用内置副本，避免离线首轮等待。
+os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
+
 ProviderKind = Literal["openai", "anthropic", "ollama", "mock"]
 PROVIDER_KINDS: tuple[str, ...] = ("openai", "anthropic", "ollama", "mock")
 

@@ -13,11 +13,14 @@ import type {
   AnalysisResult,
   AnalysisStartBody,
   HealthRecord,
+  RecordPage,
   RecordSummary,
 } from "./types";
 
 export const queryKeys = {
   records: (params?: RecordListParams) => ["records", params ?? {}] as const,
+  healthRecords: (params?: RecordListParams) =>
+    ["health-records", params ?? {}] as const,
   record: (id: string) => ["record", id] as const,
   signals: (id: string) => ["signals", id] as const,
   signal: (id: string, lead?: string) => ["signal", id, lead ?? ""] as const,
@@ -52,6 +55,17 @@ export function useRecords(params: RecordListParams) {
       };
     },
     staleTime: 15_000,
+    retry: retryNetwork,
+  });
+}
+
+/** 健康数据页需要完整 payload，因此返回原始 HealthRecord，而不是 RecordSummary。 */
+export function useHealthRecords(params: RecordListParams) {
+  return useQuery({
+    queryKey: queryKeys.healthRecords(params),
+    queryFn: (): Promise<RecordPage> => api.records.list(params),
+    // 导入流程不经过 react-query，回到本页/窗口重新聚焦时总是取最新数量。
+    staleTime: 0,
     retry: retryNetwork,
   });
 }

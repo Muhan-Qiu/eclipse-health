@@ -45,6 +45,7 @@ v1 把 `contributes` 当作「保留的任意 JSON」，核心只存不解释。
 | `size` | 是 | `sm` / `md` / `lg` |
 | `dataSource` | 是 | 见 2.1，只能绑定本模块 RPC |
 | `view` | 是 | 见 2.2，只能使用受控组件 |
+| `link` | 否 | 可选站内路径（见 2.3）；点击整张卡片跳转 |
 
 ### 2.1 `dataSource`
 
@@ -68,6 +69,20 @@ v1 把 `contributes` 当作「保留的任意 JSON」，核心只存不解释。
 
 `valuePath` 只允许字母、数字、下划线、`.` 与 `[n]`；等价于受限 JSONPath，**不执行表达式**。
 
+### 2.3 `link`
+
+可选的站内跳转目标，只允许应用内路由：
+
+- 必须以单个 `/` 开头（`^/`）；
+- 禁止 `//`（协议相对地址）、`://`（外部协议）与任何 `..` 片段；
+- 禁止空白与反斜杠，≤512 字符。
+
+前端 `widget-card.tsx` 在渲染前会再次过滤，非法值按「无链接」处理；schema 校验失败会直接拒绝 manifest。
+
+```json
+"link": "/modules/io.github.example.weight-trend/pages/weight"
+```
+
 ## 3. `contributes.ui.pages[]`
 
 模块自有页面。稳定形状：
@@ -83,8 +98,8 @@ v1 把 `contributes` 当作「保留的任意 JSON」，核心只存不解释。
       "source": { "type": "module-rpc", "method": "list" },
       "rowPath": "items",
       "columns": [
-        { "key": "capturedAt", "label": "时间" },
-        { "key": "weight", "label": "体重", "unit": "kg" }
+        { "key": "capturedAt", "label": "时间", "format": "datetime" },
+        { "key": "weight", "label": "体重", "unit": "kg", "format": "number" }
       ] }
   ]
 }
@@ -103,11 +118,13 @@ v1 把 `contributes` 当作「保留的任意 JSON」，核心只存不解释。
 |---|---|---|---|
 | `text` | `text`（≤2000） | — | 静态说明文字 |
 | `list` | `source` | `title`、`itemPath`、`primaryPath`、`secondaryPath` | 简单列表 |
-| `table` | `source`、`columns` | `title`、`rowPath` | 表格；列含 `key`、`label`、可选 `unit` |
-| `detail` | `source` | `title`、`fields` | 键值详情，`fields` 同表格列 |
-| `form` | `source`、`fields` | `title`、`submitMethod` | 表单；字段类型见下 |
+| `table` | `source`、`columns` | `title`、`rowPath` | 表格；列含 `key`、`label`、可选 `unit`、可选 `format` |
+| `detail` | `source` | `title`、`fields` | 键值详情，`fields` 同表格列（含可选 `format`） |
+| `form` | `source`、`fields` | `title`、`submitMethod` | 表单；字段类型见下，另可选 `format` |
 
-表单字段类型：`text` / `textarea` / `number` / `date` / `select` / `checkbox`；可选 `required`、`default`（字符串/数字/布尔）、`options`（`value` + `label`）。提交由核心收集后调用 `submitMethod`，模块不接触 DOM。
+表单字段类型：`text` / `textarea` / `number` / `date` / `select` / `checkbox`；可选 `required`、`format`、`default`（字符串/数字/布尔）、`options`（`value` + `label`）。提交由核心收集后调用 `submitMethod`，模块不接触 DOM。
+
+`format` 是显示提示，取值 `text` / `number` / `date` / `datetime`，由渲染器决定如何展示；它不改变数据本身，也不允许表达式。
 
 ## 4. `contributes.tools[]`
 
@@ -193,6 +210,7 @@ GET /api/v1/modules/contributions?type=widgets|pages|tools|recordTypes
 - 没有 `ui.widgets` / `ui.pages` / `tools` 的模块不受影响；Cardia 与 demo 模块继续通过校验。
 - v1 时期 `ui.widgets` 是任意 JSON；v2 起改为受控结构。仓库内没有依赖旧形状的模块。
 - 工具新增 `parameters` 别名与 `permissions` 字段，均为可选。
+- `ui.widgets[]` 新增可选 `link`；页面列/字段新增可选 `format`。两者都是增量字段，旧 manifest 不受影响。
 
 ## 9. 完整示例 A · dashboard-widget
 
@@ -220,7 +238,8 @@ GET /api/v1/modules/contributions?type=widgets|pages|tools|recordTypes
           "description": "最近 30 天的体重与变化",
           "size": "md",
           "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
-          "view": { "type": "sparkline", "unit": "kg", "valuePath": "latest.weight" }
+          "view": { "type": "sparkline", "unit": "kg", "valuePath": "latest.weight" },
+          "link": "/modules/io.github.example.weight-trend/pages/weight"
         }
       ]
     }

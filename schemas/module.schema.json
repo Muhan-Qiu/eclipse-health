@@ -614,7 +614,8 @@
         "description": { "type": "string", "maxLength": 300 },
         "size": { "type": "string", "enum": ["sm", "md", "lg"] },
         "dataSource": { "$ref": "#/$defs/moduleRpcSource" },
-        "view": { "$ref": "#/$defs/widgetView" }
+        "view": { "$ref": "#/$defs/widgetView" },
+        "link": { "$ref": "#/$defs/internalLink" }
       }
     },
     "widgetView": {
@@ -747,7 +748,8 @@
       "properties": {
         "key": { "$ref": "#/$defs/valuePath" },
         "label": { "type": "string", "minLength": 1, "maxLength": 120 },
-        "unit": { "type": "string", "maxLength": 32 }
+        "unit": { "type": "string", "maxLength": 32 },
+        "format": { "$ref": "#/$defs/valueFormat" }
       }
     },
     "formField": {
@@ -762,6 +764,7 @@
           "enum": ["text", "textarea", "number", "date", "select", "checkbox"]
         },
         "required": { "type": "boolean" },
+        "format": { "$ref": "#/$defs/valueFormat" },
         "default": { "type": ["string", "number", "boolean"] },
         "options": {
           "type": "array",
@@ -783,6 +786,18 @@
       "minLength": 1,
       "maxLength": 64,
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "internalLink": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^/(?!/)(?!.*//)(?!.*\\.\\.)(?!.*://)[^\\s\\\\]*$",
+      "description": "In-app route: starts with a single '/', no protocol, '//', '..' or backslash."
+    },
+    "valueFormat": {
+      "type": "string",
+      "enum": ["text", "number", "date", "datetime"],
+      "description": "Display format hint for page values; rendering stays declarative."
     }
   }
 }

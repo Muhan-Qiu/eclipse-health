@@ -15,6 +15,9 @@ const RecordsPage = lazy(() =>
 const RecordDetailPage = lazy(() =>
   import("@/pages/record-detail").then((m) => ({ default: m.RecordDetailPage })),
 );
+const HealthDataPage = lazy(() =>
+  import("@/pages/health-data").then((m) => ({ default: m.HealthDataPage })),
+);
 const ProfilePage = lazy(() =>
   import("@/pages/profile").then((m) => ({ default: m.ProfilePage })),
 );
@@ -80,6 +83,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="records" element={lazyPage(<RecordsPage />)} />
           <Route path="records/:id" element={lazyPage(<RecordDetailPage />)} />
+          <Route path="health-data" element={lazyPage(<HealthDataPage />)} />
           <Route path="profile" element={lazyPage(<ProfilePage />)} />
           <Route path="trends" element={lazyPage(<TrendsPage />)} />
           <Route path="compare" element={lazyPage(<ComparePage />)} />

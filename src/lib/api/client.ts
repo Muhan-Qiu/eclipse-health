@@ -181,6 +181,7 @@ const realApi: ApiClient = {
         capturedFrom: params.capturedFrom,
         capturedTo: params.capturedTo,
         recordType: params.recordType,
+        recordTypePrefix: params.recordTypePrefix,
         moduleId: params.moduleId,
         favorite: params.favorite === undefined ? undefined : String(params.favorite),
       });

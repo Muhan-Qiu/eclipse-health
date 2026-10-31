@@ -117,6 +117,84 @@ def test_widget_and_page_manifests_pass() -> None:
     ]
 
 
+def test_widget_internal_link_passes() -> None:
+    widget = copy.deepcopy(WIDGET)
+    widget["link"] = "/modules/io.github.example.weight-trend/pages/weight?tab=1"
+    manifest = parse_manifest(_widget_manifest(widget))
+    assert manifest.contributes["ui"]["widgets"][0]["link"].startswith("/modules/")
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "https://example.com/weight",
+        "//example.com/weight",
+        "/../admin",
+        "/a/../b",
+        "/a//b",
+        "modules/weight",
+        "/a\\b",
+        "/a b",
+        "/a://b",
+        "",
+    ],
+    ids=[
+        "absolute-url",
+        "protocol-relative",
+        "leading-dotdot",
+        "inner-dotdot",
+        "double-slash",
+        "missing-leading-slash",
+        "backslash",
+        "whitespace",
+        "embedded-protocol",
+        "empty",
+    ],
+)
+def test_invalid_widget_links_are_rejected(link: str) -> None:
+    widget = copy.deepcopy(WIDGET)
+    widget["link"] = link
+    with pytest.raises(ModuleError) as info:
+        parse_manifest(_widget_manifest(widget))
+    assert info.value.code == "INVALID_INPUT"
+
+
+def test_page_value_formats_pass() -> None:
+    page = copy.deepcopy(PAGE)
+    page["layout"][1]["columns"][0]["format"] = "datetime"
+    page["layout"][1]["columns"][1]["format"] = "number"
+    page["layout"][3]["fields"] = [
+        {"key": "capturedAt", "label": "时间", "format": "date"}
+    ]
+    page["layout"][4]["fields"][0]["format"] = "number"
+    page["layout"][4]["fields"][1]["format"] = "text"
+
+    manifest = parse_manifest(_page_manifest(page))
+    layout = manifest.contributes["ui"]["pages"][0]["layout"]
+    assert layout[1]["columns"][0]["format"] == "datetime"
+    assert layout[3]["fields"][0]["format"] == "date"
+    assert layout[4]["fields"][0]["format"] == "number"
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda page: page["layout"][1]["columns"][0].update(format="currency"),
+        lambda page: page["layout"][3].update(
+            fields=[{"key": "at", "label": "时间", "format": "currency"}]
+        ),
+        lambda page: page["layout"][4]["fields"][0].update(format="currency"),
+    ],
+    ids=["bad-column-format", "bad-detail-format", "bad-form-format"],
+)
+def test_invalid_page_formats_are_rejected(mutate) -> None:
+    page = copy.deepcopy(PAGE)
+    mutate(page)
+    with pytest.raises(ModuleError) as info:
+        parse_manifest(_page_manifest(page))
+    assert info.value.code == "INVALID_INPUT"
+
+
 @pytest.mark.parametrize(
     "mutate",
     [

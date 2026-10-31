@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/common/page-header";
 import {
   MODULE_AUDIT_KEY,
+  MODULE_CONTRIBUTIONS_KEY,
   MODULE_QUERY_KEY,
   disableModule,
   enableModule,
@@ -73,7 +74,10 @@ export function ModulesWorkspace() {
   const modules = modulesQuery.data ?? [];
 
   function refreshAll() {
+    // ["modules"] 覆盖 manifest/audit/contributions/page-contributions 等子键；
+    // 单独再失效 contributions，避免未来子键改名后首页卡片与模块页漏刷。
     void queryClient.invalidateQueries({ queryKey: MODULE_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: MODULE_CONTRIBUTIONS_KEY });
     void queryClient.invalidateQueries({ queryKey: MODULE_AUDIT_KEY });
     setAuditRefreshToken((value) => value + 1);
   }

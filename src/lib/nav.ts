@@ -3,6 +3,7 @@ import {
   FileChartColumn,
   FileText,
   GitCompare,
+  HeartPulse,
   Info,
   LayoutDashboard,
   Settings,
@@ -22,6 +23,7 @@ export interface NavItem {
 export const primaryNav: NavItem[] = [
   { path: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, end: true },
   { path: "/records", labelKey: "nav.records", icon: FileText },
+  { path: "/health-data", labelKey: "nav.healthData", icon: HeartPulse },
   { path: "/profile", labelKey: "nav.profile", icon: UserRound },
   { path: "/trends", labelKey: "nav.trends", icon: TrendingUp },
   { path: "/reports", labelKey: "nav.reports", icon: FileChartColumn },

@@ -186,3 +186,118 @@ def test_record_unknown_id(client) -> None:
     response = client.get("/api/v1/records/rec_00000000-0000-0000-0000-000000000000")
     assert response.status_code == 404
     assert response.json()["code"] == "record_not_found"
+
+
+def _health_body(member_id: str, record_type: str, **overrides) -> dict:
+    return make_record_body(
+        member_id,
+        recordType=record_type,
+        samplingRate=None,
+        leads=[],
+        unit="count",
+        payload={"value": 1, "unit": "count"},
+        **overrides,
+    )
+
+
+def test_list_records_by_record_type_prefix(client, default_member: dict) -> None:
+    member_id = default_member["id"]
+    client.post(
+        "/api/v1/records",
+        json=_health_body(member_id, "org.eclipsehealth.health.steps"),
+    )
+    client.post(
+        "/api/v1/records",
+        json=_health_body(member_id, "org.eclipsehealth.health.heart-rate"),
+    )
+    client.post(
+        "/api/v1/records",
+        json=_health_body(member_id, "org.eclipsehealth.health.sleep"),
+    )
+    client.post("/api/v1/records", json=make_record_body(member_id))
+
+    health = client.get(
+        "/api/v1/records",
+        params={"recordTypePrefix": "org.eclipsehealth.health."},
+    ).json()
+    assert health["total"] == 3
+    assert {item["recordType"] for item in health["items"]} == {
+        "org.eclipsehealth.health.steps",
+        "org.eclipsehealth.health.heart-rate",
+        "org.eclipsehealth.health.sleep",
+    }
+
+    narrower = client.get(
+        "/api/v1/records",
+        params={"recordTypePrefix": "org.eclipsehealth.health.heart"},
+    ).json()
+    assert narrower["total"] == 1
+    assert narrower["items"][0]["recordType"] == "org.eclipsehealth.health.heart-rate"
+
+
+def test_record_type_prefix_pagination_keeps_total(
+    client, default_member: dict
+) -> None:
+    member_id = default_member["id"]
+    for hour in (8, 9, 10, 11):
+        client.post(
+            "/api/v1/records",
+            json=_health_body(
+                member_id,
+                "org.eclipsehealth.health.steps",
+                capturedAt=f"2026-10-28T{hour:02d}:00:00Z",
+            ),
+        )
+    client.post("/api/v1/records", json=make_record_body(member_id))
+
+    first = client.get(
+        "/api/v1/records",
+        params={
+            "recordTypePrefix": "org.eclipsehealth.health.",
+            "limit": 2,
+            "offset": 0,
+        },
+    ).json()
+    assert first["total"] == 4
+    assert len(first["items"]) == 2
+
+    tail = client.get(
+        "/api/v1/records",
+        params={
+            "recordTypePrefix": "org.eclipsehealth.health.",
+            "limit": 2,
+            "offset": 2,
+        },
+    ).json()
+    assert tail["total"] == 4
+    assert len(tail["items"]) == 2
+    assert {item["id"] for item in first["items"]}.isdisjoint(
+        {item["id"] for item in tail["items"]}
+    )
+
+
+def test_record_type_and_prefix_are_mutually_exclusive(
+    client, default_member: dict
+) -> None:
+    response = client.get(
+        "/api/v1/records",
+        params={
+            "recordType": "org.eclipsehealth.health.steps",
+            "recordTypePrefix": "org.eclipsehealth.health.",
+        },
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "invalid_query"
+    assert body["details"]["recordType"] == "org.eclipsehealth.health.steps"
+
+
+def test_record_type_prefix_empty_result(client) -> None:
+    page = client.get(
+        "/api/v1/records",
+        params={"recordTypePrefix": "org.eclipsehealth.health."},
+    ).json()
+    assert page["total"] == 0
+    assert page["items"] == []
+    assert page["limit"] == 50
+    assert page["offset"] == 0

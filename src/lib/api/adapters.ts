@@ -9,6 +9,7 @@ import type {
   DeviceVendor,
   EngineStatus,
   HealthRecord,
+  HealthRecordKind,
   ImportPreview,
   ImportRequires,
   LatestAnalysisStatus,
@@ -427,4 +428,145 @@ export function analysisStatusToRecordStatus(
   if (status === "failed") return "failed";
   if (status === "completed") return "analyzed";
   return undefined;
+}
+
+/* ------------------------------------------------------------------ *
+ * 健康数据（B4 导入 · C3 页面）
+ * ------------------------------------------------------------------ */
+
+export const HEALTH_RECORD_PREFIX = "org.eclipsehealth.health.";
+
+export const HEALTH_KINDS: readonly HealthRecordKind[] = [
+  "steps",
+  "heart-rate",
+  "sleep",
+  "body-mass",
+  "blood-pressure",
+];
+
+export type HealthSourceId = "apple-health" | "xiaomi-mi-fitness" | "unknown";
+
+export interface HealthRecordView {
+  id: string;
+  kind: HealthRecordKind;
+  /** 步数/心率/体重为数值；睡眠为 null（用 sleepStage）。 */
+  value: number | null;
+  unit: string;
+  systolic: number | null;
+  diastolic: number | null;
+  sleepStage: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  durationSec: number | null;
+  sourceId: HealthSourceId;
+  importedAt: string;
+  payload: Raw;
+  metadata: Raw;
+}
+
+/** `org.eclipsehealth.health.<kind>` → kind；非健康记录返回 null。 */
+export function healthKindOf(recordType: string): HealthRecordKind | null {
+  if (!recordType.startsWith(HEALTH_RECORD_PREFIX)) return null;
+  const suffix = recordType.slice(HEALTH_RECORD_PREFIX.length);
+  return (HEALTH_KINDS as readonly string[]).includes(suffix)
+    ? (suffix as HealthRecordKind)
+    : null;
+}
+
+export function healthRecordType(kind: HealthRecordKind): string {
+  return `${HEALTH_RECORD_PREFIX}${kind}`;
+}
+
+function healthSourceId(record: HealthRecord): HealthSourceId {
+  const importSource = str(record.metadata?.importSource).toLowerCase();
+  if (importSource === "apple-health") return "apple-health";
+  if (importSource === "xiaomi-mi-fitness") return "xiaomi-mi-fitness";
+  const app = `${str(record.source?.app)} ${str(record.source?.manufacturer)}`.toLowerCase();
+  if (app.includes("apple")) return "apple-health";
+  if (app.includes("xiaomi") || app.includes("mi fitness")) return "xiaomi-mi-fitness";
+  return "unknown";
+}
+
+function durationBetween(startAt: string | null, endAt: string | null): number | null {
+  if (!startAt || !endAt) return null;
+  const start = Date.parse(startAt);
+  const end = Date.parse(endAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  return (end - start) / 1000;
+}
+
+/** Apple 用 `asleep-deep`，小米等导出用 `deep`/`light`/`rem`；统一成页面的键。 */
+const SLEEP_STAGE_ALIASES: Record<string, string> = {
+  "in-bed": "in-bed",
+  in_bed: "in-bed",
+  inbed: "in-bed",
+  asleep: "asleep",
+  sleep: "asleep",
+  "asleep-core": "asleep-core",
+  core: "asleep-core",
+  light: "asleep-core",
+  "asleep-deep": "asleep-deep",
+  deep: "asleep-deep",
+  "asleep-rem": "asleep-rem",
+  rem: "asleep-rem",
+  awake: "awake",
+  wake: "awake",
+};
+
+export function normalizeSleepStage(value: string | null): string | null {
+  if (!value) return null;
+  return SLEEP_STAGE_ALIASES[value.trim().toLowerCase()] ?? "unknown";
+}
+
+/** 把一条健康数据记录整理成页面直接可用的视图（不含 i18n 文案）。 */
+export function toHealthRecordView(
+  record: HealthRecord,
+  fallbackKind?: HealthRecordKind,
+): HealthRecordView {
+  const kind =
+    healthKindOf(record.recordType) ??
+    fallbackKind ??
+    ("steps" as HealthRecordKind);
+  const payload = asObject(record.payload);
+  const rawValue = payload.value;
+
+  let value: number | null = null;
+  let systolic: number | null = null;
+  let diastolic: number | null = null;
+  let sleepStage: string | null = null;
+
+  if (kind === "blood-pressure") {
+    const pair = asObject(rawValue);
+    systolic = nullableNum(pair.systolic);
+    diastolic = nullableNum(pair.diastolic);
+  } else if (kind === "sleep") {
+    sleepStage = normalizeSleepStage(
+      typeof rawValue === "string" ? rawValue : null,
+    );
+  } else {
+    value = nullableNum(rawValue);
+  }
+
+  const startAt =
+    typeof payload.startAt === "string" ? payload.startAt : record.capturedAt;
+  const endAt = typeof payload.endAt === "string" ? payload.endAt : null;
+  const durationSec =
+    record.durationSec ?? durationBetween(startAt, endAt);
+
+  return {
+    id: record.id,
+    kind,
+    value,
+    unit: str(payload.unit) || record.unit || "",
+    systolic,
+    diastolic,
+    sleepStage,
+    startAt,
+    endAt,
+    durationSec: durationSec !== null && durationSec >= 0 ? durationSec : null,
+    sourceId: healthSourceId(record),
+    importedAt: record.createdAt,
+    payload,
+    metadata: asObject(record.metadata),
+  };
 }

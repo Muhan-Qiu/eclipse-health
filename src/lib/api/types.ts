@@ -397,3 +397,25 @@ export interface RecordCompareResponse {
   records: HealthRecord[];
   analyses: CompareAnalysis[];
 }
+
+/* ------------------------------------------------------------------ *
+ * 健康数据（B4 导入 · C3 页面）
+ * 记录类型固定为 `org.eclipsehealth.health.<kind>`。
+ * ------------------------------------------------------------------ */
+
+export type HealthRecordKind =
+  | "steps"
+  | "heart-rate"
+  | "sleep"
+  | "body-mass"
+  | "blood-pressure";
+
+/** 健康数据记录的 payload 约定之一（见 DATA_SCHEMA_V1）。 */
+export interface HealthRecordPayload {
+  value?: number | string | { systolic?: number; diastolic?: number } | null;
+  unit?: string;
+  startAt?: string | null;
+  endAt?: string | null;
+  sourceApp?: string | null;
+}
+
