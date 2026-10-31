@@ -1,45 +1,48 @@
-# 提示词索引 · Stage E（用户反馈 + 对外 API）
+# 提示词索引 · Stage F（健康评分 / 教练 / 记忆 / OHS）
 
 > 指挥官文件。Agent 只读自己的提示词 + `00-COMMON.md`。
-> 当前批次：Stage E，4 个 Agent 并行。D3 已验收（`6410c97`），最终包 `0.1.0` 已构建。
-> 用户第二轮反馈见 `docs/USER_FEEDBACK.md`「已收到（2026-10-31 第二轮）」。
+> 当前批次：Stage F，5 个 Agent 并行，**全部 low 思考强度**。Stage E 已验收（`6276eed`）。
+> 用户第三轮需求见 `docs/USER_FEEDBACK.md`。
 
-## 本轮（Stage E，4 个并行）
+## 本轮（Stage F，5 个并行，low）
 
-| 提示词 | 任务 | 难度 | 思考强度 | 报告 |
-|---|---|---|---|---|
-| `100-brand-motion-fix.md` | 开屏线性 + 深绿涟漪 logo + 新图标 + 导航淡入淡出 + 删副标题 | 困难 3/4 | high | `reports/F1-brand-motion-report.md` |
-| `101-themes-quotes.md` | 3 高饱和 + 2 玻璃主题 + 30 句每日名言 | 困难 3/4 | high | `reports/F2-themes-quotes-report.md` |
-| `102-external-api-backend.md` | 对外 API：Key + REST + OpenAI 兼容 + MCP | 困难 3/4 | high | `reports/F3-external-api-report.md` |
-| `103-external-access-ui.md` | 设置页外部访问 Key 管理 + 连接示例 | 中等 2/4 | high | `reports/F4-external-access-ui-report.md` |
+| 提示词 | 任务 | 报告 |
+|---|---|---|
+| `110-home-scores-ui.md` | 首页「概览」重组 + 评分/建议 UI + 首启 LLM Key 引导 | `reports/G1-home-scores-report.md` |
+| `111-scoring-backend.md` | 规则评分 + 建议后端 | `reports/G2-scoring-report.md` |
+| `112-profile-exercise-memory.md` | 档案新字段 + 运动记录 + 个性化记忆 | `reports/G3-profile-exercise-memory-report.md` |
+| `113-coach-memory.md` | 教练 + Open-Meteo + 记忆注入 + 助手预设 | `reports/G4-coach-report.md` |
+| `114-ohs-connector.md` | 可选 Open Health Sync 连接器 | `reports/G5-ohs-report.md` |
 
 ## 启动句
 
 ```
-阅读 prompts/00-COMMON.md 和 prompts/100-brand-motion-fix.md，严格按照其中的范围执行。
-只修改「文件所有权」列出的路径；完成后写 reports/F1-brand-motion-report.md。
+阅读 prompts/00-COMMON.md 和 prompts/110-home-scores-ui.md，严格按照其中的范围执行。
+只修改「文件所有权」列出的路径；完成后写 reports/G1-home-scores-report.md。
 ```
 
-其余三份同理替换文件名/报告名。
+其余四份同理替换文件名/报告名。
 
 ## 文件所有权冲突预防
 
-- F1：`branding/**`、`components/common/eclipse-mark.tsx`、`components/layout/**`、`lib/motion.ts`、`src-tauri/icons/**`、settings 的 About 文案。
-- F2：`lib/theme.tsx`、`lib/palettes.ts`、`index.css`、`lib/quotes.ts`、`dashboard.tsx`、i18n 的 palette/dashboard.quote 键。
-- F3：后端 `api/external.py`、`external_auth.py`、`mcp_server.py`、`db/models.py`、`db/base.py`、`api/__init__.py`、`tests/external/**`、`docs/EXTERNAL_API.md`。
-- F4：`features/external-access/**`、`pages/settings.tsx`、i18n 的 `settings.external.*`。
-- F2/F4 都碰 i18n：只新增自己的键，不重写文件。
-- 不要同时跑 `tauri build`/PyInstaller；本轮结束后指挥官统一重打包。
+- G1：dashboard/health-data/nav/App/onboarding/scores UI/api 客户端/i18n。
+- G2：`backend/.../scoring/**`、`tests/scoring/**`、`docs/SCORING.md`。
+- G3：profile 后端 + exercises/memory + `src/features/profile/**`。
+- G4：`backend/.../coach/**`、`llm/agent.py`、`src/features/assistant/**`、assistant 页。
+- G5：`backend/.../ohs/**`、`tests/ohs/**`、settings.tsx、OHS 文档。
+- **G2–G5 都不要改 `api/__init__.py`**；各自建 router，指挥官统一挂载。
+- i18n 多方新增：只新增自己的键，不重写文件。
+- 不要同时跑 `tauri build`/PyInstaller；本轮结束后统一打包。
 
 ## 已知边界
 
-1. 导航**只淡入淡出**；不做斜向 sweep，不覆盖侧栏，不出现空白白页。
-2. 图标用应用内深绿涟漪，不要金/黑。
-3. 对外 API **仅本机**；key 只显示一次、存 hash、可撤销；默认 read+write + assistant。
-4. OpenAI 兼容端点复用应用内 LLM；无 provider → 503。
-5. 名言只用可核实句子；中英双语带作者。
-6. 玻璃主题需提供无 `backdrop-filter` 的回退。
+1. 评分只用公开区间规则，非诊断；缺项不显示。
+2. 首启提示 LLM Provider Key，不是外部访问 Key。
+3. 教练天气 Open-Meteo，失败不影响回答。
+4. 记忆只存本机、可关闭注入；健康档案页编辑。
+5. OHS 可选；普通用户不需要 Docker，内置 Apple/小米导入继续可用。
+6. OHS token 用 DPAPI 加密；不复制 OHS 代码。
 
 ## 收尾
 
-四份报告齐后：指挥官全量 `pytest` + `ruff` + `npm run build`，处理跨区冲突，重打 NSIS，更新 release notes/校验和，交用户验收。
+五份报告齐后：指挥官挂载 routers、跑全量测试/ruff/build、处理冲突、重打 NSIS、更新 release notes/校验和。

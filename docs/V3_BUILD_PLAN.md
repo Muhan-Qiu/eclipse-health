@@ -672,4 +672,27 @@
 - 导航转场只做淡入淡出，不做斜向覆盖；侧栏不被覆盖。
 - 主题保留现有莫奈命名，新增高饱和与玻璃；玻璃含无 backdrop-filter 回退。
 - 名言只用可核实句子；中英双语、带作者。
-- 完成后重打安装包并交用户验收。 
+- 完成后重打安装包并交用户验收。
+
+## 34. Stage F：健康评分/教练/记忆/OHS（2026-10-31 启动）
+
+> 用户第三轮需求：健康数据与评分上首页、首启提示 LLM Key、规则评分、建议→助手、档案加静息心率/睡眠、运动记录、教练（含 Open-Meteo 天气）、个性化记忆、可选 Open Health Sync。**本批 Agent 用 low。**
+
+| 编号 | 任务 | 关键产出 |
+|---|---|---|
+| G1 | 首页「概览」重组 + 评分/建议 UI + 首启 LLM Key 引导 | dashboard/health-data/nav/onboarding |
+| G2 | 规则评分 + 建议后端 | `/scores`、`/suggestions`、`docs/SCORING.md` |
+| G3 | 档案新字段 + 运动记录 + 个性化记忆 | profile/exercises/memory API + UI |
+| G4 | 教练 + Open-Meteo + 记忆注入 + 助手预设 | coach context/weather、assistant UI |
+| G5 | 可选 Open Health Sync 连接器 | URL/token、测试、同步日汇总、设置面板 |
+
+**约束：**
+
+- 评分只用公开区间规则，不打医学诊断；缺项不显示，总分只平均可用项。
+- 首启提示的是 **LLM Provider Key**，不是外部访问 Key。
+- 首页第一项改名「概览」；健康数据/评分/建议在顶部。
+- 教练天气用 Open-Meteo（无需 key）；失败不影响回答。
+- 记忆只存本机，`enabled=false` 不注入；健康档案页编辑。
+- OHS 是可选外部服务：普通用户无需 Docker；内置 Apple/小米导入继续可用。
+- G2–G5 不直接改 `api/__init__.py`，由指挥官统一挂载。
+- 完成后全量测试、重打安装包。 
