@@ -93,7 +93,7 @@ export function ModuleList({
             className="m-4"
           />
         ) : (
-          <ul className="divide-y divide-border border-t border-border">
+          <ul className="eh-stagger divide-y divide-border border-t border-border">
             {modules.map((module) => {
               const actionBusy =
                 busy?.moduleId === module.id ? busy.action : null;

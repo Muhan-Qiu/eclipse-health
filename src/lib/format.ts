@@ -35,16 +35,25 @@ export function formatNumber(
   return new Intl.NumberFormat(locale, options).format(value);
 }
 
-/** 时长显示为 m:ss（等宽数字，不随语言变化分隔符）。 */
+/**
+ * 时长统一为整秒：< 1 分钟 `0:SS`，< 1 小时 `M:SS`，否则 `H:MM:SS`。
+ * 不显示毫秒，同一列表内的精度因此恒定；波形/分析内部的秒级小数走 `formatClock`。
+ */
 export function formatDuration(seconds: number, locale: string): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  const minuteText = new Intl.NumberFormat(locale).format(minutes);
-  const restText = new Intl.NumberFormat(locale, {
+  const total =
+    Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds) : 0;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const rest = total % 60;
+  const number = new Intl.NumberFormat(locale, {
     minimumIntegerDigits: 2,
     useGrouping: false,
-  }).format(rest);
-  return `${minuteText}:${restText}`;
+  });
+  if (hours > 0) {
+    const hourText = new Intl.NumberFormat(locale).format(hours);
+    return `${hourText}:${number.format(minutes)}:${number.format(rest)}`;
+  }
+  return `${new Intl.NumberFormat(locale).format(minutes)}:${number.format(rest)}`;
 }
 
 export type GreetingKey =

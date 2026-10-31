@@ -11,6 +11,17 @@ import {
   nearestPeakIndex,
 } from "@/lib/waveform";
 import { useWaveColors } from "@/features/waveform/colors";
+import { prefersReducedMotion } from "@/lib/motion";
+
+/** 选中 R 峰的一次性脉冲时长；到点后停帧，不循环。 */
+const PULSE_MS = 180;
+const HOVER_RAMP_MS = 120;
+
+type HoverTarget = {
+  kind: "beat" | "segment" | "warning";
+  key: string;
+  at: number;
+};
 
 export interface LeadStripProps {
   samples: Float32Array;
@@ -72,6 +83,10 @@ export function LeadStrip({
   analysisRef.current = analysis;
   const selectedRef = useRef<number | null>(selectedBeatIndex);
   selectedRef.current = selectedBeatIndex;
+  /** 选中时刻用于一次性脉冲；视图变化重建 plot 时不重置，避免缩放触发重播。 */
+  const pulseRef = useRef<{ index: number; at: number } | null>(null);
+  const hoverRef = useRef<HoverTarget | null>(null);
+  const animateRef = useRef<((ms?: number) => void) | null>(null);
   const onChangeRef = useRef(onViewChange);
   onChangeRef.current = onViewChange;
   const onBeatRef = useRef(onBeatSelect);
@@ -94,6 +109,15 @@ export function LeadStrip({
     const element = containerRef.current;
     if (!element || !samples.length || fs <= 0 || width <= 0) return;
     element.replaceChildren();
+    const reduced = prefersReducedMotion();
+    const selectedIndex = selectedRef.current;
+    if (selectedIndex === null) {
+      pulseRef.current = null;
+    } else if (!pulseRef.current || pulseRef.current.index !== selectedIndex) {
+      // 视图重建（缩放/平移）时索引不变，不重播脉冲。
+      pulseRef.current = { index: selectedIndex, at: performance.now() };
+    }
+    hoverRef.current = null;
 
     const [start, end] = viewRef.current;
     const target = Math.max(200, Math.round(width * 2));
@@ -109,6 +133,16 @@ export function LeadStrip({
           const current = analysisRef.current;
           const xMin = plot.scales.x.min ?? 0;
           const xMax = plot.scales.x.max ?? durationRef.current;
+          const now = performance.now();
+          const hover = hoverRef.current;
+          const hoverRamp = (kind: HoverTarget["kind"], key: string) =>
+            hover && hover.kind === kind && hover.key === key
+              ? Math.min(1, (now - hover.at) / HOVER_RAMP_MS)
+              : 0;
+          const pulse = pulseRef.current;
+          const pulseT = pulse
+            ? Math.min(1, (now - pulse.at) / PULSE_MS)
+            : 1;
 
           const drawBand = (fromSec: number, toSec: number, color: string, alpha: number) => {
             const left = plot.valToPos(Math.max(xMin, fromSec), "x", true);
@@ -125,10 +159,11 @@ export function LeadStrip({
           if (current) {
             for (const segment of current.quality.segments ?? []) {
               if (segment.endSec <= xMin || segment.startSec >= xMax) continue;
+              const lifted = 0.07 * hoverRamp("segment", `s:${segment.startSec}`);
               if (segment.quality < 0.7) {
-                drawBand(segment.startSec, segment.endSec, colors.danger, 0.12);
+                drawBand(segment.startSec, segment.endSec, colors.danger, 0.12 + lifted);
               } else if (segment.quality < 0.82) {
-                drawBand(segment.startSec, segment.endSec, colors.warning, 0.11);
+                drawBand(segment.startSec, segment.endSec, colors.warning, 0.11 + lifted);
               }
             }
             for (const warning of current.quality.warnings ?? []) {
@@ -138,11 +173,12 @@ export function LeadStrip({
                 warning.endSec !== null &&
                 warning.endSec !== undefined
               ) {
+                const lifted = 0.07 * hoverRamp("warning", `w:${warning.startSec}`);
                 drawBand(
                   warning.startSec,
                   warning.endSec,
                   warning.severity === "error" ? colors.danger : colors.warning,
-                  0.1,
+                  0.1 + lifted,
                 );
               }
             }
@@ -152,26 +188,54 @@ export function LeadStrip({
               const beat = current.beats[index];
               const x = plot.valToPos(beat.rPeakSample / fs, "x", true);
               const isSelected = selectedRef.current === index;
+              const isHovered = hoverRamp("beat", `b:${index}`) > 0;
+              const enter =
+                !reduced && pulse?.index === index ? pulseT : 1;
               const abnormal = beat.label !== "N";
-              ctx.globalAlpha = isSelected ? 0.95 : 0.32;
+              const hoverLift = hoverRamp("beat", `b:${index}`) * 0.22;
+              ctx.globalAlpha = isSelected
+                ? 0.55 + 0.4 * enter
+                : Math.min(1, (abnormal ? 0.42 : 0.32) + hoverLift);
               ctx.strokeStyle = isSelected
                 ? colors.accent
                 : abnormal
                   ? colors.warning
                   : colors.signal;
-              ctx.lineWidth = isSelected ? 2 : 1;
+              ctx.lineWidth = isSelected ? 2 : isHovered ? 1.5 : 1;
               ctx.beginPath();
               ctx.moveTo(x, bbox.top);
               ctx.lineTo(x, bbox.top + bbox.height);
               ctx.stroke();
 
               if (isSelected) {
-                ctx.globalAlpha = 0.12;
+                // 一次性扩散+淡出，不循环；减少动效时只保留静态色带。
+                const spread = reduced ? 3 : 3 + 6 * pulseT;
+                ctx.globalAlpha = reduced ? 0.16 : 0.18 * (1 - pulseT);
                 ctx.fillStyle = colors.accent;
-                ctx.fillRect(x - 3, bbox.top, 6, bbox.height);
+                ctx.fillRect(x - spread, bbox.top, spread * 2, bbox.height);
+
+                const amplitude = samples[Math.round(beat.rPeakSample)];
+                const y = Number.isFinite(amplitude)
+                  ? plot.valToPos(amplitude, "y", true)
+                  : null;
+                if (y !== null && y >= bbox.top - 2 && y <= bbox.top + bbox.height + 2) {
+                  ctx.globalAlpha = 0.95;
+                  ctx.fillStyle = colors.accent;
+                  ctx.beginPath();
+                  ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+                  ctx.fill();
+                  if (!reduced && pulseT < 1) {
+                    ctx.globalAlpha = 0.35 * (1 - pulseT);
+                    ctx.strokeStyle = colors.accent;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2.6 + 6 * pulseT, 0, Math.PI * 2);
+                    ctx.stroke();
+                  }
+                }
               }
               if (abnormal && isPrimary) {
-                ctx.globalAlpha = 0.9;
+                ctx.globalAlpha = Math.min(1, 0.9 + hoverRamp("beat", `b:${index}`));
                 ctx.fillStyle = colors.warning;
                 ctx.font = "10px ui-monospace, monospace";
                 ctx.fillText(beat.label.slice(0, 4), x + 2, bbox.top + 10);
@@ -267,6 +331,19 @@ export function LeadStrip({
     plotRef.current = plot;
     plot.over.style.cursor = interactive ? "crosshair" : "default";
 
+    let frame = 0;
+    const animate = (ms = PULSE_MS) => {
+      if (reduced) return;
+      cancelAnimationFrame(frame);
+      const started = performance.now();
+      const tick = () => {
+        plot.redraw(false);
+        frame = performance.now() - started < ms ? requestAnimationFrame(tick) : 0;
+      };
+      frame = requestAnimationFrame(tick);
+    };
+    animateRef.current = animate;
+
     const xToSeconds = (clientX: number) => {
       const rect = plot.over.getBoundingClientRect();
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
@@ -360,13 +437,71 @@ export function LeadStrip({
     plot.over.addEventListener("pointercancel", onPointerUp);
     plot.over.addEventListener("click", onClick);
 
+    const setHover = (next: Pick<HoverTarget, "kind" | "key"> | null) => {
+      const current = hoverRef.current;
+      if (!next) {
+        if (!current) return;
+        hoverRef.current = null;
+        plot.redraw(false);
+        return;
+      }
+      if (current && current.kind === next.kind && current.key === next.key) return;
+      hoverRef.current = { ...next, at: performance.now() };
+      plot.redraw(false);
+      animate(HOVER_RAMP_MS);
+    };
+
+    const onHoverMove = (event: PointerEvent) => {
+      if (!interactive || dragging) return;
+      const current = analysisRef.current;
+      if (!current) return;
+      const seconds = xToSeconds(event.clientX);
+      const inRange = (start?: number | null, end?: number | null) =>
+        start !== null &&
+        start !== undefined &&
+        end !== null &&
+        end !== undefined &&
+        seconds >= start &&
+        seconds <= end;
+
+      for (const segment of current.quality.segments ?? []) {
+        if (segment.quality < 0.82 && inRange(segment.startSec, segment.endSec)) {
+          setHover({ kind: "segment", key: `s:${segment.startSec}` });
+          return;
+        }
+      }
+      for (const warning of current.quality.warnings ?? []) {
+        if (inRange(warning.startSec, warning.endSec)) {
+          setHover({ kind: "warning", key: `w:${warning.startSec}` });
+          return;
+        }
+      }
+
+      const index = nearestPeakIndex(current.beats, fs, seconds);
+      if (index !== null) {
+        const x = plot.valToPos(current.beats[index].rPeakSample / fs, "x", true);
+        if (Math.abs(x - (event.clientX - plot.over.getBoundingClientRect().left)) <= 8) {
+          setHover({ kind: "beat", key: `b:${index}` });
+          return;
+        }
+      }
+      setHover(null);
+    };
+    const onHoverLeave = () => setHover(null);
+    plot.over.addEventListener("pointermove", onHoverMove);
+    plot.over.addEventListener("pointerleave", onHoverLeave);
+
     return () => {
+      cancelAnimationFrame(frame);
+      animateRef.current = null;
       plot.over.removeEventListener("wheel", onWheel);
       plot.over.removeEventListener("pointerdown", onPointerDown);
       plot.over.removeEventListener("pointermove", onPointerMove);
       plot.over.removeEventListener("pointerup", onPointerUp);
       plot.over.removeEventListener("pointercancel", onPointerUp);
       plot.over.removeEventListener("click", onClick);
+      plot.over.removeEventListener("pointermove", onHoverMove);
+      plot.over.removeEventListener("pointerleave", onHoverLeave);
       plot.destroy();
       plotRef.current = null;
     };
@@ -397,7 +532,14 @@ export function LeadStrip({
   }, [view, samples, fs, width]);
 
   useEffect(() => {
+    const index = selectedBeatIndex;
+    if (index === null) {
+      pulseRef.current = null;
+    } else if (!pulseRef.current || pulseRef.current.index !== index) {
+      pulseRef.current = { index, at: performance.now() };
+    }
     plotRef.current?.redraw(false);
+    if (index !== null) animateRef.current?.(PULSE_MS);
   }, [analysis, selectedBeatIndex, colors]);
 
   const unitLabel = unit || "mV";

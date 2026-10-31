@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { LatestAnalysisStatus, RecordSummary } from "@/lib/api/types";
-import { formatDateTime, formatDuration } from "@/lib/format";
+import { formatDateTime, formatNumber } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
 
 const STATUS_STYLES: Record<
@@ -174,7 +174,16 @@ export function RecordPicker({
         <div className="max-h-60 overflow-y-auto pr-1" role="listbox">
           {records.map((record) => {
             const active = record.id === selectedId;
-            const source = record.device.model || "—";
+            // 与记录页行摘要同构：设备/文件 · 导联 · 采样率，缺项直接省略。
+            const summary = [
+              record.device.model || t("records.localFile"),
+              record.leads.join(" / "),
+              record.sampleRateHz > 0
+                ? `${formatNumber(record.sampleRateHz, locale)} Hz`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" · ");
             return (
               <button
                 key={record.id}
@@ -194,10 +203,7 @@ export function RecordPicker({
                     {formatDateTime(record.recordedAt, locale)}
                   </span>
                   <span className="eh-caption block truncate text-muted-foreground">
-                    {source} · {formatDuration(Math.floor(record.durationSec), locale)}
-                    {record.leads.length > 0
-                      ? ` · ${record.leads.join("/")}`
-                      : ""}
+                    {summary}
                   </span>
                 </span>
                 <AnalysisStatusBadge status={record.analysisStatus} />

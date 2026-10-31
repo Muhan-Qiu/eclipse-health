@@ -402,7 +402,7 @@ export function HealthDataPage() {
           ) : null}
 
           {rows.length > 0 ? (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border eh-stagger">
               {rows.map((view) => (
                 <HealthDataRow key={view.id} view={view} />
               ))}

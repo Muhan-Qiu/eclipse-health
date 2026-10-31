@@ -76,10 +76,12 @@ export function ReportSettings({
             </p>
             <p className="truncate text-sm font-medium">
               {formatDateTime(record.recordedAt, locale)}
-              <span className="font-normal text-muted-foreground">
-                {" · "}
-                {record.device.model || "—"}
-              </span>
+              {record.device.model ? (
+                <span className="font-normal text-muted-foreground">
+                  {" · "}
+                  {record.device.model}
+                </span>
+              ) : null}
             </p>
           </div>
           <Button asChild size="xs" variant="ghost">

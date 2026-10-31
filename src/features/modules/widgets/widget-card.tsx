@@ -109,46 +109,58 @@ export function WidgetCard({ widget, className }: WidgetCardProps) {
       </CardHeader>
 
       <CardContent>
-        {method.length === 0 ? (
-          <p className="eh-caption text-destructive">
-            {t("moduleUi.widgets.cardError")}
-          </p>
-        ) : query.isLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : query.isError ? (
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 items-start gap-2">
-              <AlertCircle
-                className="mt-0.5 size-4 shrink-0 text-destructive"
-                aria-hidden="true"
-              />
-              <div className="min-w-0">
-                <p className="eh-caption text-destructive">
-                  {t("moduleUi.widgets.cardError")}
-                </p>
-                <p
-                  className="eh-caption text-muted-foreground"
-                  title={moduleErrorMessage(query.error, t)}
-                >
-                  {t("moduleUi.widgets.cardErrorDesc")}
-                </p>
+        {/* 骨架 → 内容、以及刷新成功后的一次性 200ms 淡入；key 变化即重播。 */}
+        <div
+          key={
+            query.isLoading
+              ? "loading"
+              : query.isError
+                ? `error:${query.errorUpdatedAt}`
+                : `data:${query.dataUpdatedAt}`
+          }
+          className="eh-fade-in"
+        >
+          {method.length === 0 ? (
+            <p className="eh-caption text-destructive">
+              {t("moduleUi.widgets.cardError")}
+            </p>
+          ) : query.isLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : query.isError ? (
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-start gap-2">
+                <AlertCircle
+                  className="mt-0.5 size-4 shrink-0 text-destructive"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="eh-caption text-destructive">
+                    {t("moduleUi.widgets.cardError")}
+                  </p>
+                  <p
+                    className="eh-caption text-muted-foreground"
+                    title={moduleErrorMessage(query.error, t)}
+                  >
+                    {t("moduleUi.widgets.cardErrorDesc")}
+                  </p>
+                </div>
               </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void query.refetch();
+                }}
+              >
+                {t("common.retry")}
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={(event) => {
-                event.stopPropagation();
-                void query.refetch();
-              }}
-            >
-              {t("common.retry")}
-            </Button>
-          </div>
-        ) : (
-          <WidgetView widget={widget} data={query.data} locale={locale} />
-        )}
+          ) : (
+            <WidgetView widget={widget} data={query.data} locale={locale} />
+          )}
+        </div>
       </CardContent>
     </Card>
   );

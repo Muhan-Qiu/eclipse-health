@@ -457,7 +457,8 @@ export function DashboardPage() {
       </div>
 
       <div className="eh-grid mt-6 eh-stagger">
-        <Card className="eh-lift desk:col-span-5 xl:col-span-7">
+        {/* 记录不满 3 条时按内容高度收口，避免被右列拉高后留下大块空白。 */}
+        <Card className="eh-lift self-start desk:col-span-5 xl:col-span-7">
           <CardHeader>
             <CardTitle className="eh-h3">{t("dashboard.recent.title")}</CardTitle>
             <CardDescription>{t("dashboard.recent.description")}</CardDescription>
