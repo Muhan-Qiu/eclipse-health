@@ -99,6 +99,7 @@ datas += [
     (str(ROOT / "schemas" / "module.schema.json"), "eclipse_health_backend/modules"),
     (str(ROOT / "marketplace" / "official" / "index.json"), "eclipse_health_backend/marketplace/indexes/official"),
     (str(ROOT / "marketplace" / "community" / "index.json"), "eclipse_health_backend/marketplace/indexes/community"),
+    (str(BACKEND_DIR / "src" / "eclipse_health_backend" / "marketplace" / "public_key.txt"), "eclipse_health_backend/marketplace"),
     (str(ROOT / "dist" / "modules"), "eclipse_health_backend/marketplace/packages"),
 ]
 
