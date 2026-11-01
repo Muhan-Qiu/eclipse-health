@@ -107,13 +107,15 @@ Want to build one? Start with [`docs/MODULE_DEVELOPER_GUIDE_V1.md`](docs/MODULE_
 
 ## Build from source
 
-Requirements: Node.js 20.19+ and Python 3.12.
+Requirements: Node.js 20.19+ and Python 3.12 with [`uv`](https://docs.astral.sh/uv/) (the lockfile is `backend/uv.lock`).
 
 ```powershell
-# Backend (dependencies already in backend/.venv)
-backend\.venv\Scripts\python.exe -m uvicorn eclipse_health_backend.app:app --host 127.0.0.1 --port 8765
+# Backend
+cd backend
+uv sync
+uv run uvicorn eclipse_health_backend.app:app --host 127.0.0.1 --port 8765
 
-# Web preview (second terminal)
+# Web preview (second terminal, project root)
 npm install
 npm run dev                 # http://localhost:1420
 
@@ -125,8 +127,9 @@ Checks:
 
 ```powershell
 npm run build                                        # tsc + vite build
-backend\.venv\Scripts\python.exe -m pytest backend\tests -q
-backend\.venv\Scripts\python.exe -m ruff check backend
+cd backend
+uv run pytest tests -q
+uv run ruff check .
 ```
 
 See [`BUILD.md`](BUILD.md) for packaging details.

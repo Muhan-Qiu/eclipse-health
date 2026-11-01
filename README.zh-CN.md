@@ -105,13 +105,15 @@
 
 ## 从源码运行
 
-需要 Node.js 20.19+ 与 Python 3.12。
+需要 Node.js 20.19+、Python 3.12，以及 [`uv`](https://docs.astral.sh/uv/)（锁文件为 `backend/uv.lock`）。
 
 ```powershell
-# 后端（依赖已在 backend/.venv）
-backend\.venv\Scripts\python.exe -m uvicorn eclipse_health_backend.app:app --host 127.0.0.1 --port 8765
+# 后端
+cd backend
+uv sync
+uv run uvicorn eclipse_health_backend.app:app --host 127.0.0.1 --port 8765
 
-# Web 预览（另一个终端）
+# Web 预览（另一个终端，项目根目录）
 npm install
 npm run dev                 # http://localhost:1420
 
@@ -123,8 +125,9 @@ npm run tauri dev
 
 ```powershell
 npm run build                                        # tsc + vite build
-backend\.venv\Scripts\python.exe -m pytest backend\tests -q
-backend\.venv\Scripts\python.exe -m ruff check backend
+cd backend
+uv run pytest tests -q
+uv run ruff check .
 ```
 
 打包细节见 [`BUILD.md`](BUILD.md)。
