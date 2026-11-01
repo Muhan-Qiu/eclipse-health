@@ -8,6 +8,14 @@ export type MarketplaceTab = MarketplaceSource | "local";
  * 索引条目。除 id/name/version 外都按可选处理：
  * `updates` 接口返回的条目可能只带部分字段，UI 需要能优雅降级。
  */
+/** 静态扫描结果；索引未提供时整个字段缺省。 */
+export interface MarketplaceScan {
+  status?: string;
+  risk?: string;
+  scannedAt?: string;
+  reportUrl?: string;
+}
+
 export interface MarketplaceModule {
   id: string;
   name: string;
@@ -25,6 +33,7 @@ export interface MarketplaceModule {
   file?: string;
   size?: number;
   sha256?: string;
+  scan?: MarketplaceScan;
 }
 
 export interface MarketplaceIndex {

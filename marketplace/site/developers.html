@@ -6,7 +6,10 @@
   <meta name="color-scheme" content="light dark">
   <title>开发者文档 · eclipse health 模块</title>
   <meta name="description" content="eclipse health 模块开发指南：契约 v2、.ehmod 包结构、module.json、权限、依赖、测试与 GitHub PR 提交流程。">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2326251f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%235f7358' stroke-width='2'/%3E%3Ccircle cx='22' cy='10' r='5' fill='%23f6f3ec'/%3E%3C/svg%3E">
+  <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/developers.html">
+  <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/developers.html">
+  <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/developers.html">
+  <link rel="icon" href="brand/favicon.svg?v=2">
   <link rel="stylesheet" href="styles.css">
   <script>
     (function () {
@@ -21,13 +24,13 @@
     })();
   </script>
 </head>
-<body data-page="developers">
+<body data-page="developers" data-depth="1">
   <a class="skip-link" href="#main">跳到主要内容</a>
 
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="eclipse health 首页">
-        <span class="brand-mark" aria-hidden="true"></span>
+        <img class="brand-mark" src="brand/favicon.svg?v=2" alt="" aria-hidden="true" />
         <span class="brand-name">eclipse health</span>
         <span class="brand-sub">marketplace</span>
       </a>
@@ -35,6 +38,7 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="modules.html" data-nav="modules">模块市场</a>
         <a href="developers.html" data-nav="developers">开发者</a>
+        <a class="lang-switch" href="en/developers.html" hreflang="en" lang="en" aria-label="Switch to English">EN</a>
         <button class="theme-toggle" type="button" id="theme-toggle" aria-label="切换亮色或暗色主题" aria-pressed="false">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
@@ -54,6 +58,7 @@
         <aside class="docs-toc" aria-label="文档目录">
           <h2>目录</h2>
           <ol>
+            <li><a href="#downloads">模块文档下载</a></li>
             <li><a href="#contract">契约概览</a></li>
             <li><a href="#package">.ehmod 包结构</a></li>
             <li><a href="#manifest">module.json 示例</a></li>
@@ -79,6 +84,38 @@
               文档与实现冲突时以 schema 为准。
             </p>
           </div>
+
+          <section id="downloads">
+            <h2>模块文档下载</h2>
+            <p>两份文档、中英文各一版，均可直接下载，不需要跳转 GitHub。用户版给使用模块的人；Agent 版可以整份交给 AI Agent，也可以给开发者当实现清单。</p>
+            <div class="download-grid">
+              <a class="download-card" href="docs/modules-user-guide.zh.md" download="modules-user-guide.zh.md">
+                <span class="badge badge-accent">用户版 · 中文</span>
+                <h3>模块使用指南</h3>
+                <p>模块能做什么、如何安装、权限怎么看，以及如何让 AI 帮你做一个模块。</p>
+                <span class="download-action">下载 modules-user-guide.zh.md</span>
+              </a>
+              <a class="download-card" href="docs/modules-user-guide.en.md" download="modules-user-guide.en.md">
+                <span class="badge">User guide · English</span>
+                <h3>Module user guide</h3>
+                <p>What modules do, how to install them, how to read permissions, and how to have an AI agent build one.</p>
+                <span class="download-action">Download modules-user-guide.en.md</span>
+              </a>
+              <a class="download-card" href="docs/modules-agent-guide.zh.md" download="modules-agent-guide.zh.md">
+                <span class="badge badge-accent">Agent 版 · 中文</span>
+                <h3>模块设计文档</h3>
+                <p>契约 v2、.ehmod 包结构、module.json、stdio JSON-RPC、权限、测试、打包与提交 PR。</p>
+                <span class="download-action">下载 modules-agent-guide.zh.md</span>
+              </a>
+              <a class="download-card" href="docs/modules-agent-guide.en.md" download="modules-agent-guide.en.md">
+                <span class="badge">Agent guide · English</span>
+                <h3>Module design guide</h3>
+                <p>Contract v2, .ehmod layout, module.json, stdio JSON-RPC, permissions, testing, packing and the PR flow.</p>
+                <span class="download-action">Download modules-agent-guide.en.md</span>
+              </a>
+            </div>
+            <p class="fine-print">文件为 Markdown，可用任意编辑器打开。内容与本站一致；没有你想要的模块时，可在<a href="modules.html#request-module">模块市场</a>生成一段给 AI Agent 的提示词。</p>
+          </section>
 
           <section id="contract">
             <h2>1 · 契约概览</h2>
@@ -264,9 +301,9 @@ python .github/scripts/validate_module.py marketplace/submissions/my-module</cod
               <li>合并后由维护者在 GitHub Releases 上传 <code>.ehmod</code>，再生成并离线签名索引。</li>
             </ol>
             <p>
-              <a class="btn btn-primary btn-small" href="https://github.com/eclipse-health/eclipse-health/pulls" rel="noopener">打开 GitHub Pull Requests</a>
+              <a class="btn btn-primary btn-small" href="https://github.com/Muhan-Qiu/eclipse-health/pulls" rel="noopener">打开 GitHub Pull Requests</a>
             </p>
-            <p class="fine-print">仓库地址为占位；发布后替换为真实组织名。提交清单见 <code>marketplace/CONTRIBUTING.md</code>。</p>
+            <p class="fine-print">提交清单见仓库中的 <code>marketplace/CONTRIBUTING.md</code>。</p>
           </section>
 
           <section id="license">
@@ -328,7 +365,7 @@ python .github/scripts/validate_module.py marketplace/submissions/my-module</cod
           <a href="index.html">首页</a>
           <a href="modules.html">模块市场</a>
           <a href="developers.html">开发者</a>
-          <a href="https://github.com/eclipse-health/eclipse-health" rel="noopener">GitHub</a>
+          <a href="https://github.com/Muhan-Qiu/eclipse-health" rel="noopener">GitHub</a>
         </div>
         <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
       </div>

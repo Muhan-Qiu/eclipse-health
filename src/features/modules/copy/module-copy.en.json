@@ -1,0 +1,493 @@
+{
+  "schemaVersion": "1",
+  "lang": "en",
+  "modules": {
+    "org.eclipsehealth.relay-ecg": {
+      "name": "ECG Beat Analysis",
+      "tagline": "Splits an ECG into individual beats and flags normal beats and ectopics.",
+      "summary": "Given an ECG recording, the module locates every beat and classifies it as normal (N), supraventricular ectopic (SVEB), ventricular ectopic (VEB) or fusion (F), then reports counts, proportions and an estimated heart rate. It ships with seven beat-classification models so you can run the same recording through different engines and see where their conclusions differ.",
+      "features": [
+        { "title": "Beat-by-beat labels", "text": "Every beat shows four-class probabilities and a final label; abnormal beats can be filtered on their own." },
+        { "title": "Rhythm overview", "text": "Counts, proportions and beat density for N/SVEB/VEB/F at a glance." },
+        { "title": "Model comparison", "text": "Switch between or line up seven built-in models on the same input for research replication and algorithm evaluation." },
+        { "title": "Three input modes", "text": "WFDB records (with optional .atr annotations), float32 signal files, or inline samples. Single-lead input is expanded to two leads and noted in the result." }
+      ],
+      "usage": [
+        "Pick a record or drop in a WFDB / float32 file.",
+        "Confirm leads and sample rate, then choose a model.",
+        "Run the analysis and review the beat list, class proportions and text summary."
+      ],
+      "inputs": [
+        "WFDB record (.hea / .dat, optional .atr annotations)",
+        "float32 signal file (360 Hz)",
+        "Inline sample array ([N] or [N, C])"
+      ],
+      "outputs": [
+        "Per-beat class and four-class probabilities",
+        "Counts, proportions and heart-rate overview",
+        "A plain-language summary"
+      ],
+      "goodFor": "Research and teaching, reproducing public datasets, comparing classification models, skimming long recordings.",
+      "limits": [
+        "Accepts 360 Hz input only; it does not silently resample.",
+        "Noisy signals, complex rhythms and paced rhythms need human review.",
+        "Output is not a diagnosis and cannot replace a clinician reading the ECG."
+      ],
+      "techNote": "Four in-house Relay-LSTM models plus three baselines, running locally via ONNX; trained and evaluated on MIT-BIH Arrhythmia."
+    },
+    "org.eclipsehealth.relay-sleep": {
+      "name": "Sleep Staging",
+      "tagline": "Assigns an entire night to five sleep stages and shows the structure.",
+      "summary": "Feed in whole-night EEG features or raw 30-second windows and the module labels each window as Wake (W), N1, N2, N3 or REM, then summarises stage duration and share, awakenings and sleep efficiency. It is built for reproducing public-dataset experiments or comparing how different staging models disagree.",
+      "features": [
+        { "title": "Five-stage output", "text": "A stage label and confidence for every 30-second window." },
+        { "title": "Structure summary", "text": "Time and share per stage, awakenings and sleep efficiency in one view." },
+        { "title": "Model comparison", "text": "Five built-in models (three in-house, two public baselines) can be compared." },
+        { "title": "Two input types", "text": "Pre-extracted 272-dimension features, or raw 30-second EEG windows." }
+      ],
+      "usage": [
+        "Prepare a feature .npz file or a 30-second window array.",
+        "Choose a model; in-house models use features, baseline models use raw windows.",
+        "Run staging and review window-level results plus the whole-night summary."
+      ],
+      "inputs": [
+        "272-dimension feature sequence [N×10×272] (nested array or npz)",
+        "Raw 30-second windows [N×3×2×3000] (baseline models)",
+        "Optional per-window time delta dt"
+      ],
+      "outputs": [
+        "Per-window stage labels and probabilities",
+        "Counts, duration and share per stage",
+        "Majority class and whole-night summary"
+      ],
+      "goodFor": "Reproducing Sleep-EDF and similar datasets, teaching sleep structure, comparing staging models.",
+      "limits": [
+        "Staging only; it does not decode EDF or extract features.",
+        "Cross-dataset and cross-device generalisation has not been validated.",
+        "Not for diagnosis or treatment."
+      ],
+      "techNote": "Five models trained on Sleep-EDF sleep-cassette, running locally via ONNX; in-house models use frozen 272-dimension features."
+    },
+    "io.github.alexandrebarachant.muselsl": {
+      "name": "Muse Headband EEG",
+      "tagline": "Stream EEG from a Muse headband, or import recorded sessions.",
+      "summary": "Receives Muse EEG channels over LSL and writes them into a record as they arrive. MuseLSL CSV recordings can also be imported for review and later analysis.",
+      "features": [
+        { "title": "Live streaming", "text": "Receives Muse data over LSL with the signal visible during capture." },
+        { "title": "Recording import", "text": "Turns MuseLSL CSV recordings into EEG records." },
+        { "title": "Signal checks", "text": "Reports channels and sample rates on import and flags missing channels." }
+      ],
+      "inputs": ["Muse headband over Bluetooth", "MuseLSL CSV file"],
+      "outputs": ["EEG record with channels, sample rate and timeline"],
+      "limits": ["Requires a Muse headband and working Bluetooth.", "Depends on upstream MuseLSL and pylsl.", "Not a medical device."],
+      "techNote": "Adapted from alexandrebarachant/muse-lsl and called over stdio JSON-RPC."
+    },
+    "io.github.apache.echarts": {
+      "name": "ECharts Charts",
+      "tagline": "Line, bar and distribution charts for your metrics.",
+      "summary": "Renders heart rate, HRV, weight and other metrics as line, bar or distribution charts using the app's controlled components, without bundling the upstream JavaScript library.",
+      "features": [
+        { "title": "Trend lines", "text": "Metric changes over time." },
+        { "title": "Category counts", "text": "Bar and distribution views of class counts." },
+        { "title": "Theme aware", "text": "Follows the app's design tokens and light/dark themes." }
+      ],
+      "inputs": ["Metric time series or category counts"],
+      "outputs": ["Chart cards for the dashboard or detail pages"],
+      "limits": ["Visualisation only; no statistical inference.", "Not a medical device."],
+      "techNote": "A declarative widget adapted from apache/echarts; upstream JS is not bundled."
+    },
+    "io.github.aura-healthcare.hrv-analysis": {
+      "name": "HRV Analysis",
+      "tagline": "Time-domain, frequency-domain and non-linear HRV from RR intervals.",
+      "summary": "Takes beat-to-beat RR intervals or an R-peak-annotated ECG record and computes RMSSD, SDNN, pNN50, frequency-band power and several non-linear metrics, with a readable HRV overview.",
+      "features": [
+        { "title": "Time domain", "text": "RMSSD, SDNN, pNN50 and related metrics." },
+        { "title": "Frequency and non-linear", "text": "Band power plus non-linear indices." },
+        { "title": "Quality hints", "text": "Warns about ectopic intervals and records that are too short." }
+      ],
+      "inputs": ["RR interval series", "R-peak-annotated ECG record"],
+      "outputs": ["HRV metrics table and summary"],
+      "goodFor": "Resting HRV tracking, stress and recovery research.",
+      "limits": ["Sensitive to ectopics and noise; correct beats first.", "Not a medical device."],
+      "techNote": "Adapted from Aura-healthcare/hrv-analysis, which is GPL-3.0."
+    },
+    "io.github.blinry.habitctl": {
+      "name": "Habit Tracking",
+      "tagline": "Daily check-ins and streaks for the habits you track.",
+      "summary": "Reads habitctl daily check-ins and streaks through a subprocess and places habit completion on the health timeline, so it can be reviewed alongside sleep and activity.",
+      "features": [
+        { "title": "Check-in list", "text": "Daily completion per habit." },
+        { "title": "Streaks", "text": "Consecutive days and breaks." },
+        { "title": "Shared timeline", "text": "Sits alongside sleep and activity records." }
+      ],
+      "inputs": ["habitctl data directory"],
+      "outputs": ["Daily habit completion and streaks"],
+      "limits": ["Requires habitctl to be installed locally.", "Reads upstream data without modifying it.", "Not a medical device."],
+      "techNote": "Adapted from blinry/habitctl and invoked as a CLI subprocess."
+    },
+    "io.github.brainflow-dev.brainflow": {
+      "name": "BrainFlow Device Capture",
+      "tagline": "EEG/EMG/ECG capture from supported boards, with signal quality.",
+      "summary": "Streams multi-channel data from BrainFlow-compatible boards, summarises signal quality, and imports JSONL recordings made with BrainFlow.",
+      "features": [
+        { "title": "Board support", "text": "Covers common boards supported by BrainFlow." },
+        { "title": "Signal quality", "text": "Channel status and quality during capture." },
+        { "title": "JSONL import", "text": "Replay previously recorded sessions." }
+      ],
+      "inputs": ["BrainFlow-compatible board", "JSONL recording"],
+      "outputs": ["Multi-channel record and quality summary"],
+      "limits": ["Requires compatible hardware and drivers.", "Not a medical device."],
+      "techNote": "Adapted from brainflow-dev/brainflow."
+    },
+    "io.github.coddingtonbear.myfitnesspal": {
+      "name": "MyFitnessPal Diary Import",
+      "tagline": "Imports your own food diary as nutrition records.",
+      "summary": "Pulls your MyFitnessPal diary with your own account and converts it into daily calorie and macronutrient records, so nutrition sits next to weight and activity.",
+      "features": [
+        { "title": "Daily calories", "text": "Calorie intake summarised per day." },
+        { "title": "Macros", "text": "Protein, fat and carbohydrate breakdown." },
+        { "title": "Local only", "text": "Imported data stays in the local record store." }
+      ],
+      "inputs": ["Your MyFitnessPal account"],
+      "outputs": ["Daily nutrition records"],
+      "limits": ["Unofficial scraper; page changes may break it.", "Requires your own account.", "Not a medical device."],
+      "techNote": "Adapted from coddingtonbear/python-myfitnesspal."
+    },
+    "io.github.cyberjunky.garminconnect": {
+      "name": "Garmin Connect Import",
+      "tagline": "Activity, sleep and body composition from Garmin Connect.",
+      "summary": "Signs in to your own Garmin Connect account and imports activity, sleep and body-composition data. Credentials stay on this machine and are never written to logs.",
+      "features": [
+        { "title": "Activities", "text": "Distance, duration and heart rate." },
+        { "title": "Sleep", "text": "Sleep duration and stage summary." },
+        { "title": "Body composition", "text": "Weight and body-fat measurements." }
+      ],
+      "inputs": ["Your Garmin Connect account"],
+      "outputs": ["Activity, sleep and body-composition records"],
+      "limits": ["Unofficial interface; may change with upstream.", "Imports your own data only.", "Not a medical device."],
+      "techNote": "Adapted from cyberjunky/python-garminconnect."
+    },
+    "io.github.dogsheep.healthkit-to-sqlite": {
+      "name": "Apple Health Import",
+      "tagline": "Streams export.zip and imports activity, vitals and sleep.",
+      "summary": "Reads an Apple Health export.zip or export.xml and streams activity, vital-sign and sleep records into the app. Everything is processed locally.",
+      "features": [
+        { "title": "Streaming parse", "text": "No need to unpack the whole export first." },
+        { "title": "Many health types", "text": "Activity, heart rate, weight, sleep and more." },
+        { "title": "Local processing", "text": "The file never leaves this machine." }
+      ],
+      "inputs": ["Apple Health export.zip or export.xml"],
+      "outputs": ["Activity, vital-sign and sleep records"],
+      "limits": ["Apple Health export format only.", "Field mappings may need updates as iOS changes.", "Not a medical device."],
+      "techNote": "Adapted from dogsheep/healthkit-to-sqlite."
+    },
+    "io.github.dtcooper.fitparse": {
+      "name": "FIT File Parser",
+      "tagline": "Reads .FIT activities for duration, distance and heart rate.",
+      "summary": "Parses record and lap entries in Garmin/ANT .FIT files and produces an activity summary with duration, distance, average and maximum heart rate.",
+      "features": [
+        { "title": "record / lap parsing", "text": "Reads every record point and lap." },
+        { "title": "Activity summary", "text": "Duration, distance and heart-rate range." },
+        { "title": "Common format", "text": "Works with FIT exports from most Garmin/ANT devices." }
+      ],
+      "inputs": [".FIT file"],
+      "outputs": ["Activity summary record"],
+      "limits": ["Read and summarise only.", "Rejects corrupt or encrypted files.", "Not a medical device."],
+      "techNote": "Adapted from dtcooper/python-fitparse."
+    },
+    "io.github.gagebenne.pydexcom": {
+      "name": "Dexcom CGM",
+      "tagline": "Your CGM readings, with time-in-range statistics.",
+      "summary": "Reads your own continuous glucose readings through Dexcom Share and reports the average, high/low values and time in range (TIR) for a selected period.",
+      "features": [
+        { "title": "Reading import", "text": "Pulls CGM readings for a chosen period." },
+        { "title": "TIR statistics", "text": "Time spent inside the target range." },
+        { "title": "Trend review", "text": "Compare glucose with activity and meals." }
+      ],
+      "inputs": ["Your Dexcom account with Share enabled"],
+      "outputs": ["CGM record and TIR summary"],
+      "limits": ["Requires your account and Share access.", "Readings must not be used to adjust medication on their own.", "Not a medical device."],
+      "techNote": "Adapted from gagebenne/pydexcom."
+    },
+    "io.github.grubersjoe.activity-calendar": {
+      "name": "Activity Heatmap",
+      "tagline": "A year of daily activity as one heatmap.",
+      "summary": "Maps daily steps or active minutes onto a heatmap using controlled list and stat components, making active and quiet stretches easy to spot across a year.",
+      "features": [
+        { "title": "Year heatmap", "text": "Daily activity intensity at a glance." },
+        { "title": "Activity stats", "text": "Active days and averages." },
+        { "title": "Controlled components", "text": "No upstream React is bundled." }
+      ],
+      "inputs": ["Daily steps or active minutes"],
+      "outputs": ["Annual activity heatmap card"],
+      "limits": ["Visualisation only.", "Needs activity data first.", "Not a medical device."],
+      "techNote": "Adapted from grubersjoe/react-activity-calendar."
+    },
+    "io.github.hbldh.bleak": {
+      "name": "Bluetooth Health Devices",
+      "tagline": "Reads standard BLE heart-rate straps and scales.",
+      "summary": "Connects to standard heart-rate straps and weight scales through the Windows WinRT BLE stack, reads their GATT characteristics and writes records — no vendor gateway required.",
+      "features": [
+        { "title": "Heart-rate straps", "text": "Reads the standard heart-rate service." },
+        { "title": "Weight scales", "text": "Reads weight and body-composition characteristics." },
+        { "title": "Direct connection", "text": "Connect whenever the device is in range." }
+      ],
+      "inputs": ["BLE heart-rate strap or scale"],
+      "outputs": ["Heart-rate or weight records"],
+      "limits": ["Standard GATT services only.", "The device must be paired and in range.", "Not a medical device."],
+      "techNote": "Adapted from hbldh/bleak using Windows WinRT."
+    },
+    "io.github.holgern.pyedflib": {
+      "name": "EDF/BDF Read & Write",
+      "tagline": "Import EDF/BDF channels or export records as EDF+.",
+      "summary": "Reads channels and sample rates from EDF/BDF files and can write app records as EDF+ so they open in other sleep or EEG tools.",
+      "features": [
+        { "title": "Read EDF/BDF", "text": "Parses channels, sample rates and signals." },
+        { "title": "Export EDF+", "text": "Writes a standard EDF+ file." },
+        { "title": "Channel mapping", "text": "Preserves channel names and units." }
+      ],
+      "inputs": ["EDF / BDF file"],
+      "outputs": ["App record, or EDF+ / CSV file"],
+      "limits": ["EDF/BDF only; no proprietary formats.", "Not a medical device."],
+      "techNote": "Adapted from holgern/pyedflib."
+    },
+    "io.github.jrnl-org.jrnl": {
+      "name": "Journal & Mood",
+      "tagline": "Import an encrypted journal and revisit mood by time or keyword.",
+      "summary": "Calls jrnl's JSON export through a subprocess and places journal entries on the health timeline, with time and keyword search. Data stays on this machine.",
+      "features": [
+        { "title": "Encrypted journal", "text": "Reads entries exported from jrnl." },
+        { "title": "Keyword search", "text": "Find moods and events by word." },
+        { "title": "Timeline", "text": "Sits alongside sleep and activity." }
+      ],
+      "inputs": ["jrnl data directory"],
+      "outputs": ["Journal entries and search results"],
+      "limits": ["Requires jrnl to be installed locally.", "Attachments are not parsed.", "Not a medical device."],
+      "techNote": "Adapted from jrnl-org/jrnl and invoked as a CLI subprocess."
+    },
+    "io.github.leeoniya.uplot": {
+      "name": "Lightweight Trend Charts",
+      "tagline": "Fast trend charts for heart rate, HRV, weight and more.",
+      "summary": "Renders lightweight time-series charts with controlled sparkline and table components, ideal for dashboard cards and detail pages.",
+      "features": [
+        { "title": "Sparklines", "text": "Small, fast trend views." },
+        { "title": "Multiple metrics", "text": "Reusable across heart rate, HRV and weight." },
+        { "title": "High performance", "text": "Stays smooth with long series." }
+      ],
+      "inputs": ["Metric time series"],
+      "outputs": ["Trend chart card"],
+      "limits": ["Lightweight trends only, no deep interactive analysis.", "Not a medical device."],
+      "techNote": "Adapted from leeoniya/uplot; upstream JS is not bundled."
+    },
+    "io.github.mit-lcp.wfdb": {
+      "name": "WFDB Record Read & Write",
+      "tagline": "Read the WFDB records hospitals and datasets use, or export to WFDB.",
+      "summary": "Reads .hea/.dat records and channel information, and can write app records as WFDB so they interoperate with hospital systems and PhysioNet datasets.",
+      "features": [
+        { "title": "Read .hea/.dat", "text": "Parses channels, sample rates and signals." },
+        { "title": "Export WFDB", "text": "Produces a standard header and data file." },
+        { "title": "Channels and units", "text": "Keeps lead names and physical units." }
+      ],
+      "inputs": ["WFDB record (.hea / .dat)"],
+      "outputs": ["App record, or WFDB / CSV file"],
+      "limits": ["Does not interpret waveforms.", "Some vendor-specific header fields may be ignored.", "Not a medical device."],
+      "techNote": "Adapted from MIT-LCP/wfdb-python."
+    },
+    "io.github.neuropsychology.neurokit2": {
+      "name": "NeuroKit2 ECG/HRV",
+      "tagline": "ECG/PPG processing and HRV analysis with NeuroKit2.",
+      "summary": "Calls NeuroKit2's ECG processing and time-domain HRV analysis to produce R peaks, heart rate and common HRV metrics, useful for method comparison.",
+      "features": [
+        { "title": "ECG processing", "text": "Filtering, R-peak detection and heart rate." },
+        { "title": "Time-domain HRV", "text": "Common time-domain metrics." },
+        { "title": "Method comparison", "text": "Run alongside the built-in engine." }
+      ],
+      "inputs": ["ECG or PPG signal"],
+      "outputs": ["R peaks, heart rate and HRV metrics"],
+      "limits": ["Uses upstream default parameters.", "Sensitive to noise.", "Not a medical device."],
+      "techNote": "Adapted from neuropsychology/NeuroKit."
+    },
+    "io.github.observablehq.plot": {
+      "name": "Observable Plot Charts",
+      "tagline": "Trends, histograms and quantiles in a few declarations.",
+      "summary": "Maps metric series to line, histogram and quantile charts, rendered with the app's controlled components without loading the upstream charting library.",
+      "features": [
+        { "title": "Lines", "text": "Trends over time." },
+        { "title": "Histograms", "text": "Metric distributions." },
+        { "title": "Quantiles", "text": "Compare quantile values across ranges." }
+      ],
+      "inputs": ["Metric time series"],
+      "outputs": ["Declarative chart card"],
+      "limits": ["Visualisation only.", "Not a medical device."],
+      "techNote": "Adapted from observablehq/plot."
+    },
+    "io.github.openbci-archive.openbci": {
+      "name": "OpenBCI Capture",
+      "tagline": "Reads OpenBCI boards over serial and imports raw recordings.",
+      "summary": "Connects to an OpenBCI board, reads multi-channel raw data into a record, and imports OpenBCI text recordings.",
+      "features": [
+        { "title": "Serial capture", "text": "Reads raw channels using the board configuration." },
+        { "title": "Multi-channel", "text": "Preserves channel and sample-rate metadata." },
+        { "title": "Text import", "text": "Replays OpenBCI recording files." }
+      ],
+      "inputs": ["OpenBCI board", "OpenBCI text recording"],
+      "outputs": ["Multi-channel raw record"],
+      "limits": ["Requires OpenBCI hardware.", "The upstream project is archived.", "Not a medical device."],
+      "techNote": "Adapted from openbci-archive/OpenBCI_Python."
+    },
+    "io.github.openfoodfacts.openfoodfacts": {
+      "name": "Open Food Facts",
+      "tagline": "Look up food nutrition by barcode.",
+      "summary": "Queries the Open Food Facts database by barcode, returns per-100g calories and macros, and creates an intake record.",
+      "features": [
+        { "title": "Barcode lookup", "text": "Enter a barcode to find the product." },
+        { "title": "Nutrition detail", "text": "Calories, protein, fat and carbs." },
+        { "title": "Intake records", "text": "Creates nutrition records by serving." }
+      ],
+      "inputs": ["Food barcode"],
+      "outputs": ["Per-100g nutrition and intake records"],
+      "limits": ["Community-maintained data may be incomplete or outdated.", "Requires network access.", "Not a medical device."],
+      "techNote": "Adapted from openfoodfacts/openfoodfacts-python; data © Open Food Facts contributors (ODbL)."
+    },
+    "io.github.orcasgit.fitbit": {
+      "name": "Fitbit Sync",
+      "tagline": "Fitbit activity, sleep, heart rate and weight.",
+      "summary": "Imports your own Fitbit activity, sleep, heart-rate and weight data through the Fitbit Web API into the local record store.",
+      "features": [
+        { "title": "Activity", "text": "Steps, distance and active minutes." },
+        { "title": "Sleep", "text": "Sleep duration and stages." },
+        { "title": "Heart rate and weight", "text": "Resting heart rate and weight measurements." }
+      ],
+      "inputs": ["Fitbit account and OAuth authorisation"],
+      "outputs": ["Activity, sleep, heart-rate and weight records"],
+      "limits": ["Requires a Fitbit developer app and OAuth.", "Imports your own data only.", "Not a medical device."],
+      "techNote": "Adapted from orcasgit/python-fitbit."
+    },
+    "io.github.paulvangentcom.heartpy": {
+      "name": "HeartPy Heart Rate & HRV",
+      "tagline": "Heart rate, HRV and signal quality from PPG/ECG.",
+      "summary": "Runs HeartPy on PPG or ECG signals to produce heart rate, RR intervals, common HRV metrics and signal-quality flags.",
+      "features": [
+        { "title": "Heart rate", "text": "Estimates heart rate from PPG/ECG." },
+        { "title": "RR and HRV", "text": "Extracts intervals and common metrics." },
+        { "title": "Quality flags", "text": "Points out noisy and artefact-heavy segments." }
+      ],
+      "inputs": ["PPG or ECG signal"],
+      "outputs": ["Heart rate, RR intervals, HRV and quality flags"],
+      "limits": ["Sensitive to motion artefacts.", "Check quality flags first.", "Not a medical device."],
+      "techNote": "Adapted from paulvangentcom/heartrate_analysis_python."
+    },
+    "io.github.pgomes92.pyhrv": {
+      "name": "pyhrv HRV Toolbox",
+      "tagline": "Time-domain, frequency-domain and non-linear HRV.",
+      "summary": "Calls pyhrv's time- and frequency-domain functions to compute common HRV metrics, keeping upstream handling of short records and abnormal intervals.",
+      "features": [
+        { "title": "Time domain", "text": "Common time-domain HRV metrics." },
+        { "title": "Frequency domain", "text": "Band power and ratios." },
+        { "title": "Non-linear", "text": "Indices such as sample entropy." }
+      ],
+      "inputs": ["RR interval series"],
+      "outputs": ["HRV metrics table and plots"],
+      "limits": ["Needs clean RR intervals.", "Not a medical device."],
+      "techNote": "Adapted from PGomes92/pyhrv."
+    },
+    "io.github.polyvertex.fitdecode": {
+      "name": "FIT Decoder",
+      "tagline": "Decodes Garmin/ANT .FIT files into an activity summary.",
+      "summary": "Decodes sessions, laps and records from .FIT files into distance, duration and heart-rate summaries.",
+      "features": [
+        { "title": "Sessions and laps", "text": "Reads session and lap entries." },
+        { "title": "Activity summary", "text": "Distance, duration and heart rate." },
+        { "title": "General decoding", "text": "Handles most FIT activity files." }
+      ],
+      "inputs": [".FIT file"],
+      "outputs": ["Activity session summary"],
+      "limits": ["Decoding only.", "Unsupported private fields are skipped.", "Not a medical device."],
+      "techNote": "Adapted from polyvertex/fitdecode."
+    },
+    "io.github.raphaelvallat.yasa": {
+      "name": "YASA Sleep Staging",
+      "tagline": "Sleep staging for PSG data, plus sleep efficiency.",
+      "summary": "Calls YASA's sleep-staging algorithm to label sleep stages window by window from polysomnography data, and computes sleep-efficiency summaries.",
+      "features": [
+        { "title": "Automatic staging", "text": "Window-level sleep stages." },
+        { "title": "Sleep efficiency", "text": "Efficiency and related summaries." },
+        { "title": "PSG input", "text": "Works with common polysomnography channels." }
+      ],
+      "inputs": ["PSG data (EEG and related channels)"],
+      "outputs": ["Stage sequence and efficiency summary"],
+      "limits": ["Expects specific channels and sample rates.", "Results depend on upstream defaults.", "Not a medical device."],
+      "techNote": "Adapted from raphaelvallat/yasa."
+    },
+    "io.github.scientisst.biosppy": {
+      "name": "BioSPPy ECG Processing",
+      "tagline": "ECG processing and beat detection (ECG/HRV subset).",
+      "summary": "Calls the BioSPPy ECG/HRV subset for filtering, R-peak detection and heart-rate calculation, useful for comparing against the built-in engine.",
+      "features": [
+        { "title": "Filtering and R peaks", "text": "ECG preprocessing and R-peak detection." },
+        { "title": "Heart rate", "text": "Heart rate from R peaks." },
+        { "title": "Method comparison", "text": "Run alongside the built-in engine." }
+      ],
+      "inputs": ["ECG signal"],
+      "outputs": ["R peaks, heart rate and HRV metrics"],
+      "limits": ["ECG/HRV subset only.", "Upstream default parameters.", "Not a medical device."],
+      "techNote": "Adapted from scientisst/BioSPPy."
+    },
+    "io.github.stravalib.stravalib": {
+      "name": "Strava Activity Import",
+      "tagline": "Strava activities as local records and weekly totals.",
+      "summary": "Reads your own activities through the Strava v3 API, normalises distance, duration and heart rate into local activity records, and rolls them up by week.",
+      "features": [
+        { "title": "Activity import", "text": "Distance, duration and sport type." },
+        { "title": "Weekly totals", "text": "Training volume by week." },
+        { "title": "Heart rate", "text": "Average and maximum heart rate." }
+      ],
+      "inputs": ["Strava account and OAuth authorisation"],
+      "outputs": ["Activity records and weekly totals"],
+      "limits": ["Requires a Strava app and OAuth.", "Tokens are never logged.", "Not a medical device."],
+      "techNote": "Adapted from stravalib/stravalib."
+    },
+    "io.github.tkrajina.gpxpy": {
+      "name": "GPX Tracks",
+      "tagline": "Parse and write GPX tracks with distance and elevation.",
+      "summary": "Reads GPX tracks and computes distance, elevation gain, duration and heart-rate summaries. Activities can also be exported back to GPX for other sports apps.",
+      "features": [
+        { "title": "Track parsing", "text": "Reads track points and timestamps." },
+        { "title": "Distance and elevation", "text": "Mileage and cumulative ascent." },
+        { "title": "GPX export", "text": "Writes activities back to GPX." }
+      ],
+      "inputs": ["GPX file"],
+      "outputs": ["Track summary or GPX file"],
+      "limits": ["GPX carries no full physiological data.", "Not a medical device."],
+      "techNote": "Adapted from tkrajina/gpxpy."
+    },
+    "io.github.tremorlabs.tremor": {
+      "name": "KPI Dashboard Cards",
+      "tagline": "Metric cards with value, change and target progress.",
+      "summary": "Maps key metrics onto KPI cards showing the current value, change and target progress — a natural top row for the dashboard.",
+      "features": [
+        { "title": "KPI cards", "text": "Current value and unit." },
+        { "title": "Change", "text": "Up or down versus the previous period." },
+        { "title": "Target progress", "text": "Completion share against a goal." }
+      ],
+      "inputs": ["Metric value and target"],
+      "outputs": ["KPI cards"],
+      "limits": ["Display only.", "Not a medical device."],
+      "techNote": "Adapted from tremorlabs/tremor; upstream React is not bundled."
+    },
+    "io.github.vangorra.withings": {
+      "name": "Withings Body Measurements",
+      "tagline": "Weight, body composition and blood pressure.",
+      "summary": "Reads your own weight, body-composition and blood-pressure measurements through the Withings REST API into the local record store.",
+      "features": [
+        { "title": "Weight", "text": "Imports weight measurements." },
+        { "title": "Body composition", "text": "Body fat, muscle and related metrics." },
+        { "title": "Blood pressure", "text": "Imports blood-pressure readings." }
+      ],
+      "inputs": ["Withings account and authorisation"],
+      "outputs": ["Weight, body-composition and blood-pressure records"],
+      "limits": ["Requires Withings app authorisation.", "Your own data only.", "Not a medical device."],
+      "techNote": "Adapted from vangorra/python_withings_api."
+    }
+  }
+}

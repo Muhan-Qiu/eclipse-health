@@ -39,7 +39,8 @@ export function InstallDialog({
         if (!next) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-4xl">
+      {/* 基础 max-w 要带 sm: 前缀，否则会被 DialogContent 的 sm:max-w-sm 在桌面端覆盖。 */}
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="size-4" aria-hidden="true" />

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Modules · eclipse health</title>
+  <meta name="description" content="Browse official and community eclipse health modules: device adapters, analysis engines, data sources, exporters and dashboard widgets. See permissions, licences, dependencies and scan results before installing.">
+  <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/modules.html">
+  <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/modules.html">
+  <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/modules.html">
+  <link rel="icon" href="../brand/favicon.svg?v=2">
+  <link rel="stylesheet" href="../styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="modules" data-depth="2">
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health home">
+        <img class="brand-mark" src="../brand/favicon.svg?v=2" alt="" aria-hidden="true" />
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="modules.html" data-nav="modules">Modules</a>
+        <a href="developers.html" data-nav="developers">Developers</a>
+        <a class="lang-switch" href="../modules.html" hreflang="zh-CN" lang="zh-CN" aria-label="切换到中文">中文</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch light or dark theme" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-head">
+      <div class="container">
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>registry · static signed index</p>
+        <h1>Module marketplace</h1>
+        <p>
+          The official index holds first-party modules plus verified third-party adapters, with first-party modules always listed first.
+          The community index holds community submissions with no manual review — automated scanning only, install at your own risk.
+          Cards start with what a module does; open Details for its capability list, inputs and outputs, intended use and limits.
+          Counts, names and copy match the in-app marketplace.
+        </p>
+
+        <div class="market-toolbar">
+          <div class="tabs" role="tablist" aria-label="Index source">
+            <button class="tab" type="button" role="tab" id="tab-official" data-source="official" aria-selected="true" aria-controls="module-results">Official index</button>
+            <button class="tab" type="button" role="tab" id="tab-community" data-source="community" aria-selected="false" aria-controls="module-results" tabindex="-1">Community index</button>
+          </div>
+          <div class="search-row">
+            <label class="search-field">
+              <span class="visually-hidden">Search modules</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m16.5 16.5 4 4"></path>
+              </svg>
+              <input type="search" id="module-search" placeholder="Search name, ID, author or capability" autocomplete="off" spellcheck="false">
+            </label>
+            <span class="result-count" id="result-count" aria-live="polite"></span>
+          </div>
+          <div class="chip-row" id="category-chips" aria-label="Filter by category"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-head" style="padding-top:1.2rem" aria-live="polite">
+      <div class="container">
+        <noscript>
+          <div class="state-box">
+            <h2>JavaScript is required</h2>
+            <p>The marketplace reads the static indexes <code>../../official/index.json</code> and <code>../../community/index.json</code> in the browser. Enable JavaScript and reload; this site loads no third-party scripts.</p>
+          </div>
+        </noscript>
+        <div class="module-grid" id="module-results" role="tabpanel" aria-labelledby="tab-official"></div>
+        <p class="fine-print" id="index-meta"></p>
+      </div>
+    </section>
+
+    <section class="section prompt-section" id="request-module" aria-labelledby="request-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="request-title">Can't find the module you need?</h2>
+          <p>Describe what you want and generate a prompt you can paste straight into your own AI agent. The agent writes <code>module.json</code>, the worker, tests and a packing script against the module contract.</p>
+        </div>
+        <div class="prompt-builder is-empty">
+          <form class="prompt-form" id="module-request-form" autocomplete="off">
+            <div class="field">
+              <label for="request-name">Module name</label>
+              <input id="request-name" name="name" type="text" maxlength="80" placeholder="e.g. Night-time blood oxygen trend">
+            </div>
+            <div class="field">
+              <label for="request-purpose">Purpose</label>
+              <textarea id="request-purpose" name="purpose" rows="3" maxlength="800" placeholder="What problem does it solve? Who uses it?"></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="request-inputs">Inputs</label>
+                <textarea id="request-inputs" name="inputs" rows="3" maxlength="500" placeholder="CSV, WFDB, device import, manual records…"></textarea>
+              </div>
+              <div class="field">
+                <label for="request-outputs">Outputs</label>
+                <textarea id="request-outputs" name="outputs" rows="3" maxlength="500" placeholder="Metrics, charts, reports, new records…"></textarea>
+              </div>
+            </div>
+            <div class="field">
+              <label for="request-permissions">Data / permissions needed</label>
+              <textarea id="request-permissions" name="permissions" rows="2" maxlength="300" placeholder="e.g. records:read, files:user-selected; or “let the agent decide the minimum”"></textarea>
+            </div>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit">Generate prompt</button>
+              <button class="btn btn-ghost" type="reset">Clear</button>
+            </div>
+            <p class="fine-print">Generated in your browser only; nothing is uploaded. The template follows the current page language.</p>
+          </form>
+          <div class="prompt-output" id="prompt-output" hidden aria-live="polite">
+            <div class="prompt-output-head">
+              <span>Prompt to paste into your AI agent</span>
+              <div class="prompt-output-actions">
+                <button class="copy-btn" type="button" id="prompt-copy">Copy</button>
+                <button class="copy-btn" type="button" id="prompt-download-md">Download .md</button>
+                <button class="copy-btn" type="button" id="prompt-download-txt">Download .txt</button>
+              </div>
+            </div>
+            <pre class="prompt-text" id="prompt-text" tabindex="0"></pre>
+            <p class="fine-print">Hand the <a href="../docs/modules-agent-guide.en.md" download>agent module design guide</a> to the agent as well.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="module-dialog" id="module-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <div style="min-width:0">
+          <span class="module-id" id="dialog-id"></span>
+          <h2 id="dialog-title">Module details</h2>
+          <div class="module-meta" id="dialog-badges"></div>
+        </div>
+        <button class="dialog-close" type="button" id="dialog-close" aria-label="Close details">×</button>
+      </div>
+      <div class="dialog-body" id="dialog-body"></div>
+      <div class="dialog-foot" id="dialog-foot"></div>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · The core is open source under GPL-3.0-only.</p>
+        <p>Module output is not medical advice, not a medical device, and not for diagnosis, treatment, or as a substitute for professional medical judgement.</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="modules.html">Modules</a>
+          <a href="developers.html">Developers</a>
+          <a href="../modules.html" hreflang="zh-CN" lang="zh-CN">中文</a>
+          <a href="https://github.com/Muhan-Qiu/eclipse-health" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../app.js" defer></script>
+</body>
+</html>

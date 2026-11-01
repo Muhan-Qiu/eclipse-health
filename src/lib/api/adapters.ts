@@ -523,22 +523,52 @@ export const HEALTH_RECORD_PREFIX = "org.eclipsehealth.health.";
 export const HEALTH_KINDS: readonly HealthRecordKind[] = [
   "steps",
   "heart-rate",
+  "resting-heart-rate",
   "sleep",
   "body-mass",
   "blood-pressure",
+  "spo2",
+  "stress",
+  "workout",
+  "respiratory-rate",
+  "body-temperature",
+  "blood-glucose",
+  "hrv",
 ];
 
-export type HealthSourceId = "apple-health" | "xiaomi-mi-fitness" | "unknown";
+export type HealthSourceId =
+  | "apple-health"
+  | "samsung-health"
+  | "xiaomi-mi-fitness"
+  | "huawei-health"
+  | "zepp"
+  | "oppo-health"
+  | "garmin-connect"
+  | "fitbit"
+  | "withings"
+  | "google-fit"
+  | "unknown";
+
+export interface HealthWorkoutValue {
+  activity: string | null;
+  durationSec: number | null;
+  distanceM: number | null;
+  energyKcal: number | null;
+  avgHeartRate: number | null;
+}
 
 export interface HealthRecordView {
   id: string;
   kind: HealthRecordKind;
-  /** 步数/心率/体重为数值；睡眠为 null（用 sleepStage）。 */
+  /** 步数/心率等数值；睡眠为 null（用 sleepStage），运动为 null（用 workout）。 */
   value: number | null;
   unit: string;
   systolic: number | null;
   diastolic: number | null;
   sleepStage: string | null;
+  workout: HealthWorkoutValue | null;
+  /** HRV 的指标名（rmssd / sdnn / pnn50 / lf / hf / lf-hf-ratio）。 */
+  metric: string | null;
   startAt: string | null;
   endAt: string | null;
   durationSec: number | null;
@@ -547,6 +577,7 @@ export interface HealthRecordView {
   payload: Raw;
   metadata: Raw;
 }
+
 
 /** `org.eclipsehealth.health.<kind>` → kind；非健康记录返回 null。 */
 export function healthKindOf(recordType: string): HealthRecordKind | null {
@@ -563,11 +594,20 @@ export function healthRecordType(kind: HealthRecordKind): string {
 
 function healthSourceId(record: HealthRecord): HealthSourceId {
   const importSource = str(record.metadata?.importSource).toLowerCase();
-  if (importSource === "apple-health") return "apple-health";
-  if (importSource === "xiaomi-mi-fitness") return "xiaomi-mi-fitness";
   const app = `${str(record.source?.app)} ${str(record.source?.manufacturer)}`.toLowerCase();
-  if (app.includes("apple")) return "apple-health";
-  if (app.includes("xiaomi") || app.includes("mi fitness")) return "xiaomi-mi-fitness";
+  const haystack = `${importSource} ${app}`;
+  if (haystack.includes("apple")) return "apple-health";
+  if (haystack.includes("samsung")) return "samsung-health";
+  if (haystack.includes("huawei") || haystack.includes("荣耀")) return "huawei-health";
+  if (haystack.includes("xiaomi") || haystack.includes("mi fitness") || haystack.includes("zepp life")) {
+    return "xiaomi-mi-fitness";
+  }
+  if (haystack.includes("zepp") || haystack.includes("amazfit")) return "zepp";
+  if (haystack.includes("oppo")) return "oppo-health";
+  if (haystack.includes("garmin")) return "garmin-connect";
+  if (haystack.includes("fitbit")) return "fitbit";
+  if (haystack.includes("withings")) return "withings";
+  if (haystack.includes("google fit")) return "google-fit";
   return "unknown";
 }
 
@@ -618,6 +658,8 @@ export function toHealthRecordView(
   let systolic: number | null = null;
   let diastolic: number | null = null;
   let sleepStage: string | null = null;
+  let workout: HealthWorkoutValue | null = null;
+  let metric: string | null = null;
 
   if (kind === "blood-pressure") {
     const pair = asObject(rawValue);
@@ -627,6 +669,19 @@ export function toHealthRecordView(
     sleepStage = normalizeSleepStage(
       typeof rawValue === "string" ? rawValue : null,
     );
+  } else if (kind === "workout") {
+    const item = asObject(rawValue);
+    workout = {
+      activity: typeof item.activity === "string" ? item.activity : null,
+      durationSec: nullableNum(item.durationSec),
+      distanceM: nullableNum(item.distanceM),
+      energyKcal: nullableNum(item.energyKcal),
+      avgHeartRate: nullableNum(item.avgHeartRate),
+    };
+  } else if (kind === "hrv") {
+    const item = asObject(rawValue);
+    metric = typeof item.metric === "string" ? item.metric : null;
+    value = nullableNum(item.value);
   } else {
     value = nullableNum(rawValue);
   }
@@ -645,6 +700,8 @@ export function toHealthRecordView(
     systolic,
     diastolic,
     sleepStage,
+    workout,
+    metric,
     startAt,
     endAt,
     durationSec: durationSec !== null && durationSec >= 0 ? durationSec : null,

@@ -59,59 +59,81 @@ def pack(source: Path, output: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=ROOT / "modules" / "official")
+    parser.add_argument(
+        "--source",
+        dest="sources",
+        action="append",
+        type=Path,
+        help="module source directory; repeatable (default: official + community)",
+    )
     parser.add_argument("--out", type=Path, default=ROOT / "dist" / "modules")
     args = parser.parse_args(argv)
 
-    if not args.source.is_dir():
-        print(f"error: {args.source} not found", file=sys.stderr)
+    sources = args.sources or [
+        ROOT / "modules" / "official",
+        ROOT / "modules" / "community",
+    ]
+    sources = [source for source in sources if source.is_dir()]
+    if not sources:
+        print("error: no module source directories found", file=sys.stderr)
         return 2
     args.out.mkdir(parents=True, exist_ok=True)
     entries: list[dict] = []
+    seen: dict[str, str] = {}
     with tempfile.TemporaryDirectory(prefix="eh-pack-") as temp_dir:
-        for manifest_path in sorted(args.source.glob("*/module.json")):
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            module_id = str(manifest.get("id") or "")
-            version = str(manifest.get("version") or "")
-            if not module_id or not version:
-                print(f"error: invalid manifest {manifest_path}", file=sys.stderr)
-                return 1
-            if module_id in BUNDLED:
-                continue
-            entry_path = str((manifest.get("entry") or {}).get("python") or "")
-            source_dir = manifest_path.parent
-            if not (source_dir / "src").is_dir():
-                print(f"error: {source_dir} has no src/ directory", file=sys.stderr)
-                return 1
-            if not entry_path or not (source_dir / entry_path).is_file():
-                print(f"error: {source_dir} entry.python is missing", file=sys.stderr)
-                return 1
-            staging = Path(temp_dir) / module_id
-            shutil.copytree(
-                manifest_path.parent,
-                staging,
-                ignore=shutil.ignore_patterns(*SKIP_DIRS, "checksums.json", "*.ehmod", "*.pyc"),
-            )
-            write_checksums(staging)
-            filename = f"{module_id}-{version}.ehmod"
-            output = args.out / filename
-            pack(staging, output)
-            entries.append(
-                {
-                    "id": module_id,
-                    "name": str(manifest.get("name") or module_id),
-                    "version": version,
-                    "type": str(manifest.get("type") or ""),
-                    "description": str(manifest.get("description") or ""),
-                    "license": str(manifest.get("license") or ""),
-                    "repository": str(manifest.get("repository") or ""),
-                    "permissions": list(manifest.get("permissions") or []),
-                    "dependencies": list(manifest.get("dependencies") or []),
-                    "file": filename,
-                    "size": output.stat().st_size,
-                    "sha256": sha256_file(output),
-                }
-            )
+        for source_root in sources:
+            for manifest_path in sorted(source_root.glob("*/module.json")):
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                module_id = str(manifest.get("id") or "")
+                version = str(manifest.get("version") or "")
+                if not module_id or not version:
+                    print(f"error: invalid manifest {manifest_path}", file=sys.stderr)
+                    return 1
+                if module_id in BUNDLED:
+                    continue
+                if module_id in seen:
+                    print(
+                        f"error: duplicate module id {module_id} "
+                        f"({seen[module_id]} and {source_root.name})",
+                        file=sys.stderr,
+                    )
+                    return 1
+                seen[module_id] = source_root.name
+                entry_path = str((manifest.get("entry") or {}).get("python") or "")
+                source_dir = manifest_path.parent
+                if not (source_dir / "src").is_dir():
+                    print(f"error: {source_dir} has no src/ directory", file=sys.stderr)
+                    return 1
+                if not entry_path or not (source_dir / entry_path).is_file():
+                    print(f"error: {source_dir} entry.python is missing", file=sys.stderr)
+                    return 1
+                staging = Path(temp_dir) / module_id
+                shutil.copytree(
+                    manifest_path.parent,
+                    staging,
+                    ignore=shutil.ignore_patterns(*SKIP_DIRS, "checksums.json", "*.ehmod", "*.pyc"),
+                )
+                write_checksums(staging)
+                filename = f"{module_id}-{version}.ehmod"
+                output = args.out / filename
+                pack(staging, output)
+                entries.append(
+                    {
+                        "id": module_id,
+                        "name": str(manifest.get("name") or module_id),
+                        "version": version,
+                        "type": str(manifest.get("type") or ""),
+                        "description": str(manifest.get("description") or ""),
+                        "license": str(manifest.get("license") or ""),
+                        "repository": str(manifest.get("repository") or ""),
+                        "permissions": list(manifest.get("permissions") or []),
+                        "dependencies": list(manifest.get("dependencies") or []),
+                        "source": source_root.name,
+                        "file": filename,
+                        "size": output.stat().st_size,
+                        "sha256": sha256_file(output),
+                    }
+                )
     index = {
         "schemaVersion": "1",
         "generatedBy": ".github/scripts/pack_official_modules.py",

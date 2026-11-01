@@ -28,7 +28,7 @@ const KIND_ORDER: readonly HealthRecordKind[] = [
   "blood-pressure",
 ];
 
-const KIND_ICON: Record<HealthRecordKind, LucideIcon> = {
+const KIND_ICON: Partial<Record<HealthRecordKind, LucideIcon>> = {
   steps: Footprints,
   "heart-rate": HeartPulse,
   sleep: Moon,
@@ -75,6 +75,8 @@ function valueText(
       return view.durationSec !== null
         ? durationText(view.durationSec, locale, t)
         : t(`healthData.sleepStages.${view.sleepStage ?? "unknown"}`);
+    default:
+      return view.value === null ? "—" : formatNumber(view.value, locale);
   }
 }
 
@@ -147,7 +149,7 @@ export function HealthSummaryCard({ className }: { className?: string }) {
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
             {KIND_ORDER.filter((kind) => latest.has(kind)).map((kind) => {
-              const Icon = KIND_ICON[kind];
+              const Icon = KIND_ICON[kind] ?? HeartPulse;
               const view = latest.get(kind) as HealthRecordView;
               return (
                 <div key={kind} className="rounded-xl border border-border bg-subtle/40 p-3">

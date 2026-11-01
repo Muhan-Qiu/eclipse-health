@@ -13,7 +13,7 @@ export const LAYOUT_TITLE_MAX = 120;
 
 export const LAYOUT_WIDTHS = [3, 6, 9, 12] as const;
 export type LayoutWidth = (typeof LAYOUT_WIDTHS)[number];
-export type LayoutItemKind = "module-widget" | "core-card";
+export type LayoutItemKind = "module-widget" | "core-card" | "custom-card";
 
 export interface LayoutItem {
   id: string;
@@ -71,9 +71,24 @@ export function defaultLayout(): LayoutItem[] {
  * ------------------------------------------------------------------ */
 
 export const MODULE_WIDGET_PREFIX = "module:";
+export const CUSTOM_CARD_PREFIX = "custom:";
 
 export function widgetLayoutId(moduleId: string, widgetId: string): string {
   return `${MODULE_WIDGET_PREFIX}${moduleId}:${widgetId}`;
+}
+
+/** 自定义卡片在布局里的 id：`custom:<dcr_...>`。 */
+export function customCardLayoutId(cardId: string): string {
+  return `${CUSTOM_CARD_PREFIX}${cardId}`;
+}
+
+export function isCustomCardLayoutId(id: string): boolean {
+  return id.startsWith(CUSTOM_CARD_PREFIX);
+}
+
+/** stat / sparkline 窄卡；line / bar 需要横向空间。 */
+export function customCardWidth(view: string): LayoutWidth {
+  return view === "line" || view === "bar" ? 6 : 3;
 }
 
 export function widgetSizeWidth(size: string): LayoutWidth {
@@ -88,33 +103,64 @@ export interface WidgetLayoutInput {
   width: LayoutWidth;
 }
 
+export interface CustomCardLayoutInput extends WidgetLayoutInput {}
+
+export interface MergeLayoutOptions {
+  /** 模块列表还没加载完时传 false：保留已保存的模块卡片，不清理也不新增。 */
+  widgetsReady?: boolean;
+  /** 自定义卡片列表还没加载完时传 false：同理保留已保存的自定义卡片。 */
+  customCardsReady?: boolean;
+}
+
 /**
- * 把当前已安装的模块卡片合并进布局：
- * - 已卸载的模块卡片被移除，未知 id 不进入渲染；
- * - 新出现的模块卡片插在「最近记录」之前，保持旧页面的视觉顺序。
+ * 把当前已安装的模块卡片与自定义卡片合并进布局：
+ * - 已卸载 / 已删除的卡片被移除，未知 id 不进入渲染；
+ * - 新出现的卡片插在「最近记录」之前，保持旧页面的视觉顺序。
  *
- * 模块列表还没加载完时不要调用（否则会误删已保存的模块卡片顺序）。
+ * 对应的数据源还没加载完时把 ``ready`` 传 false，避免误删已保存的顺序。
  */
 export function mergeLayout(
   base: readonly LayoutItem[],
   widgets: readonly WidgetLayoutInput[],
+  customCards: readonly CustomCardLayoutInput[] = [],
+  options: MergeLayoutOptions = {},
 ): LayoutItem[] {
+  const widgetsReady = options.widgetsReady ?? true;
+  const customReady = options.customCardsReady ?? true;
   const widgetIds = new Set(widgets.map((widget) => widget.id));
-  const kept = base.filter((item) =>
-    item.kind === "core-card"
-      ? isCoreCardId(item.id)
-      : widgetIds.has(item.id),
-  );
+  const customIds = new Set(customCards.map((card) => card.id));
+
+  const kept = base.filter((item) => {
+    if (item.kind === "core-card") return isCoreCardId(item.id);
+    if (item.kind === "custom-card") {
+      return customReady ? customIds.has(item.id) : true;
+    }
+    return widgetsReady ? widgetIds.has(item.id) : true;
+  });
   const present = new Set(kept.map((item) => item.id));
-  const missing: LayoutItem[] = widgets
-    .filter((widget) => !present.has(widget.id))
-    .map((widget) => ({
-      id: widget.id,
-      kind: "module-widget",
-      title: widget.title,
-      width: widget.width,
-      hidden: false,
-    }));
+  const missingWidgets: LayoutItem[] = widgetsReady
+    ? widgets
+        .filter((widget) => !present.has(widget.id))
+        .map((widget) => ({
+          id: widget.id,
+          kind: "module-widget",
+          title: widget.title,
+          width: widget.width,
+          hidden: false,
+        }))
+    : [];
+  const missingCustom: LayoutItem[] = customReady
+    ? customCards
+        .filter((card) => !present.has(card.id))
+        .map((card) => ({
+          id: card.id,
+          kind: "custom-card",
+          title: card.title,
+          width: card.width,
+          hidden: false,
+        }))
+    : [];
+  const missing = [...missingWidgets, ...missingCustom];
   if (missing.length === 0) return [...kept];
 
   const recentIndex = kept.findIndex((item) => item.id === "recent");
@@ -148,7 +194,11 @@ export class LayoutError extends Error {
 }
 
 const ITEM_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9:._-]*$/;
-const KIND_VALUES: readonly LayoutItemKind[] = ["module-widget", "core-card"];
+const KIND_VALUES: readonly LayoutItemKind[] = [
+  "module-widget",
+  "core-card",
+  "custom-card",
+];
 
 export function isLayoutWidth(value: unknown): value is LayoutWidth {
   return (

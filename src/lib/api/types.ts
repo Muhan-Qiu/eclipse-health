@@ -406,9 +406,17 @@ export interface RecordCompareResponse {
 export type HealthRecordKind =
   | "steps"
   | "heart-rate"
+  | "resting-heart-rate"
   | "sleep"
   | "body-mass"
-  | "blood-pressure";
+  | "blood-pressure"
+  | "spo2"
+  | "stress"
+  | "workout"
+  | "respiratory-rate"
+  | "body-temperature"
+  | "blood-glucose"
+  | "hrv";
 
 /** 健康数据记录的 payload 约定之一（见 DATA_SCHEMA_V1）。 */
 export interface HealthRecordPayload {

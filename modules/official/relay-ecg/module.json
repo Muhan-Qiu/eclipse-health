@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0",
   "id": "org.eclipsehealth.relay-ecg",
-  "name": "Relay ECG · V1 精选模型包",
-  "description": "7 个 V1/MIT-BIH 心搏分类模型（4 个 Relay-LSTM + 3 个更低基线），本地 ONNX 推理，支持 WFDB/float32 输入与 modelId 选择。非医疗器械，不用于诊断。",
+  "name": "ECG 心搏分析",
+  "description": "把一段心电自动切成单个心搏，标出正常（N）、室上性早搏（SVEB）、室性早搏（VEB）与融合波（F），并汇总各类数量、占比与心率。内置 7 个分类模型可切换对照，支持 WFDB、float32 信号或内联采样点。非医疗器械，不用于诊断，适合科研、教学与算法比较。",
   "version": "0.1.0",
   "apiVersion": "1.0",
   "engines": {

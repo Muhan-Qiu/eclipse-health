@@ -46,7 +46,7 @@ export function ProfilePage() {
           </CardContent>
         </Card>
 
-        <MetricsPanel className="desk:col-span-12" />
+        <MetricsPanel className="desk:col-span-8 xl:col-span-12" />
       </div>
     </>
   );

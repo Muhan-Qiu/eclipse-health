@@ -6,6 +6,7 @@ import type {
   MarketplaceIndex,
   MarketplaceInstallBody,
   MarketplaceModule,
+  MarketplaceScan,
   MarketplaceSource,
   MarketplaceSources,
   MarketplaceUpdate,
@@ -85,6 +86,16 @@ function asStringArray(value: unknown): string[] {
     : [];
 }
 
+function normalizeScan(value: unknown): MarketplaceScan | undefined {
+  const item = asRecord(value);
+  const scan: MarketplaceScan = {};
+  if (typeof item.status === "string") scan.status = item.status;
+  if (typeof item.risk === "string") scan.risk = item.risk;
+  if (typeof item.scannedAt === "string") scan.scannedAt = item.scannedAt;
+  if (typeof item.reportUrl === "string") scan.reportUrl = item.reportUrl;
+  return Object.keys(scan).length > 0 ? scan : undefined;
+}
+
 function normalizeModule(value: unknown): MarketplaceModule | null {
   const item = asRecord(value);
   const id = asString(item.id);
@@ -108,6 +119,7 @@ function normalizeModule(value: unknown): MarketplaceModule | null {
     file: asString(item.file),
     size: typeof item.size === "number" ? item.size : undefined,
     sha256: asString(item.sha256),
+    scan: normalizeScan(item.scan),
   };
 }
 
@@ -261,10 +273,10 @@ export function isMarketplaceNotConfigured(error: unknown): boolean {
 
 export const MARKETPLACE_UPDATES_KEY = ["marketplace", "updates"] as const;
 export const MARKETPLACE_SOURCES_KEY = ["marketplace", "sources"] as const;
+/** 搜索在客户端按网站文案完成，键里不再包含 q。 */
 export function marketplaceIndexKey(
   source: MarketplaceSource,
-  query: string,
   category: string,
 ) {
-  return ["marketplace", "index", source, query, category] as const;
+  return ["marketplace", "index", source, category] as const;
 }

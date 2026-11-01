@@ -761,11 +761,28 @@ html[data-glass="true"] [data-slot="dropdown-menu-content"] {
     }
   }
 
-  /* 12 / 8 / 单列 网格（列间距 16） */
+  /* 12 / 8 / 单列 网格（列间距 16）
+   * 行高默认拉伸；所有直接子项都允许收缩，长 id / 长标题不会把列撑破。 */
   .eh-grid {
     display: grid;
+    align-items: stretch;
     gap: 16px;
     grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  .eh-grid > * {
+    min-width: 0;
+  }
+
+  /* 仪表盘布局单元（LayoutGrid）：
+   * 网格子项本身纵向 flex，卡片填满剩余高度，保证同排卡片上下边对齐。
+   * 浏览与编辑模式共用同一套宽度计算，编辑模式只叠加 outline，不再加内边距。 */
+  .eh-layout-cell {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+  .eh-layout-cell > [data-slot="card"] {
+    flex: 1 1 auto;
   }
   @media (min-width: 960px) {
     .eh-grid {

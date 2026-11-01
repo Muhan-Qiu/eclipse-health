@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { FileUp } from "lucide-react";
 import { api } from "@/lib/api/client";
@@ -27,7 +28,17 @@ import {
   validateDroppedFiles,
   type DroppedFile,
 } from "@/lib/zip";
-import { ImportDialog } from "./import-dialog";
+import {
+  commitAgentSession,
+  createAgentSession,
+  discardAgentSession,
+  fetchAllAgentProposals,
+  runAgentSession,
+  type AgentCommitResult,
+  type AgentProposal,
+  type AgentSession,
+} from "./import-agent-api";
+import { ImportDialog, type AgentEventItem } from "./import-dialog";
 
 interface ImportContextValue {
   openPicker: () => void;
@@ -44,6 +55,21 @@ const EMPTY_COUNTS: ImportRecordCounts = {
   ecg: 0,
 };
 
+const MAX_AGENT_FILES = 20;
+
+export interface AgentView {
+  session: AgentSession;
+  status: "created" | "running" | "ready" | "error" | "committed";
+  events: AgentEventItem[];
+  thought: string;
+  proposals: AgentProposal[];
+  selectedKinds: string[];
+  error: ApiError | null;
+  summary: string | null;
+  toolCalls: number;
+  commit: AgentCommitResult | null;
+}
+
 function localError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   const code = error instanceof Error ? error.message : "import_failed";
@@ -57,6 +83,20 @@ function localError(error: unknown): ApiError {
     code: known.has(code) ? code : "import_failed",
     status: known.has(code) ? 413 : undefined,
   });
+}
+
+function countsOf(proposals: AgentProposal[]): ImportRecordCounts {
+  const next = { ...EMPTY_COUNTS };
+  for (const item of proposals) {
+    if (item.kind === "steps") next.steps += 1;
+    else if (item.kind === "heart-rate" || item.kind === "resting-heart-rate") {
+      next.heartRate += 1;
+    } else if (item.kind === "sleep") next.sleep += 1;
+    else if (item.kind === "body-mass") next.bodyMass += 1;
+    else if (item.kind === "blood-pressure") next.bloodPressure += 1;
+    else if (item.kind === "ecg") next.ecg += 1;
+  }
+  return next;
 }
 
 function DropOverlay({ visible }: { visible: boolean }) {
@@ -83,10 +123,16 @@ function DropOverlay({ visible }: { visible: boolean }) {
 export function ImportProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dirInputRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const previewRef = useRef<ImportPreview | null>(null);
   const sourceRef = useRef<ImportSourceKind>("auto");
+  const filesRef = useRef<DroppedFile[] | null>(null);
+  const agentRef = useRef<AgentView | null>(null);
+  const agentAbortRef = useRef<AbortController | null>(null);
+  const demoStartedRef = useRef(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -96,15 +142,28 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const [commitError, setCommitError] = useState<ApiError | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [source, setSource] = useState<ImportSourceKind>("auto");
-  const [recordCounts, setRecordCounts] = useState<ImportRecordCounts>(EMPTY_COUNTS);
+  const [recordCounts, setRecordCounts] =
+    useState<ImportRecordCounts>(EMPTY_COUNTS);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [commitResult, setCommitResult] = useState<HealthImportCommitResult | null>(null);
+  const [commitResult, setCommitResult] =
+    useState<HealthImportCommitResult | null>(null);
+  const [hasSelection, setHasSelection] = useState(false);
+  const [agent, setAgent] = useState<AgentView | null>(null);
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [agentCommitting, setAgentCommitting] = useState(false);
 
   useEffect(() => {
     previewRef.current = preview;
   }, [preview]);
+  useEffect(() => {
+    agentRef.current = agent;
+  }, [agent]);
 
-  const discardCurrent = useCallback(async () => {
+  const updateAgent = useCallback((patch: Partial<AgentView>) => {
+    setAgent((current) => (current ? { ...current, ...patch } : current));
+  }, []);
+
+  const discardStandard = useCallback(async () => {
     const current = previewRef.current;
     previewRef.current = null;
     setPreview(null);
@@ -120,75 +179,127 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const startFiles = useCallback(async (dropped: DroppedFile[]) => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    const previous = previewRef.current;
-    previewRef.current = null;
-    if (previous) {
-      void api.imports.discard(previous.importId).catch(() => undefined);
-    }
-    setDialogOpen(true);
-    setBusy(true);
-    setPreview(null);
-    setError(null);
-    setCommitError(null);
-    setCommitResult(null);
-    setRecordCounts({ ...EMPTY_COUNTS });
-    setTotalRecords(0);
-    setDragActive(false);
-    try {
-      validateDroppedFiles(dropped);
-      const file = await prepareImportSource(dropped);
-      const result = await previewHealthImport(file, sourceRef.current);
-      setPreview(result);
-      setRecordCounts(result.recordCounts);
-      setTotalRecords(result.totalRecords);
-    } catch (caught) {
-      setError(localError(caught));
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
+  const discardAgent = useCallback(async () => {
+    const current = agentRef.current;
+    agentAbortRef.current?.abort();
+    agentAbortRef.current = null;
+    agentRef.current = null;
+    setAgent(null);
+    if (current && current.status !== "committed") {
+      try {
+        await discardAgentSession(current.session.sessionId);
+      } catch {
+        // TTL 兜底
+      }
     }
   }, []);
+
+  const startFiles = useCallback(
+    async (dropped: DroppedFile[]) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      filesRef.current = dropped;
+      setHasSelection(dropped.length > 0);
+      const previous = previewRef.current;
+      previewRef.current = null;
+      if (previous) {
+        void api.imports.discard(previous.importId).catch(() => undefined);
+      }
+      setDialogOpen(true);
+      setBusy(true);
+      setPreview(null);
+      setError(null);
+      setCommitError(null);
+      setCommitResult(null);
+      setRecordCounts({ ...EMPTY_COUNTS });
+      setTotalRecords(0);
+      setDragActive(false);
+      try {
+        validateDroppedFiles(dropped);
+        const file = await prepareImportSource(dropped);
+        const result = await previewHealthImport(file, sourceRef.current);
+        setPreview(result);
+        setRecordCounts(result.recordCounts);
+        setTotalRecords(result.totalRecords);
+      } catch (caught) {
+        setError(localError(caught));
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    },
+    [],
+  );
 
   const openPicker = useCallback(() => {
     setCommitResult(null);
     setError(null);
     setPreview(null);
+    void discardAgent();
     setDialogOpen(true);
-  }, []);
+    window.setTimeout(() => fileInputRef.current?.click(), 0);
+  }, [discardAgent]);
 
-  const pickSource = useCallback((next: ImportSourceKind) => {
-    sourceRef.current = next;
-    setSource(next);
+  const openDialog = useCallback(() => {
     setCommitResult(null);
     setError(null);
     setPreview(null);
-    setRecordCounts({ ...EMPTY_COUNTS });
-    setTotalRecords(0);
-    window.setTimeout(() => inputRef.current?.click(), 0);
+    setDialogOpen(true);
+  }, []);
+
+  const chooseFiles = useCallback(() => {
+    setCommitResult(null);
+    setError(null);
+    setPreview(null);
+    window.setTimeout(() => fileInputRef.current?.click(), 0);
+  }, []);
+
+  const chooseFolder = useCallback(() => {
+    setCommitResult(null);
+    setError(null);
+    setPreview(null);
+    window.setTimeout(() => dirInputRef.current?.click(), 0);
   }, []);
 
   const pickAnother = useCallback(() => {
-    void discardCurrent();
+    void discardCurrentAll();
     setError(null);
     setDialogOpen(true);
-    window.setTimeout(() => inputRef.current?.click(), 0);
-  }, [discardCurrent]);
+    window.setTimeout(() => fileInputRef.current?.click(), 0);
+  }, []);
+
+  const discardCurrentAll = useCallback(async () => {
+    agentAbortRef.current?.abort();
+    agentAbortRef.current = null;
+    agentRef.current = null;
+    setAgent(null);
+    await discardStandard();
+  }, [discardStandard]);
 
   const closeDialog = useCallback(() => {
     setDialogOpen(false);
     setError(null);
     setCommitResult(null);
-    void discardCurrent();
-  }, [discardCurrent]);
+    filesRef.current = null;
+    setHasSelection(false);
+    void discardCurrentAll();
+  }, [discardCurrentAll]);
 
   const finishBundle = useCallback(() => {
     setDialogOpen(false);
     setCommitResult(null);
+    setHasSelection(false);
+    filesRef.current = null;
     navigate("/records");
   }, [navigate]);
+
+  // 导入提交不经过 react-query，主动让健康数据/记录/趋势/卡片重新取数。
+  const refreshImportedData = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["health-records"] });
+    void queryClient.invalidateQueries({ queryKey: ["records"] });
+    void queryClient.invalidateQueries({ queryKey: ["trends"] });
+    void queryClient.invalidateQueries({ queryKey: ["dashboard", "cards"] });
+  }, [queryClient]);
 
   const commit = useCallback(
     async (body: ImportCommitBody) => {
@@ -198,6 +309,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       setCommitError(null);
       try {
         const result = await commitHealthImport(current.importId, body);
+        refreshImportedData();
         previewRef.current = null;
         setPreview(null);
         if (totalRecords > 0) {
@@ -215,8 +327,230 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         setCommitting(false);
       }
     },
-    [committing, navigate, t, totalRecords],
+    [committing, navigate, refreshImportedData, t, totalRecords],
   );
+
+  /* ---------------- Agent 流程 ---------------- */
+
+  const startAgentSession = useCallback(async () => {
+    const files = filesRef.current;
+    if (!files?.length || agentBusy) return;
+    if (files.length > MAX_AGENT_FILES) {
+      setError(
+        new ApiError(t("imports.agent.errors.tooManyFiles", { max: MAX_AGENT_FILES }), {
+          code: "too_many_files",
+          status: 413,
+        }),
+      );
+      return;
+    }
+    setAgentBusy(true);
+    setError(null);
+    try {
+      const session = await createAgentSession(files.map((item) => item.file));
+      setAgent({
+        session,
+        status: "created",
+        events: [],
+        thought: "",
+        proposals: [],
+        selectedKinds: [],
+        error: null,
+        summary: null,
+        toolCalls: 0,
+        commit: null,
+      });
+    } catch (caught) {
+      setError(localError(caught));
+    } finally {
+      setAgentBusy(false);
+    }
+  }, [agentBusy, t]);
+
+  const runAgent = useCallback(async () => {
+    const current = agentRef.current;
+    if (!current || current.status === "running") return;
+    const controller = new AbortController();
+    agentAbortRef.current = controller;
+    const sessionId = current.session.sessionId;
+    let thought = "";
+    const pushEvent = (item: Omit<AgentEventItem, "id">) => {
+      setAgent((value) =>
+        value
+          ? {
+              ...value,
+              events: [
+                ...value.events.slice(-79),
+                { ...item, id: `${Date.now()}-${value.events.length}` },
+              ],
+            }
+          : value,
+      );
+    };
+    updateAgent({ status: "running", error: null, commit: null, events: [] });
+
+    await runAgentSession(sessionId, {
+      signal: controller.signal,
+      onStatus: (event) => {
+        updateAgent({ toolCalls: event.toolCalls ?? 0 });
+        pushEvent({
+          kind: "status",
+          name: event.phase,
+          detail: event.provider,
+        });
+      },
+      onToken: (text) => {
+        thought = `${thought}${text}`.slice(-600);
+        updateAgent({ thought });
+      },
+      onToolCall: (event) => {
+        pushEvent({ kind: "tool", name: event.name });
+      },
+      onToolResult: (event) => {
+        pushEvent({
+          kind: "result",
+          name: event.name,
+          ok: event.ok,
+          detail: event.resultSummary || event.error,
+        });
+      },
+      onPreview: (event) => {
+        pushEvent({
+          kind: "status",
+          name: "preview",
+          detail: `${event.count}/${event.total}`,
+        });
+      },
+      onError: (event) => {
+        updateAgent({
+          status: "error",
+          error: new ApiError(event.message, { code: event.code }),
+        });
+        pushEvent({ kind: "error", name: event.code, detail: event.message, ok: false });
+      },
+      onDone: async (event) => {
+        updateAgent({
+          status: "ready",
+          summary: event.summary ?? null,
+          toolCalls: event.toolCalls ?? 0,
+        });
+        try {
+          const proposals = await fetchAllAgentProposals(sessionId);
+          const kinds = Array.from(new Set(proposals.map((item) => item.kind)));
+          setAgent((value) =>
+            value
+              ? {
+                  ...value,
+                  status: "ready",
+                  proposals,
+                  selectedKinds: kinds,
+                  summary: event.summary ?? value.summary,
+                  toolCalls: event.toolCalls ?? value.toolCalls,
+                }
+              : value,
+          );
+          setRecordCounts(countsOf(proposals));
+          setTotalRecords(proposals.length);
+        } catch (caught) {
+          updateAgent({
+            status: "error",
+            error: localError(caught),
+          });
+        }
+      },
+    });
+  }, [updateAgent]);
+
+  const stopAgent = useCallback(() => {
+    agentAbortRef.current?.abort();
+  }, []);
+
+  const toggleAgentKind = useCallback((kind: string) => {
+    setAgent((value) => {
+      if (!value) return value;
+      const selected = value.selectedKinds.includes(kind)
+        ? value.selectedKinds.filter((item) => item !== kind)
+        : [...value.selectedKinds, kind];
+      return { ...value, selectedKinds: selected };
+    });
+  }, []);
+
+  const setAgentKinds = useCallback((kinds: string[]) => {
+    setAgent((value) => (value ? { ...value, selectedKinds: kinds } : value));
+  }, []);
+
+  const commitAgent = useCallback(
+    async (memberId: string) => {
+      const current = agentRef.current;
+      if (!current || agentCommitting) return;
+      setAgentCommitting(true);
+      try {
+        const allKinds = Array.from(
+          new Set(current.proposals.map((item) => item.kind)),
+        );
+        const allSelected = allKinds.every((kind) =>
+          current.selectedKinds.includes(kind),
+        );
+        const records = allSelected
+          ? undefined
+          : current.proposals
+              .filter((item) => current.selectedKinds.includes(item.kind))
+              .map((item) => item.id);
+        const result = await commitAgentSession(current.session.sessionId, {
+          records,
+          memberId: memberId || undefined,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+        });
+        updateAgent({ status: "committed", commit: result });
+        refreshImportedData();
+        toast.success(t("imports.agent.doneTitle"));
+      } catch (caught) {
+        updateAgent({ error: localError(caught) });
+      } finally {
+        setAgentCommitting(false);
+      }
+    },
+    [agentCommitting, refreshImportedData, t, updateAgent],
+  );
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const param = new URLSearchParams(window.location.search).get("import");
+    if (param) setDialogOpen(true);
+  }, []);
+
+  /* 开发/截图用：?import=agent 自动走一遍演示解析。 */
+  useEffect(() => {
+    if (!import.meta.env.DEV || demoStartedRef.current) return;
+    const param = new URLSearchParams(window.location.search).get("import");
+    if (param !== "agent" && param !== "agent-ready") return;
+    demoStartedRef.current = true;
+    const demo = new File(["date,steps\n2026-11-01,8421\n"], "export.csv", {
+      type: "text/csv",
+    });
+    filesRef.current = [{ file: demo, path: demo.name }];
+    setHasSelection(true);
+    setDialogOpen(true);
+    void createAgentSession([demo])
+      .then((session) => {
+        setAgent({
+          session,
+          status: "created",
+          events: [],
+          thought: "",
+          proposals: [],
+          selectedKinds: [],
+          error: null,
+          summary: null,
+          toolCalls: 0,
+          commit: null,
+        });
+        if (param === "agent") {
+          window.setTimeout(() => void runAgent(), 400);
+        }
+      })
+      .catch((caught) => setError(localError(caught)));
+  }, [runAgent]);
 
   /* 全局拖拽：任意页面拖入文件/文件夹即进入预览。 */
   useEffect(() => {
@@ -272,24 +606,54 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     };
   }, [startFiles]);
 
+  const handleInputFiles = (list: FileList | null) => {
+    const files = Array.from(list ?? []).map((file) => ({
+      file,
+      path:
+        (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+        file.name,
+    }));
+    if (files.length) void startFiles(files);
+  };
+
   return (
     <ImportContext.Provider value={{ openPicker }}>
       {children}
       <input
-        ref={inputRef}
+        ref={fileInputRef}
         type="file"
         multiple
-        accept=".hea,.dat,.atr,.zip,.csv,.txt,.xml"
+        accept=".zip,.csv,.txt,.xml,.json,.html,.htm,.pdf,.xlsx,.xls,.fit,.gpx,.tcx,.edf,.bdf,.dat,.hea,.atr"
         className="sr-only"
         aria-hidden="true"
         tabIndex={-1}
         onChange={(event) => {
-          const files = Array.from(event.target.files ?? []).map((file) => ({
-            file,
-            path: file.name,
-          }));
+          // Read the FileList before clearing the input: Chrome clears the same
+          // FileList object when value is reset, which would drop the selection.
+          const list = event.target.files;
+          handleInputFiles(list);
           event.target.value = "";
-          if (files.length) void startFiles(files);
+        }}
+      />
+      <input
+        ref={(element) => {
+          dirInputRef.current = element;
+          if (element) {
+            element.setAttribute("webkitdirectory", "");
+            element.setAttribute("directory", "");
+          }
+        }}
+        type="file"
+        multiple
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(event) => {
+          // Read the FileList before clearing the input: Chrome clears the same
+          // FileList object when value is reset, which would drop the selection.
+          const list = event.target.files;
+          handleInputFiles(list);
+          event.target.value = "";
         }}
       />
       <DropOverlay visible={dragActive} />
@@ -308,7 +672,24 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         recordCounts={recordCounts}
         totalRecords={totalRecords}
         result={commitResult}
-        onPickSource={pickSource}
+        hasSelection={hasSelection}
+        selectedFiles={filesRef.current?.map((item) => item.file.name) ?? []}
+        agent={agent}
+        agentBusy={agentBusy}
+        agentCommitting={agentCommitting}
+        onPickSource={(next) => {
+          sourceRef.current = next;
+          setSource(next);
+        }}
+        onChooseFiles={chooseFiles}
+        onChooseFolder={chooseFolder}
+        onOpenDialog={openDialog}
+        onStartAgent={() => void startAgentSession()}
+        onRunAgent={() => void runAgent()}
+        onStopAgent={stopAgent}
+        onToggleAgentKind={toggleAgentKind}
+        onSetAgentKinds={setAgentKinds}
+        onCommitAgent={(memberId) => void commitAgent(memberId)}
         onDone={finishBundle}
         onCommit={(body) => void commit(body)}
         onPickAnother={pickAnother}

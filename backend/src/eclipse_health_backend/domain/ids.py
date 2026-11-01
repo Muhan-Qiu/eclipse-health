@@ -21,6 +21,8 @@ PREFIXES: dict[str, str] = {
     "report": "rep",
     "module": "mod",
     "audit": "evt",
+    "card": "dcr",
+    "cardDraft": "ddr",
 }
 
 _UUID_RE = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"

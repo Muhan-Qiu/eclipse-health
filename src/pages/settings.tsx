@@ -589,7 +589,7 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="desk:col-span-4 xl:col-span-4">
+        <Card className="desk:col-span-8 xl:col-span-4">
           <CardHeader>
             <CardTitle className="eh-h3">
               {t("settings.language.title")}

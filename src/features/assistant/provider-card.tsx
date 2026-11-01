@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ChevronDown,
   CircleAlert,
   CircleCheck,
+  ExternalLink,
   KeyRound,
   LoaderCircle,
   Plus,
+  Search,
   Server,
   Trash2,
   Wrench,
@@ -37,10 +40,12 @@ import type {
   AssistantProvider,
   ProviderInput,
   ProviderKind,
+  ProviderPreset,
+  ProviderPresetGroup,
   ProviderTestResult,
 } from "./types";
 
-const KIND_ORDER: ProviderKind[] = ["mock", "ollama", "openai", "anthropic"];
+const LEGACY_KINDS: ProviderKind[] = ["mock", "ollama", "openai", "anthropic"];
 
 const DEFAULT_MODEL: Record<ProviderKind, string> = {
   mock: "mock-1",
@@ -56,30 +61,17 @@ const DEFAULT_BASE_URL: Record<ProviderKind, string> = {
   anthropic: "https://api.anthropic.com",
 };
 
-const NEEDS_KEY: Record<ProviderKind, boolean> = {
-  mock: false,
-  ollama: false,
-  openai: true,
-  anthropic: true,
-};
-
-interface ProviderPreset {
-  label: string;
-  model: string;
-  baseUrl: string;
-}
-
-/**
- * DeepSeek / OpenCode 通过 CC Switch 这类本地代理暴露 Anthropic Messages 格式。
- * 只预填地址与占位模型名，不预填任何真实 Key。
- */
-const PROXY_PRESET: ProviderPreset = {
-  label: "DeepSeek / OpenCode",
-  model: "deepseek-chat",
-  baseUrl: "http://127.0.0.1:15721",
-};
+const GROUP_ORDER: ProviderPresetGroup[] = [
+  "official",
+  "china",
+  "gateway",
+  "local",
+  "custom",
+  "demo",
+];
 
 interface Draft {
+  presetId: string | null;
   kind: ProviderKind;
   label: string;
   model: string;
@@ -89,23 +81,22 @@ interface Draft {
   enabled: boolean;
 }
 
-function draftFrom(
-  provider: AssistantProvider | null,
-  initialKind: ProviderKind = "mock",
-  preset: ProviderPreset | null = null,
-): Draft {
-  if (!provider) {
-    return {
-      kind: initialKind,
-      label: preset?.label ?? "",
-      model: preset?.model ?? DEFAULT_MODEL[initialKind],
-      baseUrl: preset?.baseUrl ?? DEFAULT_BASE_URL[initialKind],
-      apiKey: "",
-      clearKey: false,
-      enabled: true,
-    };
-  }
+function draftFromPreset(preset: ProviderPreset): Draft {
   return {
+    presetId: preset.id,
+    kind: preset.kind,
+    label: preset.label,
+    model: preset.defaultModel,
+    baseUrl: preset.baseUrl ?? "",
+    apiKey: "",
+    clearKey: false,
+    enabled: true,
+  };
+}
+
+function draftFromProvider(provider: AssistantProvider): Draft {
+  return {
+    presetId: provider.presetId,
     kind: provider.kind,
     label: provider.label,
     model: provider.model,
@@ -116,6 +107,19 @@ function draftFrom(
   };
 }
 
+function draftFromLegacy(initialKind: ProviderKind): Draft {
+  return {
+    presetId: null,
+    kind: initialKind,
+    label: "",
+    model: DEFAULT_MODEL[initialKind],
+    baseUrl: DEFAULT_BASE_URL[initialKind],
+    apiKey: "",
+    clearKey: false,
+    enabled: true,
+  };
+}
+
 function newProviderId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `llm_${crypto.randomUUID()}`;
@@ -123,11 +127,40 @@ function newProviderId(): string {
   return `llm_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function localizedPreset(
+  preset: ProviderPreset,
+  english: boolean,
+): { label: string; description: string } {
+  return {
+    label: english ? preset.labelEn : preset.label,
+    description: english ? preset.descriptionEn : preset.description,
+  };
+}
+
+function presetForProvider(
+  provider: AssistantProvider | null,
+  presetsById: Map<string, ProviderPreset>,
+): ProviderPreset | null {
+  if (!provider?.presetId) return null;
+  return presetsById.get(provider.presetId) ?? null;
+}
+
+function presetBadgeLabel(
+  provider: AssistantProvider,
+  presetsById: Map<string, ProviderPreset>,
+  english: boolean,
+): string {
+  const preset = presetForProvider(provider, presetsById);
+  return preset
+    ? localizedPreset(preset, english).label
+    : provider.kind;
+}
+
 interface ProviderFormProps {
   provider: AssistantProvider | null;
-  initialKind?: ProviderKind;
-  preset?: ProviderPreset | null;
-  autoFocusLabel?: boolean;
+  preset: ProviderPreset | null;
+  presetsById: Map<string, ProviderPreset>;
+  autoFocusKey?: boolean;
   onSaved: (provider: AssistantProvider) => Promise<void> | void;
   onDeleted?: (id: string) => Promise<void> | void;
   onCancel?: () => void;
@@ -136,18 +169,20 @@ interface ProviderFormProps {
 
 function ProviderForm({
   provider,
-  initialKind = "mock",
-  preset = null,
-  autoFocusLabel = false,
+  preset,
+  presetsById,
+  autoFocusKey = false,
   onSaved,
   onDeleted,
   onCancel,
   onError,
 }: ProviderFormProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const english = i18n.language.startsWith("en");
   const [draft, setDraft] = useState<Draft>(() =>
-    draftFrom(provider, initialKind, preset),
+    provider ? draftFromProvider(provider) : preset ? draftFromPreset(preset) : draftFromLegacy("mock"),
   );
+  const [advancedOpen, setAdvancedOpen] = useState(Boolean(preset?.requiresBaseUrl));
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -158,14 +193,22 @@ function ProviderForm({
   } | null>(null);
 
   const isNew = provider === null;
-  const needsKey = NEEDS_KEY[draft.kind];
+  const needsKey =
+    preset?.needsKey ?? provider?.needsKey ?? (draft.kind === "openai" || draft.kind === "anthropic");
+  const isLocal =
+    preset?.local ?? provider?.isLocal ?? (draft.kind === "ollama" || draft.kind === "mock");
+  const requiresBaseUrl = preset?.requiresBaseUrl ?? false;
+  const presetInfo = preset ? localizedPreset(preset, english) : null;
+  const protocol =
+    preset?.litellmProvider ?? provider?.litellmProvider ?? (draft.kind === "mock" ? "mock" : draft.kind);
+  const baseUrlMissing = requiresBaseUrl && !draft.baseUrl.trim();
 
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
     setTestResult(null);
   };
 
-  const changeKind = (kind: ProviderKind) => {
+  const changeLegacyKind = (kind: ProviderKind) => {
     setDraft((current) => ({
       ...current,
       kind,
@@ -178,15 +221,20 @@ function ProviderForm({
   };
 
   const save = async () => {
+    if (baseUrlMissing) {
+      onError(t("assistant.providers.baseUrlRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const input: ProviderInput = {
-        kind: draft.kind,
-        label: draft.label.trim() || t(`assistant.providers.kinds.${draft.kind}`),
-        model: draft.model.trim() || DEFAULT_MODEL[draft.kind],
+        label: draft.label.trim() || preset?.label || t(`assistant.providers.kinds.${draft.kind}`),
+        model: draft.model.trim() || preset?.defaultModel || DEFAULT_MODEL[draft.kind],
         baseUrl: draft.kind === "mock" ? null : draft.baseUrl.trim() || null,
         enabled: draft.enabled,
       };
+      if (preset) input.presetId = preset.id;
+      else input.kind = draft.kind;
       if (draft.clearKey) input.clearKey = true;
       else if (draft.apiKey.trim()) input.apiKey = draft.apiKey.trim();
       const saved = await assistantApi.providers.save(
@@ -240,81 +288,61 @@ function ProviderForm({
 
   return (
     <div className="space-y-3 rounded-xl border border-border bg-surface/50 p-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-1.5">
-          <Label htmlFor="assistant-provider-kind">
-            {t("assistant.providers.kind")}
-          </Label>
-          <Select value={draft.kind} onValueChange={(value) => changeKind(value as ProviderKind)}>
-            <SelectTrigger id="assistant-provider-kind">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KIND_ORDER.map((kind) => (
-                <SelectItem key={kind} value={kind}>
-                  {t(`assistant.providers.kinds.${kind}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {preset && presetInfo ? (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <p className="text-sm font-medium">{presetInfo.label}</p>
+            <p className="eh-caption text-muted-foreground">{presetInfo.description}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+            {isLocal ? (
+              <Badge variant="secondary" className="font-normal">
+                {t("assistant.providers.localBadge")}
+              </Badge>
+            ) : null}
+            <Badge variant="outline" className="font-normal text-muted-foreground">
+              {needsKey
+                ? t("assistant.providers.needsKeyBadge")
+                : t("assistant.providers.noKeyRequiredBadge")}
+            </Badge>
+            {preset.docsUrl ? (
+              <a
+                href={preset.docsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="eh-caption inline-flex items-center gap-1 text-muted-foreground underline-offset-2 hover:underline"
+              >
+                {t("assistant.providers.docs")}
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            ) : null}
+          </div>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="assistant-provider-label">
-            {t("assistant.providers.label")}
-          </Label>
-          <Input
-            id="assistant-provider-label"
-            autoFocus={autoFocusLabel}
-            value={draft.label}
-            placeholder={t(`assistant.providers.kinds.${draft.kind}`)}
-            onChange={(event) => update("label", event.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-1.5">
-        <Label htmlFor="assistant-provider-model">
-          {t("assistant.providers.model")}
-        </Label>
-        <Input
-          id="assistant-provider-model"
-          value={draft.model}
-          onChange={(event) => update("model", event.target.value)}
-        />
-      </div>
-
-      {draft.kind !== "mock" ? (
-        <div className="grid gap-1.5">
-          <Label htmlFor="assistant-provider-base">
-            {t("assistant.providers.baseUrl")}
-          </Label>
-          <Input
-            id="assistant-provider-base"
-            value={draft.baseUrl}
-            placeholder={t("assistant.providers.baseUrlPlaceholder")}
-            onChange={(event) => update("baseUrl", event.target.value)}
-          />
-          {preset && draft.kind === "anthropic" ? (
-            <p className="eh-caption text-muted-foreground">
-              {t("assistant.providers.proxyHint")}
-            </p>
-          ) : null}
-        </div>
-      ) : (
-        <p className="eh-caption text-muted-foreground">
-          {t("assistant.providers.mockHint")}
-        </p>
-      )}
+      ) : null}
 
       {needsKey ? (
         <div className="grid gap-1.5">
-          <Label htmlFor="assistant-provider-key">
-            {t("assistant.providers.apiKey")}
-          </Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="assistant-provider-key">
+              {t("assistant.providers.apiKey")}
+            </Label>
+            {preset?.keyUrl ? (
+              <a
+                href={preset.keyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="eh-caption inline-flex items-center gap-1 text-muted-foreground underline-offset-2 hover:underline"
+              >
+                {t("assistant.providers.applyKey")}
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            ) : null}
+          </div>
           <div className="flex items-center gap-2">
             <Input
               id="assistant-provider-key"
               type="password"
+              autoFocus={autoFocusKey}
               autoComplete="off"
               spellCheck={false}
               value={draft.apiKey}
@@ -343,23 +371,196 @@ function ProviderForm({
         </div>
       ) : null}
 
-      {needsKey && !provider?.configured ? (
+      {needsKey && !provider?.configured && !draft.apiKey.trim() ? (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-subtle px-3 py-2 text-xs">
           <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span>{t("assistant.providers.missingKeyNotice")}</span>
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2">
-        <Label htmlFor="assistant-provider-enabled" className="text-sm">
-          {t("assistant.providers.enabled")}
+      <div className="grid gap-1.5">
+        <Label htmlFor="assistant-provider-model">
+          {t("assistant.providers.model")}
         </Label>
-        <Switch
-          id="assistant-provider-enabled"
-          checked={draft.enabled}
-          onCheckedChange={(checked) => update("enabled", checked)}
+        <Input
+          id="assistant-provider-model"
+          value={draft.model}
+          placeholder={preset?.defaultModel ?? DEFAULT_MODEL[draft.kind]}
+          onChange={(event) => update("model", event.target.value)}
         />
+        {preset?.models.length ? (
+          <div className="flex flex-wrap gap-1.5">
+            {preset.models.map((model) => (
+              <button
+                key={model}
+                type="button"
+                onClick={() => update("model", model)}
+                aria-pressed={draft.model === model}
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-xs transition-colors",
+                  draft.model === model
+                    ? "border-primary/50 bg-accent-soft text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted/60",
+                )}
+              >
+                {model}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {preset?.requiresBaseUrl ? (
+          <p className="eh-caption text-muted-foreground">
+            {t("assistant.providers.modelFreeformHint")}
+          </p>
+        ) : null}
       </div>
+
+      {preset ? (
+        <div className="rounded-lg border border-border/70">
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((open) => !open)}
+            aria-expanded={advancedOpen}
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm"
+          >
+            <span>{t("assistant.providers.advanced")}</span>
+            <ChevronDown
+              className={cn(
+                "size-4 text-muted-foreground transition-transform",
+                advancedOpen && "rotate-180",
+              )}
+              aria-hidden="true"
+            />
+          </button>
+          {advancedOpen ? (
+            <div className="space-y-3 border-t border-border/70 px-3 py-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="assistant-provider-label">
+                  {t("assistant.providers.label")}
+                </Label>
+                <Input
+                  id="assistant-provider-label"
+                  value={draft.label}
+                  placeholder={preset.label}
+                  onChange={(event) => update("label", event.target.value)}
+                />
+              </div>
+              {draft.kind !== "mock" ? (
+                <div className="grid gap-1.5">
+                  <Label htmlFor="assistant-provider-base">
+                    {t("assistant.providers.baseUrl")}
+                    {requiresBaseUrl ? (
+                      <span className="text-destructive"> *</span>
+                    ) : null}
+                  </Label>
+                  <Input
+                    id="assistant-provider-base"
+                    value={draft.baseUrl}
+                    placeholder={preset.baseUrl ?? t("assistant.providers.baseUrlPlaceholder")}
+                    aria-invalid={baseUrlMissing}
+                    onChange={(event) => update("baseUrl", event.target.value)}
+                  />
+                  <p className="eh-caption text-muted-foreground">
+                    {requiresBaseUrl
+                      ? t("assistant.providers.baseUrlRequired")
+                      : t("assistant.providers.baseUrlHint")}
+                  </p>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm">{t("assistant.providers.protocol")}</p>
+                  <p className="eh-caption truncate text-muted-foreground">
+                    {protocol}/{draft.model || preset.defaultModel}
+                  </p>
+                </div>
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{protocol}</code>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="assistant-provider-enabled" className="text-sm">
+                  {t("assistant.providers.enabled")}
+                </Label>
+                <Switch
+                  id="assistant-provider-enabled"
+                  checked={draft.enabled}
+                  onCheckedChange={(checked) => update("enabled", checked)}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="assistant-provider-kind">
+                {t("assistant.providers.kind")}
+              </Label>
+              <Select
+                value={draft.kind}
+                onValueChange={(value) => changeLegacyKind(value as ProviderKind)}
+              >
+                <SelectTrigger id="assistant-provider-kind">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEGACY_KINDS.map((kind) => (
+                    <SelectItem key={kind} value={kind}>
+                      {t(`assistant.providers.kinds.${kind}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="assistant-provider-label">
+                {t("assistant.providers.label")}
+              </Label>
+              <Input
+                id="assistant-provider-label"
+                value={draft.label}
+                placeholder={t(`assistant.providers.kinds.${draft.kind}`)}
+                onChange={(event) => update("label", event.target.value)}
+              />
+            </div>
+          </div>
+
+          {draft.kind !== "mock" ? (
+            <div className="grid gap-1.5">
+              <Label htmlFor="assistant-provider-base">
+                {t("assistant.providers.baseUrl")}
+              </Label>
+              <Input
+                id="assistant-provider-base"
+                value={draft.baseUrl}
+                placeholder={t("assistant.providers.baseUrlPlaceholder")}
+                onChange={(event) => update("baseUrl", event.target.value)}
+              />
+            </div>
+          ) : (
+            <p className="eh-caption text-muted-foreground">
+              {t("assistant.providers.mockHint")}
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2">
+            <Label htmlFor="assistant-provider-enabled" className="text-sm">
+              {t("assistant.providers.enabled")}
+            </Label>
+            <Switch
+              id="assistant-provider-enabled"
+              checked={draft.enabled}
+              onCheckedChange={(checked) => update("enabled", checked)}
+            />
+          </div>
+        </>
+      )}
+
+      {preset && draft.kind === "mock" ? (
+        <p className="eh-caption text-muted-foreground">
+          {t("assistant.providers.mockHint")}
+        </p>
+      ) : null}
 
       {testResult ? (
         <div
@@ -424,7 +625,7 @@ function ProviderForm({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => void save()} disabled={saving}>
+        <Button size="sm" onClick={() => void save()} disabled={saving || baseUrlMissing}>
           {saving ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : null}
           {saving ? t("assistant.providers.saving") : t("assistant.providers.save")}
         </Button>
@@ -460,6 +661,132 @@ function ProviderForm({
             {t("assistant.privacy.cancel")}
           </Button>
         ) : null}
+        {preset && provider ? (
+          <span className="eh-caption text-muted-foreground">
+            {t("assistant.providers.presetApplied", {
+              label: presetBadgeLabel(provider, presetsById, english),
+            })}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+interface PresetPickerProps {
+  presets: ProviderPreset[];
+  loading: boolean;
+  failed: boolean;
+  onPick: (preset: ProviderPreset) => void;
+  onCancel: () => void;
+}
+
+function PresetPicker({ presets, loading, failed, onPick, onCancel }: PresetPickerProps) {
+  const { t, i18n } = useTranslation();
+  const english = i18n.language.startsWith("en");
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    if (!needle) return presets;
+    return presets.filter((preset) => {
+      const { label, description } = localizedPreset(preset, english);
+      return [label, preset.label, preset.labelEn, description, preset.id, preset.litellmProvider]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(needle));
+    });
+  }, [presets, needle, english]);
+
+  return (
+    <div className="space-y-3 rounded-xl border border-border bg-surface/50 p-3">
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("assistant.providers.searchPlaceholder")}
+          className="pl-8"
+          autoFocus
+          aria-label={t("assistant.providers.searchPlaceholder")}
+        />
+      </div>
+
+      {loading ? (
+        <p className="eh-caption flex items-center gap-2 text-muted-foreground">
+          <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+          {t("assistant.providers.loadingPresets")}
+        </p>
+      ) : failed ? (
+        <p className="eh-caption text-destructive">
+          {t("assistant.providers.loadPresetsFailed")}
+        </p>
+      ) : (
+        <div className="max-h-96 space-y-4 overflow-y-auto pr-1">
+          {GROUP_ORDER.map((group) => {
+            const items = filtered.filter((preset) => preset.group === group);
+            if (!items.length) return null;
+            return (
+              <div key={group} className="space-y-1.5">
+                <p className="eh-caption font-medium text-muted-foreground">
+                  {t(`assistant.providers.groups.${group}`)}
+                </p>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {items.map((preset) => {
+                    const info = localizedPreset(preset, english);
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => onPick(preset)}
+                        className="flex min-h-16 flex-col items-start gap-1 rounded-lg border border-border bg-background px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/60"
+                      >
+                        <span className="flex w-full items-center justify-between gap-2">
+                          <span className="truncate text-sm font-medium">{info.label}</span>
+                          {preset.local ? (
+                            <Badge variant="secondary" className="shrink-0 font-normal">
+                              {t("assistant.providers.localBadge")}
+                            </Badge>
+                          ) : preset.needsKey ? (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 font-normal text-muted-foreground"
+                            >
+                              {t("assistant.providers.needsKeyBadge")}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 font-normal text-muted-foreground"
+                            >
+                              {t("assistant.providers.noKeyRequiredBadge")}
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="eh-caption line-clamp-2 text-muted-foreground">
+                          {info.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {!filtered.length ? (
+            <p className="eh-caption text-muted-foreground">
+              {t("assistant.providers.searchEmpty")}
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          {t("assistant.privacy.cancel")}
+        </Button>
       </div>
     </div>
   );
@@ -480,13 +807,48 @@ export function ProviderCard({
   onProvidersChanged,
   onError,
 }: ProviderCardProps) {
-  const { t } = useTranslation();
-  const [creating, setCreating] = useState<{
-    kind: ProviderKind;
-    preset: ProviderPreset | null;
-  } | null>(null);
-  const isCreating = creating !== null;
+  const { t, i18n } = useTranslation();
+  const english = i18n.language.startsWith("en");
+  const [presets, setPresets] = useState<ProviderPreset[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(true);
+  const [presetsFailed, setPresetsFailed] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [creating, setCreating] = useState<ProviderPreset | null>(null);
   const selected = providers.find((provider) => provider.id === activeId) ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    setPresetsLoading(true);
+    setPresetsFailed(false);
+    assistantApi.providers
+      .presets()
+      .then((items) => {
+        if (cancelled) return;
+        setPresets(items);
+      })
+      .catch(() => {
+        if (!cancelled) setPresetsFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setPresetsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const presetsById = useMemo(
+    () => new Map(presets.map((preset) => [preset.id, preset])),
+    [presets],
+  );
+  const quickPreset = (id: string) => presetsById.get(id) ?? null;
+
+  const isCreating = creating !== null;
+
+  const start = (preset: ProviderPreset) => {
+    setCreating(preset);
+    setPicking(false);
+  };
 
   const saved = async (provider: AssistantProvider) => {
     await onProvidersChanged();
@@ -505,32 +867,31 @@ export function ProviderCard({
     }
   };
 
+  const selectedPreset = presetForProvider(selected, presetsById);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="eh-h3">{t("assistant.providers.title")}</CardTitle>
         <CardDescription>{t("assistant.providers.description")}</CardDescription>
         <CardAction>
-          {!isCreating ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setCreating({ kind: "anthropic", preset: PROXY_PRESET })}
-              >
-                <KeyRound data-icon="inline-start" />
-                {t("assistant.providers.proxyQuickShort")}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setCreating({ kind: "mock", preset: null })}>
-                <Plus data-icon="inline-start" />
-                {t("assistant.providers.add")}
-              </Button>
-            </div>
+          {!isCreating && !picking ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setCreating(null);
+                setPicking(true);
+              }}
+            >
+              <Plus data-icon="inline-start" />
+              {t("assistant.providers.add")}
+            </Button>
           ) : null}
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-3">
-        {providers.length === 0 && !isCreating ? (
+        {providers.length === 0 && !isCreating && !picking ? (
           <div className="space-y-3 rounded-xl border border-dashed border-border bg-surface/40 p-4">
             <div className="space-y-1">
               <p className="eh-small font-medium">{t("assistant.providers.emptyTitle")}</p>
@@ -539,34 +900,36 @@ export function ProviderCard({
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => setCreating({ kind: "mock", preset: null })}>
-                <Server data-icon="inline-start" />
-                {t("assistant.providers.mockQuick")}
+              {quickPreset("mock") ? (
+                <Button size="sm" onClick={() => start(quickPreset("mock")!)}>
+                  <Server data-icon="inline-start" />
+                  {t("assistant.providers.mockQuick")}
+                </Button>
+              ) : null}
+              {quickPreset("ollama") ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => start(quickPreset("ollama")!)}
+                >
+                  <Server data-icon="inline-start" />
+                  {t("assistant.providers.ollamaQuick")}
+                </Button>
+              ) : null}
+              <Button size="sm" variant="outline" onClick={() => setPicking(true)}>
+                <Plus data-icon="inline-start" />
+                {t("assistant.providers.browsePresets")}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setCreating({ kind: "ollama", preset: null })}
-              >
-                <Server data-icon="inline-start" />
-                {t("assistant.providers.ollamaQuick")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setCreating({ kind: "openai", preset: null })}
-              >
-                <KeyRound data-icon="inline-start" />
-                {t("assistant.providers.apiQuick")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setCreating({ kind: "anthropic", preset: PROXY_PRESET })}
-              >
-                <KeyRound data-icon="inline-start" />
-                {t("assistant.providers.proxyQuick")}
-              </Button>
+              {quickPreset("custom-openai") ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => start(quickPreset("custom-openai")!)}
+                >
+                  <KeyRound data-icon="inline-start" />
+                  {t("assistant.providers.customQuick")}
+                </Button>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -574,13 +937,15 @@ export function ProviderCard({
         {providers.length > 0 ? (
           <div className="space-y-1.5">
             {providers.map((provider) => {
-              const isActive = provider.id === selected?.id && !isCreating;
+              const isActive = provider.id === selected?.id && !isCreating && !picking;
+              const name = presetBadgeLabel(provider, presetsById, english);
               return (
                 <button
                   key={provider.id}
                   type="button"
                   onClick={() => {
                     setCreating(null);
+                    setPicking(false);
                     onActiveChange(provider.id);
                   }}
                   aria-pressed={isActive}
@@ -596,7 +961,7 @@ export function ProviderCard({
                       {provider.label}
                     </span>
                     <span className="eh-caption block truncate text-muted-foreground">
-                      {t(`assistant.providers.kinds.${provider.kind}`)} · {provider.model}
+                      {name} · {provider.model}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
@@ -605,7 +970,7 @@ export function ProviderCard({
                         {t("assistant.providers.localBadge")}
                       </Badge>
                     ) : null}
-                    {provider.kind !== "mock" && !provider.isLocal ? (
+                    {provider.needsKey && !provider.isLocal ? (
                       <Badge
                         variant="outline"
                         className="font-normal text-muted-foreground"
@@ -627,13 +992,23 @@ export function ProviderCard({
           </div>
         ) : null}
 
-        {creating !== null ? (
+        {picking ? (
+          <PresetPicker
+            presets={presets}
+            loading={presetsLoading}
+            failed={presetsFailed}
+            onPick={start}
+            onCancel={() => setPicking(false)}
+          />
+        ) : null}
+
+        {creating ? (
           <ProviderForm
-            key={`${creating.kind}:${creating.preset ? "preset" : "blank"}`}
+            key={`preset:${creating.id}`}
             provider={null}
-            initialKind={creating.kind}
-            preset={creating.preset}
-            autoFocusLabel
+            preset={creating}
+            presetsById={presetsById}
+            autoFocusKey={creating.needsKey}
             onSaved={saved}
             onCancel={() => setCreating(null)}
             onError={onError}
@@ -642,6 +1017,8 @@ export function ProviderCard({
           <ProviderForm
             key={selected.id}
             provider={selected}
+            preset={selectedPreset}
+            presetsById={presetsById}
             onSaved={saved}
             onDeleted={deleted}
             onError={onError}

@@ -4,8 +4,9 @@
     "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
     "NOTICE": "df44effd4e594868840845f869126960181797e22c10c515372f5e0f61908a99",
     "README.md": "5775b871bc4690c498422e9a21df5f60c79d6bd69d61da157f7485e7848c3c06",
-    "module.json": "d2d374c26fe7b2d20363a03258f767266da000c1e1675f41a7e7fce27c90cf20",
+    "module.json": "843ca40afd258ace25f3111f1a18590dde1e9fc552a45490cac81a7e101a0f66",
     "src/__pycache__/adapter.cpython-312.pyc": "d629af548db7a34c150d15d234bd50b5fd9b93f7dba74a48ed21d83c78ca0c44",
+    "src/__pycache__/main.cpython-312.pyc": "7fca32484863679c284d1bbd41c721dcd8e44dc3dee990034433bd085111bb9f",
     "src/adapter.py": "21e85814e5f5707fd3ba57d02e28a872a459a6a94bc340c6403f4305e6541f7e",
     "src/main.py": "117b7590cf5d9229924e6911df8c6f13a512dfd986f402b594d73d6d53e1ee02"
   }

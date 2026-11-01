@@ -201,7 +201,7 @@ export function RecordsPage() {
             </div>
 
             <div
-              className="flex flex-wrap items-center gap-1.5"
+              className="flex min-h-14 flex-wrap items-center gap-1.5"
               role="group"
               aria-label={t("a11y.tagFilter")}
             >

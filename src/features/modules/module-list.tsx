@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import {
+  BadgeCheck,
   Blocks,
   Loader2,
   Power,
@@ -24,6 +25,10 @@ import {
 import { EmptyState } from "@/components/common/empty-state";
 import { RecordListSkeleton } from "@/components/common/loading";
 import { intlLocale } from "@/lib/i18n";
+import {
+  isFirstPartyModule,
+  moduleDisplayName,
+} from "./copy";
 import { formatDateTime, moduleTypeLabel } from "./format";
 import { ModuleStateBadge } from "./state-badge";
 import type { ModuleSummary } from "./types";
@@ -97,6 +102,11 @@ export function ModuleList({
             {modules.map((module) => {
               const actionBusy =
                 busy?.moduleId === module.id ? busy.action : null;
+              const name = moduleDisplayName(
+                i18n.language,
+                module.id,
+                module.name,
+              );
               return (
                 <li
                   key={module.id}
@@ -116,11 +126,17 @@ export function ModuleList({
                         className="truncate text-sm font-medium hover:underline"
                         onClick={() => onDetails(module)}
                       >
-                        {module.name}
+                        {name}
                       </button>
                       <Badge variant="secondary" className="font-normal">
                         v{module.version}
                       </Badge>
+                      {isFirstPartyModule(module.id) ? (
+                        <Badge variant="secondary" className="gap-1 font-normal">
+                          <BadgeCheck className="size-3" aria-hidden="true" />
+                          {t("moduleUi.marketplace.firstParty")}
+                        </Badge>
+                      ) : null}
                       <ModuleStateBadge state={module.state} />
                       <Badge
                         variant="outline"

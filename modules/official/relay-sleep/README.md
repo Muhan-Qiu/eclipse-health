@@ -1,7 +1,7 @@
-# Relay Sleep · 睡眠分期
+# 睡眠分期分析
 
-Sleep-EDF 5 类睡眠分期（W/N1/N2/N3/R）的可选分析模块。模块代码 GPL-3.0-only，
-通过 stdio JSON-RPC 提供推理；**非医疗器械，不用于诊断**。
+`org.eclipsehealth.relay-sleep` 把整夜睡眠逐窗分成 W / N1 / N2 / N3 / REM，并汇总各阶段时长、
+占比与睡眠结构。内置 5 个可切换的分期模型；模块 ID 保持不变。
 
 ## 模型
 

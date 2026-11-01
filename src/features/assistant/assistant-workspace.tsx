@@ -453,7 +453,8 @@ export function AssistantWorkspace({
       </Alert>
 
       <div className="eh-grid">
-        <div className="space-y-4 desk:col-span-3 xl:col-span-4">
+        {/* 1024 宽度下单列堆叠，避免左栏被挤成逐字换行；1280 起恢复 4 + 8 双栏。 */}
+        <div className="flex min-w-0 flex-col gap-4 desk:col-span-8 xl:col-span-4">
           <ProviderCard
             providers={providers}
             activeId={activeProviderId}
@@ -464,6 +465,7 @@ export function AssistantWorkspace({
             onError={setActionError}
           />
           <SessionList
+            className="min-h-0 flex-1"
             sessions={sessions}
             activeId={activeSessionId}
             query={data.sessionQuery}
@@ -476,7 +478,7 @@ export function AssistantWorkspace({
           />
         </div>
 
-        <div className="desk:col-span-5 xl:col-span-8">
+        <div className="min-w-0 desk:col-span-8 xl:col-span-8">
           <ChatPanel
             messages={messages}
             streaming={streaming}

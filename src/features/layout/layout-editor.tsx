@@ -88,7 +88,7 @@ export function LayoutGrid({
               key={item.id}
               data-layout-id={item.id}
               data-layout-kind={item.kind}
-              className={cn("min-w-0", layoutWidthClass(item.width))}
+              className={cn("eh-layout-cell", layoutWidthClass(item.width))}
             >
               {renderItem(item)}
             </div>
@@ -109,12 +109,13 @@ export function LayoutGrid({
             data-layout-kind={item.kind}
             data-layout-hidden={item.hidden ? "true" : "false"}
             className={cn(
-              "min-w-0 rounded-2xl border border-dashed p-2 motion-safe:transition-[background-color,border-color,opacity]",
+              // 用 outline 标注编辑区域，不加内边距，卡片宽度与浏览模式保持一致。
+              "eh-layout-cell gap-2 rounded-2xl outline-1 -outline-offset-1 outline-dashed motion-safe:transition-[background-color,outline-color,opacity]",
               layoutWidthClass(item.width),
               dragging
-                ? "border-accent/70 bg-accent-soft/40 opacity-60"
-                : "border-border bg-subtle/30",
-              over && "border-accent bg-accent-soft/60",
+                ? "bg-accent-soft/40 opacity-60 outline-accent/70"
+                : "bg-subtle/30 outline-border",
+              over && "bg-accent-soft/60 outline-accent",
             )}
             onDragOver={(event) => {
               if (!draggingId) return;
@@ -127,8 +128,8 @@ export function LayoutGrid({
             }}
             onDrop={(event) => onDrop(event, item.id)}
           >
-            <div className="mb-2 space-y-1">
-              <div className="flex items-center gap-1">
+            <div className="mb-2 shrink-0 space-y-1 px-1">
+              <div className="flex min-w-0 items-center gap-1">
                 <span
                   draggable
                   title={t("dashboard.layout.dragHandle")}
@@ -206,7 +207,7 @@ export function LayoutGrid({
             </div>
 
             {item.hidden ? (
-              <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed border-border bg-surface/60 px-4 py-4">
+              <div className="flex min-h-24 flex-1 items-center justify-center rounded-xl border border-dashed border-border bg-surface/60 px-4 py-4">
                 <p className="eh-caption text-muted-foreground">
                   {t("dashboard.layout.hidden")}
                 </p>

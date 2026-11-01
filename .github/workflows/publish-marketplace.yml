@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "modules/official/**"
+      - "modules/community/**"
       - "dist/modules/**"
       - "marketplace/community/**"
       - "marketplace/site/**"

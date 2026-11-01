@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import {
+  Activity,
+  Droplet,
+  Droplets,
+  Dumbbell,
   FilePlus2,
   FileSearch,
   Footprints,
@@ -10,6 +14,9 @@ import {
   Moon,
   RefreshCw,
   Scale,
+  Thermometer,
+  Waves,
+  Wind,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "cn";
@@ -40,6 +47,7 @@ import {
 import type { HealthRecordKind } from "@/lib/api/types";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
+import { formatSeconds } from "@/lib/waveform";
 
 type TimeFilter = "all" | "7d" | "30d" | "90d";
 type TypeFilter = "all" | HealthRecordKind;
@@ -49,14 +57,30 @@ const PAGE_SIZE = 20;
 const KIND_ICON: Record<HealthRecordKind, LucideIcon> = {
   steps: Footprints,
   "heart-rate": HeartPulse,
+  "resting-heart-rate": Activity,
   sleep: Moon,
   "body-mass": Scale,
   "blood-pressure": Gauge,
+  spo2: Droplets,
+  stress: Waves,
+  workout: Dumbbell,
+  "respiratory-rate": Wind,
+  "body-temperature": Thermometer,
+  "blood-glucose": Droplet,
+  hrv: HeartPulse,
 };
 
 const SOURCE_LABEL_KEY: Record<HealthSourceId, string> = {
   "apple-health": "healthData.sources.apple",
+  "samsung-health": "healthData.sources.samsung",
   "xiaomi-mi-fitness": "healthData.sources.xiaomi",
+  "huawei-health": "healthData.sources.huawei",
+  zepp: "healthData.sources.zepp",
+  "oppo-health": "healthData.sources.oppo",
+  "garmin-connect": "healthData.sources.garmin",
+  fitbit: "healthData.sources.fitbit",
+  withings: "healthData.sources.withings",
+  "google-fit": "healthData.sources.googleFit",
   unknown: "healthData.sources.unknown",
 };
 
@@ -74,32 +98,72 @@ function valueText(
   t: TFunction,
   locale: string,
 ): string {
+  const withUnit = (value: number, unit: string, digits = 0) =>
+    `${formatNumber(value, locale, { maximumFractionDigits: digits })} ${unit}`;
   switch (view.kind) {
     case "steps":
       return view.value === null
         ? "—"
-        : `${formatNumber(view.value, locale)} ${t("healthData.units.steps")}`;
+        : withUnit(view.value, t("healthData.units.steps"));
     case "heart-rate":
+    case "resting-heart-rate":
       return view.value === null
         ? "—"
-        : `${formatNumber(view.value, locale)} ${t("healthData.units.bpm")}`;
+        : withUnit(view.value, t("healthData.units.bpm"));
     case "body-mass":
       return view.value === null
         ? "—"
-        : `${formatNumber(view.value, locale, {
-            maximumFractionDigits: 1,
-          })} ${t("healthData.units.kg")}`;
+        : withUnit(view.value, t("healthData.units.kg"), 1);
     case "blood-pressure":
       if (view.systolic === null || view.diastolic === null) return "—";
       return `${formatNumber(view.systolic, locale)}/${formatNumber(
         view.diastolic,
         locale,
       )} ${t("healthData.units.mmHg")}`;
-    case "sleep": {
-      return t(
-        `healthData.sleepStages.${view.sleepStage ?? "unknown"}`,
-      );
+    case "sleep":
+      return t(`healthData.sleepStages.${view.sleepStage ?? "unknown"}`);
+    case "spo2":
+      return view.value === null
+        ? "—"
+        : withUnit(view.value, t("healthData.units.percent"));
+    case "stress":
+      return view.value === null
+        ? "—"
+        : withUnit(view.value, t("healthData.units.score"));
+    case "workout": {
+      const workout = view.workout;
+      if (!workout) return "—";
+      const parts = [workout.activity || t("healthData.workout.activity")];
+      if (workout.durationSec !== null) parts.push(formatSeconds(workout.durationSec));
+      if (workout.distanceM !== null) {
+        parts.push(`${formatNumber(workout.distanceM / 1000, locale, { maximumFractionDigits: 2 })} km`);
+      }
+      if (workout.energyKcal !== null) {
+        parts.push(`${formatNumber(workout.energyKcal, locale)} kcal`);
+      }
+      if (workout.avgHeartRate !== null) {
+        parts.push(`${formatNumber(workout.avgHeartRate, locale)} bpm`);
+      }
+      return parts.join(" · ");
     }
+    case "respiratory-rate":
+      return view.value === null
+        ? "—"
+        : withUnit(view.value, t("healthData.units.perMinute"));
+    case "body-temperature":
+      return view.value === null
+        ? "—"
+        : withUnit(view.value, t("healthData.units.celsius"), 1);
+    case "blood-glucose":
+      return view.value === null
+        ? "—"
+        : withUnit(view.value, view.unit || t("healthData.units.mmolPerLiter"), 1);
+    case "hrv":
+      return view.value === null
+        ? "—"
+        : `${t(`healthData.hrvMetrics.${view.metric ?? "rmssd"}`, {
+            defaultValue: view.metric ?? "HRV",
+          })} ${formatNumber(view.value, locale)} ${view.unit || "ms"}`;
   }
 }
 
@@ -279,7 +343,7 @@ export function HealthDataPage() {
         <CardContent className="px-0">
           <div className="flex flex-wrap items-end gap-3 border-b border-border px-5 py-3">
             <div
-              className="flex flex-wrap items-center gap-1.5"
+              className="flex min-h-14 flex-wrap items-center gap-1.5"
               role="group"
               aria-label={t("healthData.filters.type")}
             >

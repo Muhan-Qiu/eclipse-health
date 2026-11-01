@@ -141,6 +141,89 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_card_templates",
+            "description": (
+                "列出内置的仪表盘卡片模板（压力、血氧、血压、运动、睡眠）。"
+                "用户想添加健康数据卡片时先看这里。"
+            ),
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dashboard_card",
+            "description": (
+                "根据健康数据类型生成一张仪表盘卡片草稿并返回预览。"
+                "只创建草稿，不会直接保存；必须等用户明确同意后再调用 "
+                "confirm_dashboard_card。不支持 SQL / JS / 模板表达式。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "maxLength": 80},
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "steps",
+                            "heart-rate",
+                            "sleep",
+                            "body-mass",
+                            "blood-pressure",
+                            "exercise",
+                            "spo2",
+                            "stress",
+                            "glucose",
+                        ],
+                        "description": "健康数据类型",
+                    },
+                    "aggregation": {
+                        "type": "string",
+                        "enum": ["latest", "avg", "min", "max", "sum", "count"],
+                    },
+                    "windowDays": {"type": "integer", "minimum": 1, "maximum": 365},
+                    "view": {
+                        "type": "string",
+                        "enum": ["stat", "sparkline", "line", "bar"],
+                    },
+                    "unit": {"type": "string", "maxLength": 16},
+                    "colorToken": {
+                        "type": "string",
+                        "enum": [
+                            "signal",
+                            "accent",
+                            "chart-1",
+                            "chart-2",
+                            "chart-3",
+                            "chart-4",
+                            "chart-5",
+                        ],
+                    },
+                },
+                "required": ["kind"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "confirm_dashboard_card",
+            "description": (
+                "用户明确确认后，把 create_dashboard_card 生成的草稿保存到仪表盘。"
+                "draftId 必须来自 create_dashboard_card 的返回。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"draftId": {"type": "string"}},
+                "required": ["draftId"],
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 TOOL_NAMES = tuple(spec["function"]["name"] for spec in TOOL_SPECS)
@@ -647,6 +730,92 @@ class ToolBox:
             "模型卡",
         )
 
+    # ------------------------------------------------------------------ 仪表盘卡片
+    def _tool_list_card_templates(
+        self, _args: dict[str, Any]
+    ) -> tuple[dict[str, Any], str]:
+        from ..dashboard_cards.catalog import templates
+
+        items = [template.model_dump(mode="json") for template in templates()]
+        return {"items": items, "count": len(items)}, f"{len(items)} 个卡片模板"
+
+    def _tool_create_dashboard_card(
+        self, args: dict[str, Any]
+    ) -> tuple[dict[str, Any], str]:
+        from pydantic import ValidationError as PydanticValidationError
+
+        from ..dashboard_cards import service
+        from ..dashboard_cards.catalog import spec_for
+        from ..dashboard_cards.models import CardFields
+        from ..domain.errors import ApiError
+
+        kind = args.get("kind")
+        spec = spec_for(kind) if isinstance(kind, str) else None
+        aggregation = str(args.get("aggregation") or "latest")
+        title = str(args.get("title") or "").strip()
+        if not title:
+            label = spec.label_zh if spec is not None else "自定义"
+            title = f"{label} · {aggregation}"
+
+        raw: dict[str, Any] = {"title": title, "kind": kind}
+        for key in ("aggregation", "windowDays", "view", "unit", "colorToken"):
+            value = args.get(key)
+            if value is not None:
+                raw[key] = value
+        try:
+            fields = CardFields.model_validate(raw)
+        except PydanticValidationError as exc:
+            first = exc.errors()[0] if exc.errors() else {}
+            detail = ".".join(str(part) for part in first.get("loc", ())) or "card"
+            raise ToolError(
+                "INVALID_ARGUMENT",
+                f"card field {detail}: {first.get('msg', 'invalid')}",
+            ) from exc
+
+        try:
+            draft = service.create_draft(
+                self._session,
+                member_id=self._member_id,
+                fields=fields,
+                created_by="agent",
+            )
+        except ApiError as exc:
+            raise ToolError(exc.code, exc.message) from exc
+
+        return (
+            {
+                "saved": False,
+                "draftId": draft.id,
+                "card": draft.card.model_dump(mode="json"),
+                "preview": draft.preview.model_dump(mode="json") if draft.preview else None,
+                "needsConfirmation": True,
+            },
+            f"已生成卡片草稿：{draft.card.title}",
+        )
+
+    def _tool_confirm_dashboard_card(
+        self, args: dict[str, Any]
+    ) -> tuple[dict[str, Any], str]:
+        from ..dashboard_cards import service
+        from ..domain.errors import ApiError
+
+        draft_id = _as_str(args.get("draftId"), "draftId")
+        try:
+            card = service.confirm_draft(
+                self._session, member_id=self._member_id, draft_id=draft_id
+            )
+            data = service.card_data(self._session, card)
+        except ApiError as exc:
+            raise ToolError(exc.code, exc.message) from exc
+        return (
+            {
+                "saved": True,
+                "card": card.model_dump(mode="json"),
+                "data": data.model_dump(mode="json"),
+            },
+            f"已保存卡片：{card.title}",
+        )
+
     # ------------------------------------------------------------------ 引用
     def _citations(self, name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
         """为前端生成可点击 chip；不包含敏感内容。"""
@@ -710,6 +879,27 @@ class ToolBox:
                     "label": f"{result.get('modelId')} {result.get('modelVersion') or ''}".strip(),
                 }
             )
+        elif name == "create_dashboard_card":
+            draft_id = result.get("draftId")
+            card = result.get("card") or {}
+            if draft_id:
+                citations.append(
+                    {
+                        "kind": "card-draft",
+                        "id": draft_id,
+                        "label": f"草稿 · {card.get('title') or card.get('kind') or ''}".strip(),
+                    }
+                )
+        elif name == "confirm_dashboard_card":
+            card = result.get("card") or {}
+            if card.get("id"):
+                citations.append(
+                    {
+                        "kind": "dashboard-card",
+                        "id": card.get("id"),
+                        "label": card.get("title") or card.get("kind") or card.get("id"),
+                    }
+                )
         # 去重（同一引用在多次工具调用中重复出现）
         seen: set[tuple[str, Any]] = set()
         unique: list[dict[str, Any]] = []

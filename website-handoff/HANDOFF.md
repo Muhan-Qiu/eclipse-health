@@ -6,14 +6,14 @@
 ## 1. 站点现状
 
 - 线上域名：**https://eclipse-health.fit/**（已验证 200）
-- 托管：GitHub Pages，仓库 **`Muhan-Qiu/ecg-agent`**，分支 **`gh-pages`**（不是 main）
+- 托管：GitHub Pages，仓库 **`Muhan-Qiu/eclipse-health`**，分支 **`gh-pages`**（不是 main）
 - 站点源码（事实源）：`marketplace/site/`
   - `index.html` 首页/下载
   - `modules.html` 模块市场（读 `official/index.json`、`community/index.json`）
   - `developers.html` 开发者文档
   - `styles.css` / `app.js`
 - 市场索引源码：`marketplace/official/index.json`、`marketplace/community/index.json`（Ed25519 签名，当前 `keyId=dev-2026`）
-- 模块包：`dist/modules/*.ehmod`（当前 32 个，含 `relay-sleep`、`relay-ecg`）
+- 模块包：`dist/modules/*.ehmod`（当前 32 个 = 官方 10 + 社区 22，含 `relay-sleep`、`relay-ecg`）
 - 发布分支结构：
   ```
   gh-pages/
@@ -38,10 +38,9 @@
    $tmp = "$env:TEMP\eh-gh-pages-update"
    if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
    $env:GIT_SSH_COMMAND = "ssh -o UserKnownHostsFile=C:/Users/qiumuhan/.claude/github_ssh_known_hosts -o StrictHostKeyChecking=yes"
-   git clone -q --depth 1 --branch gh-pages ssh://git@ssh.github.com:443/Muhan-Qiu/ecg-agent.git $tmp
-   Copy-Item -Force "$root\marketplace\site\*" $tmp
-   # 站点在根目录，索引路径要从 ../official 改成 official
-   (Get-Content "$tmp\app.js") -replace '\.\./official/index\.json','official/index.json' -replace '\.\./community/index\.json','community/index.json' | Set-Content "$tmp\app.js"
+   git clone -q --depth 1 --branch gh-pages ssh://git@ssh.github.com:443/Muhan-Qiu/eclipse-health.git $tmp
+   Copy-Item -Path "$root\marketplace\site\*" -Destination $tmp -Recurse -Force
+   # 站点源码已按 data-depth 处理索引路径（根目录 ../official，en/ 用 ../../official），不要再改 app.js
    Copy-Item -Force "$root\marketplace\official\index.json" "$tmp\official\index.json"
    Copy-Item -Force "$root\marketplace\community\index.json" "$tmp\community\index.json"
    Copy-Item -Force "$root\dist\modules\*.ehmod" "$tmp\official\modules\"
@@ -53,7 +52,10 @@
    ```
 4. 改完检查：
    - `https://eclipse-health.fit/`
-   - `https://eclipse-health.fit/official/index.json`（32 条）
+   - `https://eclipse-health.fit/en/`、`/en/modules.html`、`/en/developers.html`
+   - `https://eclipse-health.fit/official/index.json`（10 条）
+   - `https://eclipse-health.fit/community/index.json`（22 条）
+   - `https://eclipse-health.fit/module-copy.zh.json` 与 `module-copy.en.json`
    - 任取一个 `.ehmod` 链接 200。
 
 ## 3. 必须保留/不能破坏
@@ -61,20 +63,17 @@
 - `CNAME` 必须是 `eclipse-health.fit`（不要改成 www 或删掉）。
 - 市场索引签名：不要手工改 `marketplace/official/index.json` 的 `modules` 后直接发布；用 `scripts/build_marketplace_index.py` 重签。私钥在 `.secrets/`（gitignored），**不要提交/打印**。
 - 站点 `app.js` 从 `official/index.json` / `community/index.json` 读数据；模块文件路径是相对索引的 `modules/<file>.ehmod`。
-- 仓库链接使用 `https://github.com/Muhan-Qiu/ecg-agent`（后续仓库改名后再统一替换）。
+- 仓库链接使用 `https://github.com/Muhan-Qiu/eclipse-health`（已统一替换）。
+- 站点为双语：根目录中文，`en/` 英文；模块详细文案在 `module-copy.zh.json` / `module-copy.en.json`，按模块 ID 覆盖索引里的名称与简介。
 - 不要 push 到 main；只改 gh-pages。
 
 ## 4. 已知问题（用户明确要改）
 
-1. **Logo 有问题**：站点用的 logo/图标与新版应用内深绿涟漪不一致；需要换成应用当前品牌：
-   - `src/branding/Logo.tsx` / `src/components/common/eclipse-mark.tsx`（深绿同心环、由外向内收）
-   - `public/brand/favicon.svg`、`public/brand/icon-1024.png`
-   - `src-tauri/icons/*`（桌面图标）
-   - 设计令牌：`src/index.css` 的 `--eh-signal` 等；不要用旧金色/黑底图标。
-2. **布局/排版要重做**：首页、模块市场、开发者页需要更好的信息层级、间距、移动端适配；保持低饱和、与桌面应用一致的视觉，不要玻璃拟态/高饱和默认。
-3. **下载链接**：首页指向 GitHub Releases/latest，但当前安装包还没有上传到 Releases；需要你在 GitHub Releases 上传 `eclipse health_0.1.0_x64-setup.exe` 后再确认链接，或改成实际 asset 链接。
-4. **模块市场页**：32 个模块很多，需要分类/搜索/排序/分页或更好的网格；保留官方/社区切换与未审核标记。
-5. **开发者页**：写清模块提交（GitHub PR + Actions）、许可证白名单（宽松 + GPL-3.0 兼容；AGPL/无许可拒绝）、`io.github.<owner>.<name>`、NOTICE/署名、测试要求。
+1. **Logo 有问题（暂缓）**：用户 2026-11-01 明确说真正的 logo 还没定，先不要改。等品牌定稿后，再换 `src/branding/Logo.tsx` / `public/brand/favicon.svg` 对应的深绿涟漪版本。
+2. **布局/排版**：首页、模块市场、开发者页已做一轮信息层级与移动端适配；后续用户会继续提具体改动。
+3. **下载链接**：首页指向 `https://github.com/Muhan-Qiu/eclipse-health/releases`；`v0.1.0-alpha` 安装包已上传，页面标注「已发布」。发新版本时更新版本号与 Release 标签即可。
+4. **模块市场页**：卡片已改为“功能优先”，详情页包含功能、输入输出、适用场景、限制与技术说明；自研模块已改名并配详细文案。
+5. **开发者页**：已写清 PR 流程、许可证白名单、`io.github.<owner>.<name>`、NOTICE/署名与测试要求。
 6. **生产签名**：当前索引是 dev key；上线前需用户用生产 Ed25519 私钥重签，并更新应用内置公钥。不要自己生成/替换生产钥。
 
 ## 5. 不要做

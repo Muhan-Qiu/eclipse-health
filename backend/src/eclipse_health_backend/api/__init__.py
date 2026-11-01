@@ -10,6 +10,7 @@ import logging
 
 from fastapi import APIRouter
 
+from ..dashboard_cards.api import router as dashboard_cards_router
 from . import (
     analyses,
     diagnostics,
@@ -39,6 +40,8 @@ api_router.include_router(diagnostics.router)
 api_router.include_router(settings.router)
 # F3：对外 API（key 管理 + 只读 REST + OpenAI 兼容），路径自带 /external。
 api_router.include_router(external.router)
+# A8：自定义仪表盘卡片，路由自带 /dashboard。
+api_router.include_router(dashboard_cards_router)
 
 
 def _mount_imports_router(router: APIRouter) -> None:
@@ -138,5 +141,19 @@ def _mount_marketplace_router(router: APIRouter) -> None:
 
 
 _mount_marketplace_router(api_router)
+
+
+def _mount_import_agent_router(router: APIRouter) -> None:
+    """A5：Agent 数据导入路由自带 ``/import-agent``；缺失时不拖垮核心。"""
+    try:
+        from ..import_agent.api import router as import_agent_router
+    except Exception:  # noqa: BLE001 - 导入 Agent 未就绪时跳过
+        logger.info("import-agent router not available; skipping /api/v1/import-agent")
+        return
+    router.include_router(import_agent_router)
+    logger.info("import-agent router mounted at /api/v1/import-agent")
+
+
+_mount_import_agent_router(api_router)
 
 __all__ = ["api_router"]

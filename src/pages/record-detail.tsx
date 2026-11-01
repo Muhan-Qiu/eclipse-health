@@ -366,8 +366,8 @@ export function RecordDetailPage() {
       </div>
 
       <div className="eh-grid">
-        <section className="desk:col-span-5 xl:col-span-8">
-          <Card>
+        <section className="flex min-w-0 flex-col desk:col-span-5 xl:col-span-8">
+          <Card className="flex-1">
             <CardHeader>
               <CardTitle className="eh-h3">{t("waveform.title")}</CardTitle>
               <CardDescription>
@@ -426,15 +426,15 @@ export function RecordDetailPage() {
                 />
               </div>
             </CardContent>
+            {/* 隐私说明留在卡片内部，左侧卡片才能与右侧分析栏底边对齐。 */}
+            <p className="eh-caption mt-3 flex items-start gap-1.5 px-4 text-muted-foreground">
+              <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              {t("recordDetail.privacyNote")}
+            </p>
           </Card>
-
-          <p className="eh-caption mt-3 flex items-start gap-1.5 text-muted-foreground">
-            <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-            {t("recordDetail.privacyNote")}
-          </p>
         </section>
 
-        <div className="desk:col-span-3 xl:col-span-4">
+        <div className="flex min-w-0 flex-col desk:col-span-3 xl:col-span-4 [&>[data-slot=card]]:flex-1">
           <AnalysisPanel
             record={record}
             latest={latest}

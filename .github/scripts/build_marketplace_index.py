@@ -148,70 +148,62 @@ def official_entries(
     return entries
 
 
-def iter_community_documents(community_dir: Path) -> list[dict]:
-    items: list[dict] = []
-    if not community_dir.is_dir():
-        return items
-    for path in sorted(community_dir.glob("*.json")):
-        if path.name == "index.json":
-            continue
-        try:
-            data = load_json(path)
-        except (OSError, json.JSONDecodeError) as exc:
-            raise SystemExit(f"error: cannot read {path}: {exc}") from exc
-        if isinstance(data, list):
-            items.extend(item for item in data if isinstance(item, dict))
-        elif isinstance(data, dict) and isinstance(data.get("modules"), list):
-            items.extend(item for item in data["modules"] if isinstance(item, dict))
-        elif isinstance(data, dict) and data.get("id"):
-            items.append(data)
-    return items
+def community_entries(
+    community_modules_dir: Path,
+    dist_dir: Path,
+    pack_index: Path,
+    marketplace_root: Path,
+) -> list[dict]:
+    """社区索引直接扫描 modules/community/*/module.json，一律 verified=false。"""
+    pack: dict[str, dict] = {}
+    if pack_index.is_file():
+        raw = load_json(pack_index)
+        if isinstance(raw, dict) and isinstance(raw.get("modules"), list):
+            pack = {
+                str(item.get("id")): item
+                for item in raw["modules"]
+                if isinstance(item, dict) and item.get("id")
+            }
 
-
-def community_entries(community_dir: Path, dist_dir: Path, marketplace_root: Path) -> list[dict]:
     entries: list[dict] = []
-    for raw in iter_community_documents(community_dir):
-        module_id = str(raw.get("id") or "")
-        version = str(raw.get("version") or raw.get("latest") or "")
+    if not community_modules_dir.is_dir():
+        return entries
+    for manifest_path in sorted(community_modules_dir.glob("*/module.json")):
+        manifest = load_json(manifest_path)
+        if not isinstance(manifest, dict):
+            raise SystemExit(f"error: invalid manifest {manifest_path}")
+        module_id = str(manifest.get("id") or "")
+        version = str(manifest.get("version") or "")
         if not module_id or not SEMVER_RE.match(version):
-            raise SystemExit(f"error: community entry has invalid id/version: {module_id!r} {version!r}")
+            raise SystemExit(f"error: invalid manifest {manifest_path}")
         artifact = artifact_for(module_id, version, dist_dir, marketplace_root)
-        if artifact is None and raw.get("file"):
-            candidate = marketplace_root / str(raw["file"])
-            if candidate.is_file():
-                artifact = candidate
-        size = raw.get("size")
-        digest = raw.get("sha256")
-        if artifact is not None:
-            size = artifact.stat().st_size
-            digest = sha256_file(artifact)
-            file_value = f"modules/{artifact.name}"
-        else:
-            file_value = str(raw.get("file") or f"modules/{module_id}-{version}.ehmod")
-        if not digest or not SHA256_RE.match(str(digest)):
-            raise SystemExit(f"error: community entry {module_id} has no valid sha256")
-        module_type = str(raw.get("type") or "")
-        categories = raw.get("categories")
-        if not isinstance(categories, list) or not categories:
-            categories = [TYPE_CATEGORY.get(module_type, "other")]
+        packed = pack.get(module_id)
+        if artifact is None and packed and packed.get("file"):
+            artifact = dist_dir / Path(str(packed["file"])).name
+        if artifact is None or not artifact.is_file():
+            raise SystemExit(
+                f"error: missing .ehmod for community module {module_id} {version}; "
+                "run pack_official_modules.py"
+            )
+        module_type = str(manifest.get("type") or "")
         entries.append(
             {
                 "id": module_id,
-                "name": str(raw.get("name") or module_id),
+                "name": str(manifest.get("name") or module_id),
                 "version": version,
                 "type": module_type,
-                "description": str(raw.get("description") or raw.get("summary") or ""),
-                "author": author_name(raw.get("author")),
-                "license": str(raw.get("license") or ""),
-                "repository": str(raw.get("repository") or ""),
-                "permissions": list(raw.get("permissions") or []),
-                "dependencies": list(raw.get("dependencies") or []),
-                "minCoreVersion": str(raw.get("minCoreVersion") or "0.1.0"),
-                "categories": [str(item) for item in categories],
+                "description": str(manifest.get("description") or ""),
+                "author": author_name(manifest.get("author")),
+                "license": str(manifest.get("license") or ""),
+                "repository": str(manifest.get("repository") or ""),
+                "permissions": list(manifest.get("permissions") or []),
+                "dependencies": list(manifest.get("dependencies") or []),
+                "minCoreVersion": min_core_version(manifest),
+                "categories": [TYPE_CATEGORY.get(module_type, "other")],
                 "verified": False,
-                "file": file_value,
-                "size": int(size or 0),
-                "sha256": str(digest),
+                "file": f"modules/{artifact.name}",
+                "size": artifact.stat().st_size,
+                "sha256": sha256_file(artifact),
             }
         )
     return entries
@@ -298,7 +290,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--official-dir", type=Path, default=ROOT / "modules" / "official")
     parser.add_argument("--dist-dir", type=Path, default=ROOT / "dist" / "modules")
     parser.add_argument("--pack-index", type=Path, default=ROOT / "dist" / "modules" / "index.json")
-    parser.add_argument("--community-dir", type=Path, default=ROOT / "marketplace" / "community")
+    parser.add_argument(
+        "--community-modules-dir",
+        type=Path,
+        default=ROOT / "modules" / "community",
+        help="community module source directory; */module.json is scanned",
+    )
     parser.add_argument("--marketplace-root", type=Path, default=ROOT / "marketplace")
     parser.add_argument("--official-out", type=Path, default=ROOT / "marketplace" / "official" / "index.json")
     parser.add_argument("--community-out", type=Path, default=ROOT / "marketplace" / "community" / "index.json")
@@ -310,7 +307,9 @@ def main(argv: list[str] | None = None) -> int:
 
     key = None if args.unsigned else load_signing_key(args)
     official = official_entries(args.official_dir, args.dist_dir, args.pack_index, args.marketplace_root)
-    community = community_entries(args.community_dir, args.dist_dir, args.marketplace_root)
+    community = community_entries(
+        args.community_modules_dir, args.dist_dir, args.pack_index, args.marketplace_root
+    )
     has_manifests = args.official_dir.is_dir() and any(args.official_dir.glob("*/module.json"))
     if has_manifests and not official:
         raise SystemExit(

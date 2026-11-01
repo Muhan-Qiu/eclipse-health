@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>eclipse health · A local-first, open health data hub</title>
+  <meta name="description" content="eclipse health is a local-first open health data hub: ECG analysis, trend tracking and report export all run on your machine, with devices, engines and UI extended through modules.">
+  <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/">
+  <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/">
+  <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/">
+  <link rel="icon" href="../brand/favicon.svg?v=2">
+  <link rel="stylesheet" href="../styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="home" data-depth="2">
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health home">
+        <img class="brand-mark" src="../brand/favicon.svg?v=2" alt="" aria-hidden="true" />
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="modules.html" data-nav="modules">Modules</a>
+        <a href="developers.html" data-nav="developers">Developers</a>
+        <a class="lang-switch" href="../index.html" hreflang="zh-CN" lang="zh-CN" aria-label="切换到中文">中文</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch light or dark theme" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Local-first · Open source · Modular</p>
+          <h1>Your health data,<br><span class="accent-text">kept by you.</span></h1>
+          <p class="lede">
+            eclipse health is a desktop health data hub: ECG analysis, trend tracking and report export all happen
+            on your machine. Device support, analysis engines and UI are modules, with one contract for first-party
+            and third-party alike.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/Muhan-Qiu/eclipse-health/releases" rel="noopener">
+              Go to GitHub Releases
+            </a>
+            <a class="btn btn-ghost" href="modules.html">Browse modules</a>
+          </div>
+          <p class="fine-print">
+            The 0.1.0 installer is published on Releases.
+            Windows 10/11 · Free and open source · No account required.
+          </p>
+        </div>
+
+        <aside class="release-card" aria-labelledby="release-title">
+          <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>latest release</p>
+          <h2 id="release-title">eclipse health for desktop</h2>
+          <span class="version">v0.1.0-alpha · released</span>
+          <ul class="release-meta">
+            <li><span>Platform</span><span>Windows 10/11 x64</span></li>
+            <li><span>Installer</span><span>eclipse health_0.1.0_x64-setup.exe</span></li>
+            <li><span>Runtime</span><span>Bundled Python, nothing to install</span></li>
+            <li><span>Verify</span><span>SHA-256 published with the release</span></li>
+            <li><span>License</span><span>GPL-3.0-only</span></li>
+          </ul>
+          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/releases" rel="noopener">
+            View release and checksums
+          </a>
+          <p class="fine-print">Installers and <code>.ehmod</code> packages are checked against SHA-256 before install; signed modules also verify the author's public key.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="capabilities-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="capabilities-title">One import, from waveform to report</h2>
+          <p>From ECG and health-data import through analysis, records, trends and reports — all on this machine.</p>
+        </div>
+        <div class="grid grid-3">
+          <article class="card feature">
+            <h3>ECG import</h3>
+            <p>WFDB, CSV, EDF and SCP-ECG, plus ECG exports from Apple Health, Samsung and Huawei watches (vendor formats marked experimental). Drag and drop, with a preview and parameter check before import.</p>
+          </article>
+          <article class="card feature">
+            <h3>Beat analysis</h3>
+            <p>The built-in Cardia 2.0 engine reports signal quality, R peaks, per-beat N / SVEB / VEB / F classes and heart-rate/interval measurements. Switch engines and re-analyse at any time.</p>
+          </article>
+          <article class="card feature">
+            <h3>Records and trends</h3>
+            <p>Filter the record library by time, device and tag; zoom and pan waveforms; follow metric trends and compare two records side by side.</p>
+          </article>
+          <article class="card feature">
+            <h3>Reports and sharing</h3>
+            <p>Generate PDF / PNG reports with redaction and a "non-diagnostic" watermark. Reports stay on your machine and can be exported when you choose.</p>
+          </article>
+          <article class="card feature">
+            <h3>AI assistant (optional)</h3>
+            <p>Connect OpenAI, Anthropic or a local Ollama instance. API keys live in Windows Credential Manager; only summaries and measurements are sent, and every tool call is visible.</p>
+          </article>
+          <article class="card feature">
+            <h3>Local and open</h3>
+            <p>Data lives in local SQLite with no telemetry. A local REST API, an OpenAI-compatible endpoint and MCP let other applications and AI tools use it.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="official-modules-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="official-modules-title">First-party analysis modules</h2>
+          <p>Official modules follow the same contract as third-party ones. Here is what each of them actually does, before any model talk.</p>
+        </div>
+        <div class="spotlight-grid">
+          <article class="spotlight-card">
+            <div class="spotlight-head">
+              <h3>Cardia 2.0 · built-in beat classification</h3>
+              <span class="badge badge-accent">Ships with the app</span>
+            </div>
+            <p class="spotlight-tagline">The ECG engine you can use the moment the app opens.</p>
+            <p class="spotlight-summary">Classifies single-lead ECG beats as N / SVEB / VEB / F and reports signal quality, heart rate and interval measurements. No module install — it comes with the core.</p>
+            <ul class="spotlight-features">
+              <li>Beat-by-beat arrhythmia classes</li>
+              <li>Signal quality and heart-rate / interval measurements</li>
+              <li>Switch engines and re-analyse in the app</li>
+            </ul>
+            <a class="pillar-link" href="https://github.com/Muhan-Qiu/eclipse-health/releases" rel="noopener">Download the app →</a>
+          </article>
+
+          <article class="spotlight-card">
+            <div class="spotlight-head">
+              <h3>ECG Beat Analysis</h3>
+              <span class="badge badge-accent">First-party · optional module</span>
+            </div>
+            <p class="spotlight-tagline">Splits an ECG into beats and flags normal beats and ectopics.</p>
+            <p class="spotlight-summary">Seven classification models run on the same recording so you can switch or compare side by side. Outputs per-beat labels, class proportions and a heart-rate overview — built for research replication and algorithm comparison.</p>
+            <ul class="spotlight-features">
+              <li>Per-beat N / SVEB / VEB / F labels</li>
+              <li>Seven models to switch and compare</li>
+              <li>WFDB, float32 and inline sample input</li>
+            </ul>
+            <a class="pillar-link" href="modules.html?module=org.eclipsehealth.relay-ecg">View module details →</a>
+          </article>
+
+          <article class="spotlight-card">
+            <div class="spotlight-head">
+              <h3>Sleep Staging</h3>
+              <span class="badge badge-accent">First-party · optional module</span>
+            </div>
+            <p class="spotlight-tagline">Assigns an entire night to five stages and shows the structure.</p>
+            <p class="spotlight-summary">Labels each window as W / N1 / N2 / N3 / REM and summarises time per stage, awakenings and sleep efficiency. Accepts extracted features or raw 30-second windows, with five models to compare.</p>
+            <ul class="spotlight-features">
+              <li>Five-stage sleep classification</li>
+              <li>Whole-night structure summary</li>
+              <li>Five staging models to compare</li>
+            </ul>
+            <a class="pillar-link" href="modules.html?module=org.eclipsehealth.relay-sleep">View module details →</a>
+          </article>
+        </div>
+        <p class="builtin-note" style="margin-top:1rem">
+          <strong>Cardia 2.0</strong> ships with the app and needs no module install. ECG Beat Analysis and Sleep Staging are optional first-party modules available from the marketplace.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="sources-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="sources-title">Three sources, one install entry</h2>
+          <p>Official, community and local files share the same index and install checks. Risk level and permissions are always shown before install.</p>
+        </div>
+        <div class="grid grid-3">
+          <article class="card pillar">
+            <span class="pillar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z"></path>
+                <path d="m9 12 2 2 4-4"></path>
+              </svg>
+            </span>
+            <h3>Official index</h3>
+            <p>Maintained and signed by the project. It holds first-party modules plus verified third-party adapters, with first-party modules listed first; official denotes the source, not a substitute for scan results.</p>
+            <a class="pillar-link" href="modules.html">Browse official modules →</a>
+          </article>
+          <article class="card pillar">
+            <span class="pillar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="8" r="3.2"></circle>
+                <path d="M3.5 19c.7-2.9 2.9-4.6 5.5-4.6s4.8 1.7 5.5 4.6"></path>
+                <path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 14.6c1.8.5 3 2 3.5 4.4"></path>
+              </svg>
+            </span>
+            <h3>Community index</h3>
+            <p>Community-maintained and independently signed. It holds community submissions with no manual review — automated scanning only. Proprietary or paid modules are allowed and clearly labelled.</p>
+            <a class="pillar-link" href="modules.html?source=community">Browse community modules →</a>
+          </article>
+          <article class="card pillar">
+            <span class="pillar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v12"></path>
+                <path d="m7 10 5 5 5-5"></path>
+                <path d="M4 19h16"></path>
+              </svg>
+            </span>
+            <h3>Local .ehmod</h3>
+            <p>Install a package directly for offline or intranet use. Path safety, checksums and the manifest are verified before install — no network required.</p>
+            <a class="pillar-link" href="developers.html#package">See the package format →</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="features-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="features-title">Modules are first-class, not easter eggs</h2>
+          <p>The core stays minimal: data, permissions, lifecycle and audit. Everything else can be replaced.</p>
+        </div>
+        <div class="grid grid-4">
+          <article class="card feature">
+            <h3>Separate processes</h3>
+            <p>Modules speak stdio JSON-RPC and never import core code. A crash is isolated, and any module can be disabled at any time.</p>
+          </article>
+          <article class="card feature">
+            <h3>Least privilege</h3>
+            <p>Reading records, writing records, network and background execution are granted permission by permission. New permissions on upgrade require explicit re-approval.</p>
+          </article>
+          <article class="card feature">
+            <h3>Declarative UI</h3>
+            <p>Pages and widgets use only controlled components and design tokens. Arbitrary React or CSS is limited to sandboxes and theme scopes.</p>
+          </article>
+          <article class="card feature">
+            <h3>Removable and replaceable</h3>
+            <p>First-party features ship as modules too: preinstalled but removable. Users can pin versions and switch between stable and beta channels.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="safety-title">
+      <div class="container">
+        <div class="callout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"></path>
+            <path d="M12 8v5M12 16.5v.5"></path>
+          </svg>
+          <div>
+            <h3 id="safety-title">Security boundaries, stated up front</h3>
+            <p>
+              Publishing runs structural, integrity, dependency, static-code, secret, permission-diff, network-allowlist and model-format scans.
+              Red refuses installation; yellow and orange allow it but are clearly labelled. The client sends no telemetry, does not report installed modules,
+              and health data does not leave this machine by default. All analysis output is non-medical and not for diagnosis or treatment.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="cta-band">
+          <div>
+            <h2>Build a module anyone can install</h2>
+            <p>The contract, manifest examples, permission reference and PR flow are ready. If the module you need does not exist, <a href="modules.html#request-module">generate a prompt for your AI agent</a>.</p>
+          </div>
+          <div class="cta-row" style="margin-top:0">
+            <a class="btn btn-primary" href="developers.html">Start building</a>
+            <a class="btn btn-ghost" href="modules.html">Browse the marketplace</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · Health that gets overlooked. The core is open source under GPL-3.0-only.</p>
+        <p>This software and all module output are not medical advice, not a medical device, and not for diagnosis, treatment, or as a substitute for professional medical judgement.</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="modules.html">Modules</a>
+          <a href="developers.html">Developers</a>
+          <a href="../index.html" hreflang="zh-CN" lang="zh-CN">中文</a>
+          <a href="https://github.com/Muhan-Qiu/eclipse-health" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../app.js" defer></script>
+</body>
+</html>

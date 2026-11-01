@@ -8,6 +8,7 @@ import {
   FlaskConical,
   LayoutGrid as LayoutGridIcon,
   LoaderCircle,
+  Plus,
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
@@ -40,11 +41,30 @@ import { useImport } from "@/components/import/import-provider";
 import { measurementsByCode } from "@/components/records/measurement-list";
 import { WidgetCard } from "@/features/modules/widgets/widget-card";
 import { useModuleWidgets } from "@/features/modules/widgets/use-widgets";
+import { CardFormDialog } from "@/features/dashboard-cards/card-form-dialog";
+import { CardDraftCard } from "@/features/dashboard-cards/draft-card";
+import { CustomCard } from "@/features/dashboard-cards/custom-card";
+import {
+  useCardDrafts,
+  useCardTemplates,
+  useConfirmCardDraft,
+  useCreateDashboardCard,
+  useDashboardCards,
+  useDeleteDashboardCard,
+  useDiscardCardDraft,
+} from "@/features/dashboard-cards/use-dashboard-cards";
+import { autoCardTitle } from "@/features/dashboard-cards/types";
+import type {
+  CardFields,
+  DashboardCard,
+} from "@/features/dashboard-cards/types";
 import {
   LayoutGrid,
   LayoutToolbar,
 } from "@/features/layout/layout-editor";
 import {
+  customCardLayoutId,
+  customCardWidth,
   defaultLayout,
   exportLayoutJson,
   importLayoutJson,
@@ -66,10 +86,11 @@ import {
   useHealthScores,
   useHealthSuggestions,
   useImportSample,
+  useMembers,
   useRecentAnalyses,
   useRecords,
 } from "@/lib/api/queries";
-import { useMock } from "@/lib/api/client";
+import { ApiError, useMock } from "@/lib/api/client";
 import { cn } from "cn";
 import type { AnalysisResult, RecordSummary } from "@/lib/api/types";
 import { formatFullDate, formatNumber, greetingKey } from "@/lib/format";
@@ -122,7 +143,7 @@ function GuideCard({
   children: ReactNode;
 }) {
   return (
-    <Card className="eh-lift gap-0 p-5">
+    <Card className="eh-lift h-full gap-0 p-5">
       <div
         className="flex size-9 items-center justify-center rounded-lg bg-accent-soft text-primary"
         aria-hidden="true"
@@ -131,7 +152,7 @@ function GuideCard({
       </div>
       <h2 className="eh-h3 mt-4">{title}</h2>
       <p className="eh-small mt-1.5 flex-1 text-muted-foreground">{description}</p>
-      <div className="mt-4">{children}</div>
+      <div className="mt-auto pt-4">{children}</div>
     </Card>
   );
 }
@@ -425,6 +446,17 @@ export function DashboardPage() {
   }, [candidates, latestRecord]);
 
   const widgetsQuery = useModuleWidgets();
+  const membersQuery = useMembers();
+  const memberId = membersQuery.data?.[0]?.id;
+  const cardsQuery = useDashboardCards(memberId);
+  const templatesQuery = useCardTemplates();
+  const draftsQuery = useCardDrafts(memberId);
+  const createCard = useCreateDashboardCard(memberId);
+  const deleteCard = useDeleteDashboardCard(memberId);
+  const confirmDraft = useConfirmCardDraft(memberId);
+  const discardDraft = useDiscardCardDraft(memberId);
+  const [cardFormOpen, setCardFormOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DashboardCard | null>(null);
   const [savedLayout, setSavedLayout] = useState<LayoutItem[]>(() => loadLayout());
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LayoutItem[]>([]);
@@ -448,13 +480,38 @@ export function DashboardPage() {
     return map;
   }, [widgetsQuery.widgets]);
 
-  // 模块列表未就绪时保留已保存的模块卡片顺序，就绪后再清理已卸载的卡片。
+  const customInputs = useMemo(
+    () =>
+      cardsQuery.cards.map((card) => ({
+        id: customCardLayoutId(card.id),
+        title: card.title,
+        width: customCardWidth(card.view),
+      })),
+    [cardsQuery.cards],
+  );
+
+  const cardById = useMemo(() => {
+    const map = new Map<string, DashboardCard>();
+    for (const card of cardsQuery.cards) {
+      map.set(customCardLayoutId(card.id), card);
+    }
+    return map;
+  }, [cardsQuery.cards]);
+
+  // 任一列表未就绪时保留对应的已保存卡片顺序，就绪后再清理已删除的卡片。
   const layout = useMemo(
     () =>
-      widgetsQuery.isSuccess
-        ? mergeLayout(savedLayout, widgetInputs)
-        : savedLayout,
-    [savedLayout, widgetInputs, widgetsQuery.isSuccess],
+      mergeLayout(savedLayout, widgetInputs, customInputs, {
+        widgetsReady: widgetsQuery.isSuccess,
+        customCardsReady: cardsQuery.isSuccess,
+      }),
+    [
+      savedLayout,
+      widgetInputs,
+      customInputs,
+      widgetsQuery.isSuccess,
+      cardsQuery.isSuccess,
+    ],
   );
 
   const startEditing = () => {
@@ -477,7 +534,10 @@ export function DashboardPage() {
   };
 
   const resetDraft = () => {
-    const next = mergeLayout(defaultLayout(), widgetInputs);
+    const next = mergeLayout(defaultLayout(), widgetInputs, customInputs, {
+      widgetsReady: widgetsQuery.isSuccess,
+      customCardsReady: cardsQuery.isSuccess,
+    });
     saveLayout(next);
     setSavedLayout(next);
     setDraft(next);
@@ -502,9 +562,10 @@ export function DashboardPage() {
       .then((text) => {
         try {
           const parsed = importLayoutJson(text);
-          const next = widgetsQuery.isSuccess
-            ? mergeLayout(parsed, widgetInputs)
-            : parsed;
+          const next = mergeLayout(parsed, widgetInputs, customInputs, {
+            widgetsReady: widgetsQuery.isSuccess,
+            customCardsReady: cardsQuery.isSuccess,
+          });
           setDraft(next);
           setLayoutError(null);
         } catch (error) {
@@ -521,7 +582,46 @@ export function DashboardPage() {
     if (item.kind === "core-card" && isCoreCardId(item.id)) {
       return t(CORE_TITLE_KEYS[item.id]);
     }
+    if (item.kind === "custom-card") {
+      return cardById.get(item.id)?.title ?? item.title;
+    }
     return widgetById.get(item.id)?.title ?? item.title;
+  };
+
+  const askAssistantForCard = (fields: CardFields) => {
+    setCardFormOpen(false);
+    const prompt = t("dashboard.customCards.assistantPrompt", {
+      kind: t(`dashboard.customCards.kinds.${fields.kind}`),
+      aggregation: t(
+        `dashboard.customCards.aggregations.${fields.aggregation}`,
+      ),
+      view: t(`dashboard.customCards.views.${fields.view}`),
+      days: fields.windowDays,
+      title:
+        fields.title ||
+        autoCardTitle(fields.kind, fields.aggregation, t),
+    });
+    navigate(`/assistant?prompt=${encodeURIComponent(prompt)}`);
+  };
+
+  const submitCard = (fields: CardFields) => {
+    createCard.mutate(fields, { onSuccess: () => setCardFormOpen(false) });
+  };
+
+  const cardFormError =
+    createCard.error instanceof ApiError
+      ? createCard.error.message
+      : createCard.error
+        ? t("dashboard.customCards.createFailed")
+        : null;
+
+  const requestDeleteCard = (card: DashboardCard) => setDeleteTarget(card);
+
+  const confirmDeleteCard = () => {
+    if (!deleteTarget) return;
+    deleteCard.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
   };
 
   const renderRecentCard = () => (
@@ -602,6 +702,20 @@ export function DashboardPage() {
         <WidgetCard widget={widget} animate={!editing} />
       ) : null;
     }
+    if (item.kind === "custom-card") {
+      const card = cardById.get(item.id);
+      if (!card) return null;
+      return (
+        <CustomCard
+          card={card}
+          data={card.data}
+          loading={cardsQuery.isLoading}
+          error={cardsQuery.isError}
+          onRetry={() => void cardsQuery.refetch()}
+          onDelete={() => requestDeleteCard(card)}
+        />
+      );
+    }
     if (!isCoreCardId(item.id)) return null;
     switch (item.id) {
       case "scores":
@@ -670,6 +784,16 @@ export function DashboardPage() {
             type="button"
             variant="outline"
             size="sm"
+            onClick={() => setCardFormOpen(true)}
+            disabled={editing}
+          >
+            <Plus data-icon="inline-start" />
+            {t("dashboard.customCards.add")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={startEditing}
             disabled={editing}
             aria-pressed={editing}
@@ -680,7 +804,52 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {/* 评分/建议/指标/波形与模块卡片统一进 12 列布局；编辑模式可排序、调宽与隐藏。 */}
+      {draftsQuery.drafts.length > 0 && !editing ? (
+        <section
+          aria-label={t("dashboard.customCards.draftsTitle")}
+          className="mt-6"
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="eh-h3">{t("dashboard.customCards.draftsTitle")}</h2>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => void draftsQuery.refetch()}
+            >
+              <RefreshCw data-icon="inline-start" />
+              {t("common.retry")}
+            </Button>
+          </div>
+          <div className="eh-grid">
+            {draftsQuery.drafts.map((item) => (
+              <div
+                key={item.id}
+                className={cn(
+                  "min-w-0",
+                  item.card.view === "line" || item.card.view === "bar"
+                    ? "desk:col-span-4 xl:col-span-6"
+                    : "desk:col-span-2 xl:col-span-3",
+                )}
+              >
+                <CardDraftCard
+                  draft={item}
+                  confirming={
+                    confirmDraft.isPending && confirmDraft.variables === item.id
+                  }
+                  discarding={
+                    discardDraft.isPending && discardDraft.variables === item.id
+                  }
+                  onConfirm={() => confirmDraft.mutate(item.id)}
+                  onDiscard={() => discardDraft.mutate(item.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* 评分/建议/指标/波形、模块卡片与自定义卡片统一进 12 列布局。 */}
       <section aria-label={t("dashboard.layout.aria")} className="mt-6">
         {editing ? (
           <LayoutToolbar
@@ -830,6 +999,60 @@ export function DashboardPage() {
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => setFormatsOpen(false)}>
               {t("common.close")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <CardFormDialog
+        open={cardFormOpen}
+        onOpenChange={setCardFormOpen}
+        templates={templatesQuery.templates}
+        submitting={createCard.isPending}
+        error={cardFormError}
+        onSubmit={submitCard}
+        onAskAssistant={askAssistantForCard}
+      />
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("dashboard.customCards.deleteTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("dashboard.customCards.deleteDesc", {
+                title: deleteTarget?.title ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteCard.error ? (
+            <p className="eh-caption text-destructive" role="alert">
+              {deleteCard.error instanceof ApiError
+                ? deleteCard.error.message
+                : t("dashboard.customCards.deleteFailed")}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteTarget(null)}
+            >
+              {t("dashboard.customCards.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteCard}
+              disabled={deleteCard.isPending}
+            >
+              {deleteCard.isPending
+                ? t("dashboard.customCards.deleting")
+                : t("dashboard.customCards.delete")}
             </Button>
           </div>
         </DialogContent>

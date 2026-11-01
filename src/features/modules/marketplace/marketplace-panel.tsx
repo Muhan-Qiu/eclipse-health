@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
+  BadgeCheck,
   Loader2,
   RefreshCw,
   Search,
@@ -27,6 +28,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { moduleTypeLabel } from "../format";
+import {
+  getModuleCopy,
+  isFirstPartyModule,
+  moduleDisplayName,
+  moduleMatchesQuery,
+  sortMarketplaceModules,
+} from "../copy";
 import type { ModuleSummary } from "../types";
 import {
   MARKETPLACE_SOURCES_KEY,
@@ -78,7 +86,7 @@ function MarketplaceBrowser({
   installed,
   onSelect,
 }: MarketplaceBrowserProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -89,14 +97,26 @@ function MarketplaceBrowser({
   }, [search]);
 
   const activeCategory = category === "all" ? "" : category;
+  // 搜索要覆盖网站文案里的 tagline/features，索引不含这些字段，
+  // 因此索引只按分类取全量，关键词在客户端过滤。
   const indexQuery = useQuery({
-    queryKey: marketplaceIndexKey(source, query, activeCategory),
-    queryFn: () => getMarketplaceIndex(source, query, activeCategory),
+    queryKey: marketplaceIndexKey(source, activeCategory),
+    queryFn: () => getMarketplaceIndex(source, "", activeCategory),
     enabled: open && info?.configured !== false,
     retry: false,
   });
 
   const modules = indexQuery.data?.modules ?? [];
+  const visibleModules = useMemo(() => {
+    const filtered = modules.filter((module) =>
+      moduleMatchesQuery(
+        module,
+        getModuleCopy(i18n.language, module.id),
+        query,
+      ),
+    );
+    return sortMarketplaceModules(filtered, i18n.language);
+  }, [modules, query, i18n.language]);
   // 分类选项累积自所有已加载响应：分类筛选后响应只剩当前分类，
   // 若直接从当前列表派生，选项会塌缩并导致选中值被重置。
   const [knownCategories, setKnownCategories] = useState<string[]>([]);
@@ -195,6 +215,13 @@ function MarketplaceBrowser({
             <RefreshCw aria-hidden="true" />
           )}
         </Button>
+        {indexQuery.data ? (
+          <span className="eh-caption text-muted-foreground">
+            {t("moduleUi.marketplace.resultCount", {
+              count: visibleModules.length,
+            })}
+          </span>
+        ) : null}
       </div>
 
       {notConfiguredError ? (
@@ -236,7 +263,7 @@ function MarketplaceBrowser({
       {!notConfiguredError &&
       !indexQuery.isLoading &&
       !indexQuery.isError &&
-      modules.length === 0 ? (
+      visibleModules.length === 0 ? (
         <EmptyState
           icon={Store}
           title={t("moduleUi.marketplace.empty")}
@@ -244,15 +271,19 @@ function MarketplaceBrowser({
         />
       ) : null}
 
-      {modules.length > 0 ? (
+      {visibleModules.length > 0 ? (
         <ul className="grid gap-3 sm:grid-cols-2">
-          {modules.map((module) => {
+          {visibleModules.map((module) => {
             const installedVersion = installed.get(module.id);
             const sameVersion = installedVersion === module.version;
             const update =
               installedVersion !== undefined &&
               !sameVersion &&
               isNewerVersion(module.version, installedVersion);
+            const copy = getModuleCopy(i18n.language, module.id);
+            const name = moduleDisplayName(i18n.language, module.id, module.name);
+            const features = copy?.features ?? [];
+            const firstParty = isFirstPartyModule(module.id);
             return (
               <li key={module.id}>
                 <button
@@ -262,8 +293,15 @@ function MarketplaceBrowser({
                 >
                   <span className="flex w-full items-start justify-between gap-2">
                     <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      <span className="truncate text-sm font-medium">{module.name}</span>
-                      {module.verified ? (
+                      <span className="text-sm leading-snug font-medium break-words">
+                        {name}
+                      </span>
+                      {firstParty ? (
+                        <Badge variant="secondary" className="gap-1 font-normal">
+                          <BadgeCheck className="size-3" aria-hidden="true" />
+                          {t("moduleUi.marketplace.firstParty")}
+                        </Badge>
+                      ) : module.verified ? (
                         <Badge variant="secondary" className="gap-1 font-normal">
                           <ShieldCheck className="size-3" aria-hidden="true" />
                           {t("moduleUi.marketplace.verified")}
@@ -285,7 +323,21 @@ function MarketplaceBrowser({
                     {module.id}
                   </code>
 
-                  {module.description ? (
+                  {copy?.tagline ? (
+                    <span className="eh-small line-clamp-2 text-muted-foreground">
+                      {copy.tagline}
+                    </span>
+                  ) : null}
+
+                  {features.length > 0 ? (
+                    <span className="eh-caption line-clamp-2 text-muted-foreground">
+                      {features
+                        .slice(0, 3)
+                        .map((feature) => feature.title)
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  ) : module.description ? (
                     <span className="eh-small line-clamp-2 text-muted-foreground">
                       {module.description}
                     </span>

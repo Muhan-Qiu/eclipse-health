@@ -62,9 +62,11 @@ for _package in (
     "pydantic_ai",
     "sse_starlette",
     "jsonschema",
+    "openpyxl",
     "orjson",
     "pandas",
     "pydantic",
+    "pypdf",
     "pydantic_settings",
     "fastapi",
     "starlette",
@@ -93,6 +95,11 @@ hiddenimports += [
 ]
 
 datas += [
+    # A5：Agent 数据导入沙箱的 runner / helper（冻结后由子进程 runpy 执行）。
+    (
+        str(BACKEND_DIR / "src" / "eclipse_health_backend" / "import_agent" / "sandbox_assets"),
+        "eclipse_health_backend/import_agent/sandbox_assets",
+    ),
     (str(ROOT / "modules" / "official" / "cardia"), "modules/official/cardia"),
     (str(BACKEND_DIR / "resources" / "models" / "cardia"), "backend/resources/models/cardia"),
     (str(BACKEND_DIR / "resources" / "samples"), "backend/resources/samples"),

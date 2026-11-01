@@ -1,7 +1,7 @@
-# Relay ECG · V1 精选模型包
+# ECG 心搏分析 · 多模型心搏分类
 
-`org.eclipsehealth.relay-ecg` 把 V1 / MIT-BIH 已训练权重封装成可替换的 `analysis-model`：
-4 个自研 Relay-LSTM（K=2/4/8/12）+ 3 个更低基线（BiLSTM / 1D-ResNet18 / T-LSTM）。
+`org.eclipsehealth.relay-ecg` 把一段 ECG 自动切成心搏并分为 N / SVEB / VEB / F，内置 7 个可切换的分类模型
+（4 个自研 Relay-LSTM + 3 个基线），适合科研复现、教学与算法对照。模块 ID 保持不变。
 
 **非医疗器械，不用于诊断。** 所有输出都带 `nonDiagnostic` 字段，只用于科研、教学与模型对比。
 

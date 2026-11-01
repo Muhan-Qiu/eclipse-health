@@ -53,7 +53,7 @@ SYSTEM_PROMPT = """你是 eclipse health 的本地分析助手，帮助用户理
 2. 只使用工具返回的数据与下方上下文；没有数据就明确说没有，绝不编造数值。
 3. 引用数据时给出记录 ID 或分析 ID。
 4. 用简体中文回答；用户使用其他语言时跟随用户语言。
-5. 工具只能读取摘要与测量值，读不到波形、备注和成员信息，不要假装能看到。
+5. 工具只能读取摘要与测量值，读不到波形、备注和成员信息，不要假装能看到；create_dashboard_card 只生成待确认的卡片草稿，不会直接保存，只有用户明确同意后才能调用 confirm_dashboard_card。
 6. 以 m_ 开头的工具由已安装的第三方模块提供，结果仅供参考；与内置工具冲突时以内置结果为准。
 7. 回答末尾用一句话提醒：以上为数据解读，不构成医学诊断。"""
 
@@ -339,7 +339,7 @@ def build_transparency(
         "includeNotes": context["includeNotes"],
         "toolCalls": tool_calls,
         "usage": None,
-        "localOnly": provider.kind in {"ollama", "mock"},
+        "localOnly": provider.is_local,
     }
 
 
@@ -712,7 +712,7 @@ class LiteLLMAdapter(ChatAdapter):
             raise LLMError("litellm_missing", "LiteLLM is not installed") from exc
 
         kwargs: dict[str, Any] = {
-            "model": f"{self.provider.kind}/{self.provider.model}",
+            "model": self.provider.litellm_model,
             "messages": messages,
             "stream": True,
             "timeout": REQUEST_TIMEOUT_S,
@@ -723,7 +723,7 @@ class LiteLLMAdapter(ChatAdapter):
             kwargs["api_key"] = self.api_key
         if self.provider.base_url:
             kwargs["api_base"] = self.provider.base_url
-        if self.provider.kind == "openai":
+        if self.provider.litellm_provider == "openai":
             # OpenAI 兼容端点默认不在流里带 usage，需要显式要求。
             kwargs["stream_options"] = {"include_usage": True}
 
@@ -763,7 +763,7 @@ class LiteLLMAdapter(ChatAdapter):
             raise
         except BaseException as exc:  # noqa: BLE001 - 统一脱敏
             status = getattr(exc, "status_code", None)
-            raise _sanitize(self.provider.kind, exc, status=status) from None
+            raise _sanitize(self.provider.error_kind, exc, status=status) from None
 
         ordered = [calls[index] for index in sorted(calls)]
         if ordered:

@@ -12,6 +12,7 @@ import type {
   CoachWeather,
   MessagePage,
   ProviderInput,
+  ProviderPreset,
   ProviderTestResult,
   SendMessageBody,
   StreamEvent,
@@ -84,6 +85,12 @@ function parseSseChunk(raw: string): StreamEvent | null {
 
 export const assistantApi = {
   providers: {
+    presets: async (): Promise<ProviderPreset[]> => {
+      const body = await request<{ items: ProviderPreset[] }>(
+        "/assistant/provider-presets",
+      );
+      return Array.isArray(body.items) ? body.items : [];
+    },
     list: async (): Promise<AssistantProvider[]> => {
       const body = await request<{ items: AssistantProvider[] }>("/assistant/providers");
       return Array.isArray(body.items) ? body.items : [];

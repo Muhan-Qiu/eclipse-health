@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 from ..domain.common import utc_now
 from ..domain.ids import uuid7
 from ..settings import get_settings
+from .provider_presets import LITELLM_PROVIDERS, get_preset
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,11 @@ class Provider:
     enabled: bool = True
     key_ref: str | None = None
     options: dict[str, Any] = field(default_factory=dict)
+    preset_id: str | None = None
+    litellm_provider: str | None = None
+    # None 表示旧记录没有该字段，按 kind 推断，保持向后兼容。
+    needs_key_value: bool | None = None
+    local_value: bool | None = None
     created_at: str = ""
     updated_at: str = ""
 
@@ -202,6 +208,10 @@ class Provider:
             "enabled": self.enabled,
             "keyRef": self.key_ref,
             "options": self.options,
+            "presetId": self.preset_id,
+            "litellmProvider": self.litellm_provider,
+            "needsKey": self.needs_key,
+            "local": self.is_local,
             "createdAt": self.created_at,
             "updatedAt": self.updated_at,
         }
@@ -216,14 +226,35 @@ class Provider:
             "baseUrl": self.base_url,
             "enabled": self.enabled,
             "configured": bool(self.key_ref),
-            "isLocal": self.kind in {"ollama", "mock"},
+            "isLocal": self.is_local,
+            "presetId": self.preset_id,
+            "litellmProvider": self.litellm_provider,
+            "needsKey": self.needs_key,
             "createdAt": self.created_at,
             "updatedAt": self.updated_at,
         }
 
     @property
     def needs_key(self) -> bool:
+        if self.needs_key_value is not None:
+            return self.needs_key_value
         return self.kind in {"openai", "anthropic"}
+
+    @property
+    def is_local(self) -> bool:
+        if self.local_value is not None:
+            return self.local_value
+        return self.kind in {"ollama", "mock"}
+
+    @property
+    def litellm_model(self) -> str:
+        """LiteLLM 模型字符串：``<provider>/<model>``。"""
+        return f"{self.litellm_provider or self.kind}/{self.model}"
+
+    @property
+    def error_kind(self) -> str:
+        """错误信息里显示的服务商名；预设 provider 用它而不是通用 kind。"""
+        return self.litellm_provider or self.kind
 
 
 def _parse_provider(raw: dict[str, Any]) -> Provider | None:
@@ -237,6 +268,19 @@ def _parse_provider(raw: dict[str, Any]) -> Provider | None:
     if kind not in PROVIDER_KINDS:
         return None
     base_url = raw.get("baseUrl")
+    raw_preset_id = raw.get("presetId")
+    preset_id = str(raw_preset_id) if raw_preset_id else None
+    raw_litellm = raw.get("litellmProvider")
+    litellm_provider: str | None
+    if kind in {"ollama", "mock"}:
+        litellm_provider = None
+    elif isinstance(raw_litellm, str) and raw_litellm in LITELLM_PROVIDERS:
+        litellm_provider = raw_litellm
+    else:
+        # 旧记录没有 litellmProvider：kind 就是 LiteLLM 前缀。
+        litellm_provider = kind
+    raw_needs_key = raw.get("needsKey")
+    raw_local = raw.get("local")
     return Provider(
         id=provider_id,
         kind=kind,
@@ -246,14 +290,20 @@ def _parse_provider(raw: dict[str, Any]) -> Provider | None:
         enabled=bool(raw.get("enabled", True)),
         key_ref=str(raw["keyRef"]) if raw.get("keyRef") else None,
         options=dict(raw.get("options") or {}),
+        preset_id=preset_id,
+        litellm_provider=litellm_provider,
+        needs_key_value=raw_needs_key if isinstance(raw_needs_key, bool) else None,
+        local_value=raw_local if isinstance(raw_local, bool) else None,
         created_at=str(raw.get("createdAt") or ""),
         updated_at=str(raw.get("updatedAt") or ""),
     )
 
 
-def _validate_base_url(value: str | None, kind: str) -> str | None:
+def _validate_base_url(
+    value: str | None, kind: str, *, default: str | None = None
+) -> str | None:
     if value is None or value == "":
-        return DEFAULT_BASE_URLS.get(kind)
+        return default if default is not None else DEFAULT_BASE_URLS.get(kind)
     parsed = urlparse(value.strip())
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ProviderError("invalid_base_url", "baseUrl must be an http(s) URL")
@@ -352,16 +402,87 @@ class ProviderStore:
                     existing = _parse_provider(raw)
                     break
 
-            kind = str(payload.get("kind") or (existing.kind if existing else "")).strip()
-            if kind not in PROVIDER_KINDS:
+            preset_id_present = "presetId" in payload
+            if preset_id_present:
+                raw_preset_id = payload.get("presetId")
+                preset_id = str(raw_preset_id).strip() if raw_preset_id else None
+            else:
+                preset_id = existing.preset_id if existing else None
+            preset = get_preset(preset_id)
+            if preset_id and preset is None:
                 raise ProviderError(
-                    "invalid_provider_kind",
-                    "kind must be one of openai, anthropic, ollama, mock",
+                    "unknown_preset", f"unknown provider preset: {preset_id}"
                 )
+            preset_changed = existing is None or existing.preset_id != preset_id
+
+            if preset is not None:
+                kind = preset.kind
+                submitted_kind = payload.get("kind")
+                if submitted_kind and submitted_kind != kind:
+                    # 预设决定协议类型（openai / anthropic / ollama），不允许前端改写。
+                    raise ProviderError(
+                        "invalid_provider_kind", "kind does not match the selected preset"
+                    )
+            else:
+                kind = str(payload.get("kind") or (existing.kind if existing else "")).strip()
+                if kind not in PROVIDER_KINDS:
+                    raise ProviderError(
+                        "invalid_provider_kind",
+                        "kind must be one of openai, anthropic, ollama, mock",
+                    )
+            kind_changed = existing is not None and existing.kind != kind
+
+            if kind in {"ollama", "mock"}:
+                litellm_provider = None
+            elif preset is not None:
+                litellm_provider = str(
+                    payload.get("litellmProvider") or preset.litellm_provider or kind
+                )
+            elif payload.get("litellmProvider"):
+                litellm_provider = str(payload["litellmProvider"])
+            elif existing is not None and not kind_changed and existing.litellm_provider:
+                litellm_provider = existing.litellm_provider
+            else:
+                litellm_provider = kind
+            if litellm_provider is not None and litellm_provider not in LITELLM_PROVIDERS:
+                raise ProviderError(
+                    "invalid_litellm_provider",
+                    "litellmProvider is not supported by this build",
+                )
+
+            if "needsKey" in payload and payload["needsKey"] is not None:
+                needs_key = bool(payload["needsKey"])
+            elif preset is not None and (preset_changed or existing is None):
+                needs_key = preset.needs_key
+            elif existing is not None and not kind_changed:
+                needs_key = existing.needs_key
+            elif preset is not None:
+                needs_key = preset.needs_key
+            else:
+                needs_key = kind in {"openai", "anthropic"}
+
+            if "local" in payload and payload["local"] is not None:
+                is_local = bool(payload["local"])
+            elif preset is not None and (preset_changed or existing is None):
+                is_local = preset.local
+            elif existing is not None and not kind_changed:
+                is_local = existing.is_local
+            elif preset is not None:
+                is_local = preset.local
+            else:
+                is_local = kind in {"ollama", "mock"}
 
             label = str(
                 payload.get("label")
-                or (existing.label if existing else "")
+                or (
+                    preset.label
+                    if preset is not None and (preset_changed or existing is None)
+                    else existing.label
+                    if existing is not None
+                    else preset.label
+                    if preset is not None
+                    else ""
+                )
                 or {
                     "openai": "OpenAI",
                     "anthropic": "Anthropic",
@@ -371,14 +492,43 @@ class ProviderStore:
             ).strip()
             model = str(
                 payload.get("model")
-                or (existing.model if existing else "")
+                or (
+                    preset.default_model
+                    if preset is not None and (preset_changed or existing is None)
+                    else existing.model
+                    if existing is not None
+                    else preset.default_model
+                    if preset is not None
+                    else ""
+                )
                 or DEFAULT_MODELS[kind]
             ).strip()
             if not label or not model or len(label) > 80 or len(model) > 120:
                 raise ProviderError("invalid_provider", "label/model is invalid")
 
+            if "baseUrl" in payload:
+                raw_base_url = payload.get("baseUrl") or (
+                    preset.base_url if preset is not None else None
+                )
+            elif preset is not None and (preset_changed or existing is None):
+                raw_base_url = preset.base_url
+            elif existing is not None:
+                raw_base_url = existing.base_url
+            elif preset is not None:
+                raw_base_url = preset.base_url
+            else:
+                raw_base_url = None
+            if preset is not None and preset.requires_base_url and not str(
+                raw_base_url or ""
+            ).strip():
+                raise ProviderError(
+                    "base_url_required",
+                    "baseUrl is required for this provider preset",
+                )
             base_url = _validate_base_url(
-                payload.get("baseUrl", existing.base_url if existing else None), kind
+                raw_base_url,
+                kind,
+                default=preset.base_url if preset is not None else None,
             )
             enabled = bool(payload.get("enabled", existing.enabled if existing else True))
 
@@ -398,6 +548,10 @@ class ProviderStore:
                 enabled=enabled,
                 key_ref=key_ref,
                 options=dict(existing.options) if existing else {},
+                preset_id=preset_id,
+                litellm_provider=litellm_provider,
+                needs_key_value=needs_key,
+                local_value=is_local,
                 created_at=existing.created_at if existing else now,
                 updated_at=now,
             )
@@ -406,9 +560,10 @@ class ProviderStore:
             merged.append(provider.to_storage())
             self._write_raw(merged)
         logger.info(
-            "provider saved id=%s kind=%s model=%s key=%s",
+            "provider saved id=%s preset=%s litellm=%s model=%s key=%s",
             provider.id,
-            provider.kind,
+            provider.preset_id or "custom",
+            provider.litellm_provider or provider.kind,
             provider.model,
             "configured" if provider.key_ref else "none",
         )

@@ -30,6 +30,7 @@ export interface SessionListProps {
   sessions: AssistantSession[];
   activeId: string | null;
   query: string;
+  className?: string;
   onCreate: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
@@ -42,6 +43,7 @@ export function SessionList({
   sessions,
   activeId,
   query,
+  className,
   onCreate,
   onSelect,
   onDelete,
@@ -85,7 +87,7 @@ export function SessionList({
   };
 
   return (
-    <Card>
+    <Card className={cn("flex h-full min-h-0 flex-col", className)}>
       <CardHeader>
         <CardTitle className="eh-h3">{t("assistant.sessions.title")}</CardTitle>
         <CardDescription>{t("assistant.sessions.description")}</CardDescription>
@@ -96,7 +98,7 @@ export function SessionList({
           </Button>
         </CardAction>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto">
         <div className="relative">
           <Search
             className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"

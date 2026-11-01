@@ -60,8 +60,24 @@ class Settings(BaseSettings):
     def imports_dir(self) -> Path:
         return self.data_dir / "imports"
 
+    # A5：Agent 数据导入的 session 工作区（input/work/output）。
+    @property
+    def import_agent_dir(self) -> Path:
+        return self.data_dir / "import-agent"
+
+    @property
+    def audit_dir(self) -> Path:
+        return self.data_dir / "audit"
+
     def ensure_dirs(self) -> None:
-        for path in (self.data_dir, self.signals_dir, self.reports_dir, self.imports_dir):
+        for path in (
+            self.data_dir,
+            self.signals_dir,
+            self.reports_dir,
+            self.imports_dir,
+            self.import_agent_dir,
+            self.audit_dir,
+        ):
             path.mkdir(parents=True, exist_ok=True)
 
     def normalize_log_level(self) -> int:

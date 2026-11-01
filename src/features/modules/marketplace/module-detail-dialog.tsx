@@ -2,6 +2,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 import {
+  BadgeCheck,
+  BookOpen,
   Download,
   ExternalLink,
   GitBranch,
@@ -24,6 +26,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatBytes, moduleTypeLabel } from "../format";
+import {
+  getModuleCopy,
+  isFirstPartyModule,
+  moduleDisplayName,
+  moduleDocsUrl,
+} from "../copy";
 import {
   permissionDescription,
   permissionLabel,
@@ -77,6 +85,20 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function CopyList({ title, items }: { title: string; items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <section className="space-y-2">
+      <h4 className="eh-caption text-muted-foreground">{title}</h4>
+      <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+        {items.map((item, index) => (
+          <li key={`${index}-${item}`}>{item}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function permissionItems(module: MarketplaceModule): PermissionDetail[] {
   return permissionDetails(module.permissions ?? []);
 }
@@ -89,7 +111,7 @@ export function ModuleDetailDialog({
   onClose,
   onInstalled,
 }: ModuleDetailDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const install = useMutation({
     mutationFn: () => {
@@ -126,6 +148,11 @@ export function ModuleDetailDialog({
   const community = source === "community";
   const permissions = permissionItems(module);
   const dependencies = module.dependencies ?? [];
+  const copy = getModuleCopy(i18n.language, module.id);
+  const name = moduleDisplayName(i18n.language, module.id, module.name);
+  const firstParty = isFirstPartyModule(module.id);
+  const features = copy?.features ?? [];
+  const summary = copy?.summary || module.description;
 
   return (
     <Dialog
@@ -138,8 +165,13 @@ export function ModuleDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2 pr-8">
             <Package className="size-4" aria-hidden="true" />
-            {module.name}
-            {module.verified ? (
+            {name}
+            {firstParty ? (
+              <Badge variant="secondary" className="gap-1 font-normal">
+                <BadgeCheck className="size-3" aria-hidden="true" />
+                {t("moduleUi.marketplace.firstParty")}
+              </Badge>
+            ) : module.verified ? (
               <Badge variant="secondary" className="gap-1 font-normal">
                 <ShieldCheck className="size-3" aria-hidden="true" />
                 {t("moduleUi.marketplace.verified")}
@@ -154,7 +186,8 @@ export function ModuleDetailDialog({
           </DialogTitle>
           <DialogDescription className="space-y-1">
             <code className="eh-caption block">{module.id}</code>
-            {module.description ? <span>{module.description}</span> : null}
+            {copy?.tagline ? <span>{copy.tagline}</span> : null}
+            {summary ? <span className="block">{summary}</span> : null}
           </DialogDescription>
         </DialogHeader>
 
@@ -207,19 +240,124 @@ export function ModuleDetailDialog({
                 </span>
               </Fact>
             ) : null}
+            {module.sha256 ? (
+              <Fact label={t("moduleUi.marketplace.details.sha256")}>
+                <code className="eh-caption break-all">{module.sha256}</code>
+              </Fact>
+            ) : null}
+            {module.scan ? (
+              <Fact label={t("moduleUi.marketplace.details.scan")}>
+                <span className="flex flex-col items-end gap-1">
+                  <span>
+                    {t("moduleUi.marketplace.details.scanStatus")}:{" "}
+                    {module.scan.status ?? "—"}
+                    {" · "}
+                    {t("moduleUi.marketplace.details.scanRisk")}:{" "}
+                    {module.scan.risk ?? "—"}
+                  </span>
+                  {module.scan.reportUrl ? (
+                    <a
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                      href={module.scan.reportUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("moduleUi.marketplace.details.scanReport")}
+                      <ExternalLink className="size-3" aria-hidden="true" />
+                    </a>
+                  ) : null}
+                </span>
+              </Fact>
+            ) : null}
           </dl>
 
-          {module.repository ? (
+          <div className="flex flex-wrap gap-4">
+            {module.repository ? (
+              <a
+                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                href={module.repository}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <GitBranch className="size-3.5" aria-hidden="true" />
+                {t("moduleUi.manifest.repository")}
+                <ExternalLink className="size-3.5" aria-hidden="true" />
+              </a>
+            ) : null}
             <a
               className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-              href={module.repository}
+              href={moduleDocsUrl(module.id)}
               target="_blank"
               rel="noreferrer"
             >
-              <GitBranch className="size-3.5" aria-hidden="true" />
-              {t("moduleUi.manifest.repository")}
+              <BookOpen className="size-3.5" aria-hidden="true" />
+              {t("moduleUi.marketplace.details.websiteDocs")}
               <ExternalLink className="size-3.5" aria-hidden="true" />
             </a>
+          </div>
+
+          {features.length > 0 ? (
+            <section className="space-y-2">
+              <h4 className="eh-caption text-muted-foreground">
+                {t("moduleUi.marketplace.details.features")}
+              </h4>
+              <ul className="space-y-2">
+                {features.map((feature, index) => (
+                  <li
+                    key={`${index}-${feature.title}`}
+                    className="rounded-lg border border-border p-3"
+                  >
+                    <p className="text-sm font-medium">{feature.title}</p>
+                    {feature.text ? (
+                      <p className="eh-caption mt-1 text-muted-foreground">
+                        {feature.text}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <CopyList
+            title={t("moduleUi.marketplace.details.usage")}
+            items={copy?.usage ?? []}
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CopyList
+              title={t("moduleUi.marketplace.details.inputs")}
+              items={copy?.inputs ?? []}
+            />
+            <CopyList
+              title={t("moduleUi.marketplace.details.outputs")}
+              items={copy?.outputs ?? []}
+            />
+          </div>
+
+          {copy?.goodFor ? (
+            <section className="space-y-2">
+              <h4 className="eh-caption text-muted-foreground">
+                {t("moduleUi.marketplace.details.goodFor")}
+              </h4>
+              <p className="eh-small text-muted-foreground">{copy.goodFor}</p>
+            </section>
+          ) : null}
+
+          <CopyList
+            title={t("moduleUi.marketplace.details.limits")}
+            items={copy?.limits ?? []}
+          />
+
+          {copy?.techNote ? (
+            <details className="rounded-lg border border-border p-3">
+              <summary className="eh-caption cursor-pointer text-muted-foreground">
+                {t("moduleUi.marketplace.details.techNote")}
+              </summary>
+              <p className="eh-small mt-2 text-muted-foreground">
+                {copy.techNote}
+              </p>
+            </details>
           ) : null}
 
           <section className="space-y-2">

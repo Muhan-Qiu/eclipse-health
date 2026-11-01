@@ -27,6 +27,7 @@ from ..db.repositories import ensure_default_member, get_record_row
 from ..domain.common import utc_now
 from ..domain.errors import ApiError, ConflictError, InvalidInputError, NotFoundError, not_found
 from ..llm import agent, session_export
+from ..llm.provider_presets import list_presets
 from ..llm.providers import (
     Provider,
     ProviderError,
@@ -55,6 +56,10 @@ class ProviderIn(BaseModel):
     model: str | None = Field(default=None, max_length=120)
     baseUrl: str | None = Field(default=None, max_length=300)
     enabled: bool | None = None
+    presetId: str | None = Field(default=None, max_length=64)
+    litellmProvider: str | None = Field(default=None, max_length=40)
+    needsKey: bool | None = None
+    local: bool | None = None
     apiKey: str | None = Field(default=None, max_length=4096)
     clearKey: bool = False
 
@@ -152,6 +157,11 @@ def _message_payload(row: Any, calls: list[Any]) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Providers
 # --------------------------------------------------------------------------- #
+
+
+@router.get("/provider-presets", summary="服务商预设（不含任何 key）")
+def list_provider_presets() -> dict[str, Any]:
+    return {"items": list_presets()}
 
 
 @router.get("/providers", summary="provider 列表（不含任何 key）")
@@ -380,7 +390,7 @@ async def _test_litellm(provider: Provider) -> _Probe:
     except ImportError as exc:  # pragma: no cover
         raise agent.LLMError("litellm_missing", "LiteLLM is not installed") from exc
     kwargs: dict[str, Any] = {
-        "model": f"{provider.kind}/{provider.model}",
+        "model": provider.litellm_model,
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 4,
         "timeout": 15,
@@ -397,7 +407,7 @@ async def _test_litellm(provider: Provider) -> _Probe:
         await litellm.acompletion(**kwargs)
     except BaseException as exc:  # noqa: BLE001 - 统一脱敏
         status = getattr(exc, "status_code", None)
-        raise agent.sanitize_error(provider.kind, exc, status=status) from None
+        raise agent.sanitize_error(provider.error_kind, exc, status=status) from None
     latency_ms = int((time.perf_counter() - started) * 1000)
     tool_hint = (
         "支持工具调用"
@@ -418,9 +428,7 @@ async def _test_litellm(provider: Provider) -> _Probe:
 def _litellm_supports_tools(litellm_module: Any, provider: Provider) -> bool | None:
     """LiteLLM 的模型能力表；未知模型返回 None，不假装探测过。"""
     try:
-        params = litellm_module.get_supported_openai_params(
-            model=f"{provider.kind}/{provider.model}"
-        )
+        params = litellm_module.get_supported_openai_params(model=provider.litellm_model)
     except Exception:  # noqa: BLE001 - 未知模型/离线表缺失都按未知处理
         try:
             params = litellm_module.get_supported_openai_params(model=provider.model)

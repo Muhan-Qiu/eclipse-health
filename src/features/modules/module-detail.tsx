@@ -2,7 +2,16 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, ChevronRight, History, LayoutGrid, ShieldCheck } from "lucide-react";
+import {
+  AlertCircle,
+  BadgeCheck,
+  BookOpen,
+  ChevronRight,
+  ExternalLink,
+  History,
+  LayoutGrid,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -35,6 +44,12 @@ import {
   revokePermission,
 } from "./api";
 import { AuditEventRow } from "./audit-row";
+import {
+  getModuleCopy,
+  isFirstPartyModule,
+  moduleDisplayName,
+  moduleDocsUrl,
+} from "./copy";
 import { moduleErrorMessage } from "./errors";
 import { ManifestFacts, ModuleIdentity } from "./manifest-summary";
 import { permissionLabel } from "./permission-utils";
@@ -60,7 +75,7 @@ export function ModuleDetail({
   onChanged,
   onViewAudit,
 }: ModuleDetailProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const moduleId = module?.id ?? "";
   const enabled = open && Boolean(module);
@@ -130,6 +145,10 @@ export function ModuleDetail({
 
   const manifest = manifestQuery.data;
   const permissions = permissionsQuery.data;
+  const copy = module ? getModuleCopy(i18n.language, module.id) : undefined;
+  const displayName = module
+    ? moduleDisplayName(i18n.language, module.id, module.name)
+    : null;
 
   return (
     <>
@@ -142,8 +161,14 @@ export function ModuleDetail({
         <SheetContent side="right" className="w-full gap-0 sm:max-w-lg">
           <SheetHeader className="border-b border-border">
             <SheetTitle className="flex flex-wrap items-center gap-2">
-              {module?.name ?? t("moduleUi.detail.title")}
+              {displayName ?? t("moduleUi.detail.title")}
               {module ? <ModuleStateBadge state={module.state} /> : null}
+              {module && isFirstPartyModule(module.id) ? (
+                <Badge variant="secondary" className="gap-1 font-normal">
+                  <BadgeCheck className="size-3" aria-hidden="true" />
+                  {t("moduleUi.marketplace.firstParty")}
+                </Badge>
+              ) : null}
             </SheetTitle>
             <SheetDescription>
               {module
@@ -176,16 +201,26 @@ export function ModuleDetail({
             {manifest ? (
               <>
                 <ModuleIdentity
-                  name={manifest.name}
+                  name={moduleDisplayName(i18n.language, manifest.id, manifest.name)}
                   id={manifest.id}
                   version={manifest.version}
                   type={manifest.type}
-                  description={manifest.description}
+                  description={copy?.summary || manifest.description}
                   author={manifest.author}
                   license={manifest.license}
                   showCredits={false}
                 />
                 <ManifestFacts manifest={manifest} />
+                <a
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  href={moduleDocsUrl(manifest.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <BookOpen className="size-3.5" aria-hidden="true" />
+                  {t("moduleUi.marketplace.details.websiteDocs")}
+                  <ExternalLink className="size-3.5" aria-hidden="true" />
+                </a>
               </>
             ) : null}
 

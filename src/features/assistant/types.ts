@@ -33,16 +33,49 @@ export interface AssistantProvider {
   enabled: boolean;
   configured: boolean;
   isLocal: boolean;
+  presetId: string | null;
+  litellmProvider: string | null;
+  needsKey: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ProviderInput {
-  kind: ProviderKind;
+export type ProviderPresetGroup =
+  | "official"
+  | "china"
+  | "gateway"
+  | "local"
+  | "custom"
+  | "demo";
+
+/** 服务商预设（GET /assistant/provider-presets）。 */
+export interface ProviderPreset {
+  id: string;
   label: string;
-  model: string;
+  labelEn: string;
+  kind: ProviderKind;
+  litellmProvider: string | null;
+  baseUrl: string | null;
+  defaultModel: string;
+  models: string[];
+  needsKey: boolean;
+  keyUrl: string | null;
+  docsUrl: string | null;
+  description: string;
+  descriptionEn: string;
+  group: ProviderPresetGroup;
+  requiresBaseUrl: boolean;
+  local: boolean;
+  custom: boolean;
+}
+
+export interface ProviderInput {
+  kind?: ProviderKind;
+  label?: string;
+  model?: string;
   baseUrl?: string | null;
   enabled?: boolean;
+  presetId?: string | null;
   apiKey?: string;
   clearKey?: boolean;
 }

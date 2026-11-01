@@ -107,6 +107,35 @@ class ReportTable(Base, table=True):
     created_at: datetime
 
 
+class DashboardCardTable(Base, table=True):
+    """自定义仪表盘卡片（A8）。
+
+    卡片只描述「查哪个 kind、怎么聚合、怎么画」，不保存任何数据副本；
+    ``data`` 是完整卡片对象的 JSON，``kind`` 单独成列便于索引与排查。
+    """
+
+    __tablename__ = "dashboard_cards"
+
+    id: str = Field(primary_key=True)
+    member_id: str = Field(foreign_key="members.id", index=True)
+    kind: str = Field(index=True)
+    data: dict[str, Any] = Field(sa_column=Column(JSON, nullable=False))
+    created_at: datetime
+    updated_at: datetime
+
+
+class DashboardCardDraftTable(Base, table=True):
+    """助手生成、等待用户确认的卡片草稿；确认后才写入 ``dashboard_cards``。"""
+
+    __tablename__ = "dashboard_card_drafts"
+
+    id: str = Field(primary_key=True)
+    member_id: str = Field(foreign_key="members.id", index=True)
+    data: dict[str, Any] = Field(sa_column=Column(JSON, nullable=False))
+    created_at: datetime
+    updated_at: datetime
+
+
 class ExternalApiKeyTable(Base, table=True):
     """对外 API Key（F3）。
 
@@ -129,6 +158,8 @@ class ExternalApiKeyTable(Base, table=True):
 __all__ = [
     "AnalysisTable",
     "AnnotationTable",
+    "DashboardCardDraftTable",
+    "DashboardCardTable",
     "ExternalApiKeyTable",
     "MeasurementTable",
     "MemberTable",

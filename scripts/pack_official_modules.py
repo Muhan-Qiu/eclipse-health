@@ -1,4 +1,7 @@
-"""Pack every module under modules/official into .ehmod and build a catalog index.
+"""Pack every module under modules/official and modules/community into .ehmod.
+
+产物统一放在 ``dist/modules``，文件名保持 ``<module-id>-<version>.ehmod``，
+因此官方/社区分家不会改变已安装模块的身份或下载地址。
 
 Usage (project root):
     backend\\.venv\\Scripts\\python.exe scripts\\pack_official_modules.py
@@ -22,7 +25,10 @@ if str(_SRC) not in sys.path:
 from eclipse_health_backend.modules import package
 from eclipse_health_backend.modules.manifest import load_manifest_file
 
-OFFICIAL = ROOT / "modules" / "official"
+MODULE_ROOTS = (
+    ROOT / "modules" / "official",
+    ROOT / "modules" / "community",
+)
 OUT = ROOT / "dist" / "modules"
 RELAY_SLEEP_ID = "org.eclipsehealth.relay-sleep"
 RELAY_SLEEP_WEIGHTS = ROOT / "uploads" / "relay-sleep" / "models"
@@ -85,60 +91,71 @@ def _stage_relay_ecg(source: Path, staging: Path) -> int:
 
 
 def main() -> int:
-    if not OFFICIAL.is_dir():
-        print(f"error: {OFFICIAL} not found", file=sys.stderr)
+    roots = [root for root in MODULE_ROOTS if root.is_dir()]
+    if not roots:
+        print(f"error: none of {MODULE_ROOTS} found", file=sys.stderr)
         return 2
     OUT.mkdir(parents=True, exist_ok=True)
     entries: list[dict[str, object]] = []
     failures: list[str] = []
+    seen_ids: dict[str, str] = {}
 
-    for source in sorted(p for p in OFFICIAL.iterdir() if p.is_dir()):
-        manifest_path = source / "module.json"
-        if not manifest_path.is_file():
-            continue
-        try:
-            manifest = load_manifest_file(manifest_path)
-        except Exception as exc:  # noqa: BLE001
-            failures.append(f"{source.name}: {exc}")
-            continue
-        if manifest.id == "org.eclipsehealth.cardia":
-            continue  # bundled separately
-        filename = f"{manifest.id}-{manifest.version}.ehmod"
-        output = OUT / filename
-        with tempfile.TemporaryDirectory(prefix=f"ehmod-{source.name}-") as stage_dir:
-            if manifest.id == RELAY_SLEEP_ID:
-                pack_source = Path(stage_dir) / "staging"
-                _stage_relay_sleep(source, pack_source)
-            elif manifest.id == RELAY_ECG_ID:
-                pack_source = Path(stage_dir) / "staging"
-                _stage_relay_ecg(source, pack_source)
-            else:
-                pack_source = source
-                shutil.rmtree(source / "__pycache__", ignore_errors=True)
-            package.write_checksums(pack_source)
-            package.pack_directory(pack_source, output)
-            with tempfile.TemporaryDirectory() as temp_dir:
-                extracted = Path(temp_dir) / "verify"
-                with zipfile.ZipFile(output) as zf:
-                    package.extract_package(zf, extracted)
-                package.verify_checksums(extracted)
-                package.verify_layout(extracted, load_manifest_file(extracted / "module.json"))
-        entries.append(
-            {
-                "id": manifest.id,
-                "name": manifest.name,
-                "version": manifest.version,
-                "type": manifest.type.value,
-                "description": manifest.description,
-                "license": manifest.license,
-                "repository": manifest.repository,
-                "permissions": list(manifest.permissions),
-                "dependencies": list(manifest.dependencies),
-                "file": filename,
-                "size": output.stat().st_size,
-                "sha256": _sha256(output),
-            }
-        )
+    for modules_root in roots:
+        for source in sorted(p for p in modules_root.iterdir() if p.is_dir()):
+            manifest_path = source / "module.json"
+            if not manifest_path.is_file():
+                continue
+            try:
+                manifest = load_manifest_file(manifest_path)
+            except Exception as exc:  # noqa: BLE001
+                failures.append(f"{source.name}: {exc}")
+                continue
+            if manifest.id == "org.eclipsehealth.cardia":
+                continue  # bundled separately
+            if manifest.id in seen_ids:
+                failures.append(
+                    f"{source.name}: duplicate id {manifest.id} "
+                    f"(also in {seen_ids[manifest.id]})"
+                )
+                continue
+            seen_ids[manifest.id] = modules_root.name
+            filename = f"{manifest.id}-{manifest.version}.ehmod"
+            output = OUT / filename
+            with tempfile.TemporaryDirectory(prefix=f"ehmod-{source.name}-") as stage_dir:
+                if manifest.id == RELAY_SLEEP_ID:
+                    pack_source = Path(stage_dir) / "staging"
+                    _stage_relay_sleep(source, pack_source)
+                elif manifest.id == RELAY_ECG_ID:
+                    pack_source = Path(stage_dir) / "staging"
+                    _stage_relay_ecg(source, pack_source)
+                else:
+                    pack_source = source
+                    shutil.rmtree(source / "__pycache__", ignore_errors=True)
+                package.write_checksums(pack_source)
+                package.pack_directory(pack_source, output)
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    extracted = Path(temp_dir) / "verify"
+                    with zipfile.ZipFile(output) as zf:
+                        package.extract_package(zf, extracted)
+                    package.verify_checksums(extracted)
+                    package.verify_layout(extracted, load_manifest_file(extracted / "module.json"))
+            entries.append(
+                {
+                    "id": manifest.id,
+                    "name": manifest.name,
+                    "version": manifest.version,
+                    "type": manifest.type.value,
+                    "description": manifest.description,
+                    "license": manifest.license,
+                    "repository": manifest.repository,
+                    "permissions": list(manifest.permissions),
+                    "dependencies": list(manifest.dependencies),
+                    "source": modules_root.name,
+                    "file": filename,
+                    "size": output.stat().st_size,
+                    "sha256": _sha256(output),
+                }
+            )
 
     index = {
         "schemaVersion": "1",

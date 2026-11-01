@@ -95,7 +95,7 @@ export function RecordRow({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-medium">
+            <p className="shrink-0 truncate text-sm font-medium">
               {formatDateTime(record.recordedAt, locale)}
             </p>
             {record.isDemo ? <DemoBadge /> : null}
