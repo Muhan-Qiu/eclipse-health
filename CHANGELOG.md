@@ -36,10 +36,10 @@ First public alpha. Windows 10/11 x64. **Pre-release**: the installer is unsigne
 
 | File | Size | SHA-256 |
 |---|---|---|
-| `eclipse health_0.1.0_x64-setup.exe` (NSIS) | 383,829,823 bytes (366.05 MiB) | `CC8F1ACB3CD9E1CAE316966037C8877A422DB399DE04F1A32479383068BAC177` |
+| `eclipse.health_0.1.0_x64-setup.exe` (NSIS) | 383,829,823 bytes (366.05 MiB) | `CC8F1ACB3CD9E1CAE316966037C8877A422DB399DE04F1A32479383068BAC177` |
 
 Verify on Windows:
 
 ```powershell
-Get-FileHash ".\eclipse health_0.1.0_x64-setup.exe" -Algorithm SHA256
+Get-FileHash ".\eclipse.health_0.1.0_x64-setup.exe" -Algorithm SHA256
 ```

@@ -96,7 +96,7 @@ Want to build one? Start with [`docs/MODULE_DEVELOPER_GUIDE_V1.md`](docs/MODULE_
 
 ## Install
 
-1. Download the latest **`eclipse health_0.1.0_x64-setup.exe`** from [Releases](https://github.com/Muhan-Qiu/eclipse-health/releases).
+1. Download the latest **`eclipse.health_0.1.0_x64-setup.exe`** from [Releases](https://github.com/Muhan-Qiu/eclipse-health/releases).
 2. Verify the SHA-256 published in the release notes.
 3. Run the installer and launch **eclipse health**.
 4. The Python backend sidecar starts automatically on `127.0.0.1:8765`. Nothing else to install.
