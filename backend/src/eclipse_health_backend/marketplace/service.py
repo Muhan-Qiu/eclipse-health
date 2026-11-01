@@ -237,6 +237,8 @@ class MarketplaceService:
                 index_path.parent.parent / file_value,
                 # 开发用：索引只提交 JSON，.ehmod 由 pack_official_modules.py 放在 dist/。
                 PROJECT_ROOT / "dist" / "modules" / Path(file_value).name,
+                # 打包后：.ehmod 随 sidecar 放在 marketplace/packages/。
+                Path(__file__).resolve().parent / "packages" / Path(file_value).name,
             ]
             for candidate in candidates:
                 if candidate.is_file():

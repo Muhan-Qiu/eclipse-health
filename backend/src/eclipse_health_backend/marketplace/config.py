@@ -17,6 +17,12 @@ PUBLIC_KEY_ENV = "EH_MARKETPLACE_PUBLIC_KEY"
 
 
 def _default_index_url(source: str) -> str:
+    # 打包后索引随 sidecar 放在包内；开发时回退到仓库 marketplace/。
+    package_index = (
+        Path(__file__).resolve().parent / "indexes" / source / "index.json"
+    )
+    if package_index.is_file():
+        return package_index.as_uri()
     return (PROJECT_ROOT / "marketplace" / source / "index.json").as_uri()
 
 

@@ -97,6 +97,9 @@ datas += [
     (str(BACKEND_DIR / "resources" / "models" / "cardia"), "backend/resources/models/cardia"),
     (str(BACKEND_DIR / "resources" / "samples"), "backend/resources/samples"),
     (str(ROOT / "schemas" / "module.schema.json"), "eclipse_health_backend/modules"),
+    (str(ROOT / "marketplace" / "official" / "index.json"), "eclipse_health_backend/marketplace/indexes/official"),
+    (str(ROOT / "marketplace" / "community" / "index.json"), "eclipse_health_backend/marketplace/indexes/community"),
+    (str(ROOT / "dist" / "modules"), "eclipse_health_backend/marketplace/packages"),
 ]
 
 a = Analysis(
