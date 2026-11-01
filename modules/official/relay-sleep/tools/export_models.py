@@ -22,7 +22,6 @@ import importlib.util
 import json
 import sys
 import types
-import os
 from pathlib import Path
 from typing import Any
 
@@ -31,8 +30,10 @@ import torch
 from torch import nn
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_DATA_ROOT = Path(os.environ.get("RELAY_SLEEP_DATA_ROOT", "Sleep-EDF"))
-DEFAULT_BRAINDECODE = Path(os.environ.get("BRAINDECODE_SRC", "braindecode"))
+DEFAULT_DATA_ROOT = Path(r"<sleep-data-root>")
+DEFAULT_BRAINDECODE = Path(
+    r"<braindecode-src>"
+)
 DEFAULT_MODULE_MODELS = REPO_ROOT / "modules" / "official" / "relay-sleep" / "models"
 DEFAULT_WEIGHTS_DIR = REPO_ROOT / "uploads" / "relay-sleep" / "models"
 

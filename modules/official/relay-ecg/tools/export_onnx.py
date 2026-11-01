@@ -18,7 +18,6 @@ import json
 import time
 from datetime import UTC, datetime
 from importlib.machinery import SourceFileLoader
-import os
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +26,7 @@ import torch
 from torch import nn
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_V1 = Path(os.environ.get("RELAY_V1_DIR", "V1"))
+DEFAULT_V1 = Path(r"<relay-checkpoint-dir>")
 DEFAULT_OUT = REPO_ROOT / "uploads" / "relay-ecg" / "models"
 DEFAULT_INDEX = REPO_ROOT / "modules" / "official" / "relay-ecg" / "models" / "index.json"
 

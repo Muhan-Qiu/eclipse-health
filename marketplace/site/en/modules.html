@@ -58,9 +58,10 @@
         <p class="eyebrow"><span class="dot" aria-hidden="true"></span>registry · static signed index</p>
         <h1>Module marketplace</h1>
         <p>
-          Official and community indexes are static signed JSON. Cards start with what a module does;
-          open Details for its capability list, inputs and outputs, intended use and limits.
-          Community modules are not manually reviewed — install at your own risk.
+          The official index holds first-party modules plus verified third-party adapters, with first-party modules always listed first.
+          The community index holds community submissions with no manual review — automated scanning only, install at your own risk.
+          Cards start with what a module does; open Details for its capability list, inputs and outputs, intended use and limits.
+          Counts, names and copy match the in-app marketplace.
         </p>
 
         <div class="market-toolbar">
@@ -94,6 +95,58 @@
         </noscript>
         <div class="module-grid" id="module-results" role="tabpanel" aria-labelledby="tab-official"></div>
         <p class="fine-print" id="index-meta"></p>
+      </div>
+    </section>
+
+    <section class="section prompt-section" id="request-module" aria-labelledby="request-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="request-title">Can't find the module you need?</h2>
+          <p>Describe what you want and generate a prompt you can paste straight into your own AI agent. The agent writes <code>module.json</code>, the worker, tests and a packing script against the module contract.</p>
+        </div>
+        <div class="prompt-builder is-empty">
+          <form class="prompt-form" id="module-request-form" autocomplete="off">
+            <div class="field">
+              <label for="request-name">Module name</label>
+              <input id="request-name" name="name" type="text" maxlength="80" placeholder="e.g. Night-time blood oxygen trend">
+            </div>
+            <div class="field">
+              <label for="request-purpose">Purpose</label>
+              <textarea id="request-purpose" name="purpose" rows="3" maxlength="800" placeholder="What problem does it solve? Who uses it?"></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="request-inputs">Inputs</label>
+                <textarea id="request-inputs" name="inputs" rows="3" maxlength="500" placeholder="CSV, WFDB, device import, manual records…"></textarea>
+              </div>
+              <div class="field">
+                <label for="request-outputs">Outputs</label>
+                <textarea id="request-outputs" name="outputs" rows="3" maxlength="500" placeholder="Metrics, charts, reports, new records…"></textarea>
+              </div>
+            </div>
+            <div class="field">
+              <label for="request-permissions">Data / permissions needed</label>
+              <textarea id="request-permissions" name="permissions" rows="2" maxlength="300" placeholder="e.g. records:read, files:user-selected; or “let the agent decide the minimum”"></textarea>
+            </div>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit">Generate prompt</button>
+              <button class="btn btn-ghost" type="reset">Clear</button>
+            </div>
+            <p class="fine-print">Generated in your browser only; nothing is uploaded. The template follows the current page language.</p>
+          </form>
+          <div class="prompt-output" id="prompt-output" hidden aria-live="polite">
+            <div class="prompt-output-head">
+              <span>Prompt to paste into your AI agent</span>
+              <div class="prompt-output-actions">
+                <button class="copy-btn" type="button" id="prompt-copy">Copy</button>
+                <button class="copy-btn" type="button" id="prompt-download-md">Download .md</button>
+                <button class="copy-btn" type="button" id="prompt-download-txt">Download .txt</button>
+              </div>
+            </div>
+            <pre class="prompt-text" id="prompt-text" tabindex="0"></pre>
+            <p class="fine-print">Hand the <a href="../docs/modules-agent-guide.en.md" download>agent module design guide</a> to the agent as well.</p>
+          </div>
+        </div>
       </div>
     </section>
   </main>

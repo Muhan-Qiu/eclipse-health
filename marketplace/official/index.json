@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1",
   "source": "official",
-  "generatedAt": "2026-11-01T15:19:09Z",
+  "generatedAt": "2026-11-01T15:44:44Z",
   "keyId": "dev-2026",
   "modules": [
     {
@@ -20,9 +20,9 @@
       "dependencies": [
         "hrv-analysis>=1.0,<2",
         "pandas>=2.1,<3",
-        "numpy>=1.26,<3",
-        "scipy>=1.11,<2",
-        "astropy>=6,<8",
+        "numpy>=1.26,<2",
+        "scipy>=1.11,<1.17",
+        "astropy>=5.3,<6",
         "nolds>=0.5.2,<1"
       ],
       "minCoreVersion": "1.0.0",
@@ -31,8 +31,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.aura-healthcare.hrv-analysis-0.1.0.ehmod",
-      "size": 23592,
-      "sha256": "7ac5fad79902549d88cfb0d98873f61bb8303266d4a981184d010dc0d05e7409"
+      "size": 28461,
+      "sha256": "f057bcc5c2793a6577478e49b30f2f596a9cf22d3037d44eee33e5ce6aa0b1b3"
     },
     {
       "id": "io.github.dogsheep.healthkit-to-sqlite",
@@ -156,66 +156,6 @@
       "sha256": "0b5aaf2733a48e99797179989088702a79b90860a6a6eeb3ed60ef0a9975897b"
     },
     {
-      "id": "io.github.pgomes92.pyhrv",
-      "name": "pyhrv · HRV 工具箱",
-      "version": "0.1.0",
-      "type": "analysis-model",
-      "description": "适配自 https://github.com/PGomes92/pyhrv 的 HRV 时域/频域/非线性指标模块，调用 pyhrv.time_domain。非医疗器械，不用于诊断。",
-      "author": "Pedro Gomes + eclipse health adapters",
-      "license": "GPL-3.0-only",
-      "repository": "https://github.com/PGomes92/pyhrv",
-      "permissions": [
-        "records:read",
-        "llm"
-      ],
-      "dependencies": [
-        "pyhrv>=0.4,<1",
-        "biosppy>=0.6,<1",
-        "nolds>=0.5.2,<1",
-        "spectrum>=0.8,<1",
-        "numpy>=1.26,<3",
-        "scipy>=1.11,<2"
-      ],
-      "minCoreVersion": "1.0.0",
-      "categories": [
-        "analysis"
-      ],
-      "verified": true,
-      "file": "modules/io.github.pgomes92.pyhrv-0.1.0.ehmod",
-      "size": 23122,
-      "sha256": "dcf7ecffa0358374d11070156bab6c6372b3c572b7ea30306dd3e96d58e0bc55"
-    },
-    {
-      "id": "io.github.raphaelvallat.yasa",
-      "name": "YASA · 睡眠分期",
-      "version": "0.1.0",
-      "type": "analysis-model",
-      "description": "适配自 https://github.com/raphaelvallat/yasa 的 PSG 睡眠分期模块，调用 yasa.SleepStaging；同时提供离线睡眠效率计算。非医疗器械，不用于诊断。",
-      "author": "Raphael Vallat + eclipse health adapters",
-      "license": "GPL-3.0-only",
-      "repository": "https://github.com/raphaelvallat/yasa",
-      "permissions": [
-        "records:read",
-        "llm"
-      ],
-      "dependencies": [
-        "yasa>=0.6,<1",
-        "mne>=1.6,<2",
-        "lightgbm>=4,<5",
-        "pooch>=1.8,<2",
-        "pandas>=2.1,<3",
-        "numpy>=1.26,<3"
-      ],
-      "minCoreVersion": "1.0.0",
-      "categories": [
-        "analysis"
-      ],
-      "verified": true,
-      "file": "modules/io.github.raphaelvallat.yasa-0.1.0.ehmod",
-      "size": 23771,
-      "sha256": "b2dc2bcc697b7fe9efaabf1bad1abb53a1bd61853da96ddce245b9f9ecfcca41"
-    },
-    {
       "id": "io.github.scientisst.biosppy",
       "name": "BioSPPy · ECG",
       "version": "0.1.0",
@@ -322,5 +262,5 @@
       "sha256": "abeb44597ad34681e0b433cb1d13fc1c049f767ab0167ce82aedf42c806a76ad"
     }
   ],
-  "signature": "eJT3DHlsWIFnq+mIVq4E749SzusgcaO6rCf5814UTpgWij02lm1Lz3GafZPNF2hSN15mLRcywaNMpOfTNSoKBw=="
+  "signature": "z4IxKiip0sF8Im5iQkGA1LS6MQlWi3A2q/7omdBQ91yJP/95iX+k3Txp+NQranxWAh+9RrDY5rw7vckgzGMhAw=="
 }

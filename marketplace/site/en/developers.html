@@ -58,6 +58,7 @@
         <aside class="docs-toc" aria-label="Documentation contents">
           <h2>Contents</h2>
           <ol>
+            <li><a href="#downloads">Download module docs</a></li>
             <li><a href="#contract">Contract overview</a></li>
             <li><a href="#package">.ehmod package layout</a></li>
             <li><a href="#manifest">module.json example</a></li>
@@ -84,6 +85,38 @@
               If documentation and implementation disagree, the schema wins.
             </p>
           </div>
+
+          <section id="downloads">
+            <h2>Download module docs</h2>
+            <p>Two documents in Chinese and English, downloadable directly — no GitHub detour. The user guide is for people installing modules; the agent guide can be handed whole to an AI agent or used by a developer as an implementation checklist.</p>
+            <div class="download-grid">
+              <a class="download-card" href="../docs/modules-user-guide.en.md" download="modules-user-guide.en.md">
+                <span class="badge badge-accent">User guide · English</span>
+                <h3>Module user guide</h3>
+                <p>What modules do, how to install them, how to read permissions, and how to have an AI agent build one.</p>
+                <span class="download-action">Download modules-user-guide.en.md</span>
+              </a>
+              <a class="download-card" href="../docs/modules-user-guide.zh.md" download="modules-user-guide.zh.md">
+                <span class="badge">用户版 · 中文</span>
+                <h3>模块使用指南</h3>
+                <p>模块能做什么、如何安装、权限怎么看，以及如何让 AI 帮你做一个模块。</p>
+                <span class="download-action">Download modules-user-guide.zh.md</span>
+              </a>
+              <a class="download-card" href="../docs/modules-agent-guide.en.md" download="modules-agent-guide.en.md">
+                <span class="badge badge-accent">Agent guide · English</span>
+                <h3>Module design guide</h3>
+                <p>Contract v2, .ehmod layout, module.json, stdio JSON-RPC, permissions, testing, packing and the PR flow.</p>
+                <span class="download-action">Download modules-agent-guide.en.md</span>
+              </a>
+              <a class="download-card" href="../docs/modules-agent-guide.zh.md" download="modules-agent-guide.zh.md">
+                <span class="badge">Agent 版 · 中文</span>
+                <h3>模块设计文档</h3>
+                <p>契约 v2、.ehmod 包结构、module.json、stdio JSON-RPC、权限、测试、打包与提交 PR。</p>
+                <span class="download-action">Download modules-agent-guide.zh.md</span>
+              </a>
+            </div>
+            <p class="fine-print">Markdown files, openable in any editor and identical to this site. If the module you need does not exist, generate a prompt for your AI agent in the <a href="modules.html#request-module">marketplace</a>.</p>
+          </section>
 
           <section id="contract">
             <h2>1 · Contract overview</h2>

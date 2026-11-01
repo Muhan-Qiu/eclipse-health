@@ -535,14 +535,38 @@ main {
 .grid {
   display: grid;
   gap: 1rem;
+  align-items: stretch;
 }
 
-.grid-3 {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-}
-
+/* Explicit column counts keep every row full and every card in a row the same
+   height. auto-fit used to drop to an orphan column between 860–1000px. */
+.grid-3,
 .grid-4 {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 620px) {
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.card,
+.spotlight-card,
+.module-card,
+.pillar,
+.release-card {
+  min-width: 0;
 }
 
 /* ---------------------------------------------------------------- hero */
@@ -554,7 +578,7 @@ main {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.95fr);
   gap: clamp(1.5rem, 4vw, 3.5rem);
-  align-items: center;
+  align-items: start;
 }
 
 .hero-copy h1 {
@@ -678,8 +702,21 @@ main {
 
 .spotlight-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
+  align-items: stretch;
+}
+
+@media (min-width: 860px) {
+  .spotlight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1040px) {
+  .spotlight-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .spotlight-card {
@@ -698,6 +735,7 @@ main {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.7rem;
+  flex-wrap: wrap;
 }
 
 .spotlight-head h3 {
@@ -953,9 +991,22 @@ main {
 
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   margin-top: 1.2rem;
+  align-items: stretch;
+}
+
+@media (min-width: 660px) {
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .module-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .module-card {
@@ -982,6 +1033,11 @@ main {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.6rem;
+  min-width: 0;
+}
+
+.module-card-top > div {
+  min-width: 0;
 }
 
 .module-card h2 {
@@ -1063,6 +1119,13 @@ main {
   flex-wrap: wrap;
   color: var(--muted);
   font-size: 0.76rem;
+  min-width: 0;
+}
+
+.module-meta .badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .module-actions {
@@ -1076,6 +1139,7 @@ main {
 
 .module-actions .btn {
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .state-box {
@@ -1345,7 +1409,7 @@ dialog.module-dialog::backdrop {
 /* ---------------------------------------------------------------- docs */
 .docs-layout {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 210px) minmax(0, 1fr);
   gap: clamp(1.5rem, 4vw, 3rem);
   align-items: start;
   padding-top: clamp(2rem, 5vw, 3.2rem);
@@ -1358,6 +1422,7 @@ dialog.module-dialog::backdrop {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface) 78%, transparent);
+  min-width: 0;
 }
 
 .docs-toc h2 {
@@ -1577,6 +1642,209 @@ td code {
   color: var(--ink-soft);
 }
 
+/* ---------------------------------------------------------------- downloads */
+.download-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+@media (min-width: 640px) {
+  .download-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.download-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  min-width: 0;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.download-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+  color: var(--ink);
+}
+
+.download-card .badge {
+  align-self: flex-start;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.download-card h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.download-card p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.download-card .download-action {
+  margin-top: auto;
+  padding-top: 0.35rem;
+  color: var(--accent-ink);
+  font-size: 0.84rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- prompt builder */
+.prompt-section {
+  scroll-margin-top: 90px;
+}
+
+.prompt-builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .prompt-builder {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  }
+}
+
+.prompt-form,
+.prompt-output {
+  min-width: 0;
+  padding: 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.prompt-builder.is-empty {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prompt-builder.is-empty .prompt-form {
+  max-width: 760px;
+}
+
+.prompt-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
+@media (min-width: 620px) {
+  .field-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.prompt-form .cta-row {
+  margin-top: 0.2rem;
+}
+
+.prompt-form .fine-print {
+  margin-top: 0;
+}
+
+.prompt-output {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  scroll-margin-top: 90px;
+}
+
+.prompt-output[hidden] {
+  display: none;
+}
+
+.prompt-output-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.prompt-output-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.prompt-text {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prompt-output .fine-print {
+  margin-top: 0;
+}
+
 /* ---------------------------------------------------------------- footer */
 .site-footer {
   border-top: 1px solid var(--line);
@@ -1591,6 +1859,11 @@ td code {
   flex-wrap: wrap;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.footer-grid > div {
+  min-width: 0;
+  flex: 1 1 260px;
 }
 
 .footer-grid p {
