@@ -17,7 +17,8 @@
 - **教练与记忆**：Coach 模式（睡眠/心脏/运动/压力/体重预设）、Open-Meteo 天气、可编辑的个人记忆（可关闭注入）。
 - **主题与动效**：8 套主题（莫奈三套 + 3 高饱和 + 2 玻璃）、启动日食、涟漪 logo、淡入淡出导航、30 句每日中英健康名言。
 - **对外 API**：设置页创建/撤销 API Key；REST、OpenAI 兼容端点、stdio MCP；仅本机，key 只显示一次、存 hash。
-- **30 个可选模块**：按官方索引按需安装（`dist/modules/*.ehmod` + `index.json`），覆盖 ECG/HRV、睡眠/活动、营养/代谢、心理/习惯、导入/导出、UI 卡片；依赖装在模块独立 venv。
+- **30 个可选模块**：由官方市场/社区市场按需安装（`dist/modules/*.ehmod` + 签名索引），覆盖 ECG/HRV、睡眠/活动、营养/代谢、心理/习惯、导入/导出、UI 卡片；依赖装在模块独立 venv。
+- **模块市场**：应用内「官方市场 / 社区市场 / 本地文件」三种安装入口；索引 Ed25519 签名、包 sha256 校验；社区模块标注未审核。静态市场站/开发者提交模板见 `marketplace/site/` 与 `.github/`。
 - **动效**：启动日食、侧栏 logo 循环、导航斜向转场、卡片/列表入场、数字滚动、波形选中反馈；遵循系统「减少动画」。
 
 ## 安装
@@ -40,6 +41,6 @@
 
 | 文件 | 大小 | SHA-256 |
 |---|---|---|
-| `eclipse health_0.1.0_x64-setup.exe`（NSIS） | 237,988,674 字节（226.96 MiB） | `896ADF65329C3C2FEB81F204A6987F6C676FA74042718C5C2CA811C76E49C279` |
+| `eclipse health_0.1.0_x64-setup.exe`（NSIS） | 239,801,353 字节（228.69 MiB） | `AEEBECB8B8719BBE1D05FE8E5F0AD1DF2991BBC5D612B47922022FDFE53F0399` |
 
 > 校验命令（PowerShell）：`Get-FileHash ".\eclipse health_0.1.0_x64-setup.exe" -Algorithm SHA256`
