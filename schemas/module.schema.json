@@ -104,6 +104,13 @@
       "maxItems": 32,
       "items": { "$ref": "#/$defs/permission" }
     },
+    "dependencies": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/dependency" },
+      "description": "PEP 508 requirements installed into the module's own venv. URLs, local paths and editable installs are rejected."
+    },
     "allowedHosts": {
       "type": "array",
       "uniqueItems": true,
@@ -376,6 +383,13 @@
         "system:notify",
         "system:background"
       ]
+    },
+    "dependency": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?(?:\\s*\\[[A-Za-z0-9._,-]+\\])?(?:\\s*(?:===|==|!=|~=|<=|>=|<|>)\\s*[A-Za-z0-9*][A-Za-z0-9.*+!_-]*(?:\\s*,\\s*(?:===|==|!=|~=|<=|>=|<|>)\\s*[A-Za-z0-9*][A-Za-z0-9.*+!_-]*)*)?(?:\\s*;\\s*[A-Za-z0-9._\\s<>=!()\"',+-]+)?$",
+      "description": "PEP 508 requirement (name, extras, version specifiers, environment marker). No URL ('@'), local path, 'file:' or '-e' forms."
     },
     "contributes": {
       "type": "object",

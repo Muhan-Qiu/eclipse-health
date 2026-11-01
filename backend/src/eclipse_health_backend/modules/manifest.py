@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import Iterable
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
@@ -10,7 +12,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import ValidationError
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic import ValidationError as PydanticValidationError
 
 from .constants import (
@@ -55,6 +57,51 @@ class Permission(StrEnum):
 
 
 ALL_PERMISSIONS: tuple[str, ...] = tuple(permission.value for permission in Permission)
+
+MAX_DEPENDENCIES = 32
+_MAX_DEPENDENCY_LENGTH = 200
+
+# PEP 508 需求的一个受限子集：名称、extras、版本约束（可逗号分隔）与环境标记。
+# 故意不接受 `name @ url`、`file:`、绝对/相对路径与 `-e`，依赖只能来自包索引。
+_DEPENDENCY_RE = re.compile(
+    r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?"
+    r"(?:\s*\[[A-Za-z0-9._,-]+\])?"
+    r"(?:\s*(?:===|==|!=|~=|<=|>=|<|>)\s*[A-Za-z0-9*][A-Za-z0-9.*+!_-]*"
+    r"(?:\s*,\s*(?:===|==|!=|~=|<=|>=|<|>)\s*[A-Za-z0-9*][A-Za-z0-9.*+!_-]*)*)?"
+    r"(?:\s*;\s*[A-Za-z0-9._\s<>=!()\"',+-]+)?$"
+)
+# 正则本身已排除这些字符；单独检查是为了给出可读的错误原因。
+_DEPENDENCY_FORBIDDEN_RE = re.compile(r"://|@|\\|:|(?:^|[\s,;(])(?:-e\b|/|\.{1,2}[/\\])")
+
+
+def normalize_dependency(spec: str) -> str:
+    """返回去除首尾空白后的 PEP 508 字符串；非法形式抛 ValueError。"""
+    if not isinstance(spec, str):
+        raise TypeError("依赖必须是 PEP 508 字符串")
+    text = spec.strip()
+    if not text:
+        raise ValueError("依赖不能为空字符串")
+    if len(text) > _MAX_DEPENDENCY_LENGTH:
+        raise ValueError("依赖字符串超过 200 字符")
+    if _DEPENDENCY_FORBIDDEN_RE.search(text):
+        raise ValueError(f"依赖不允许 URL、本地路径或 -e 形式：{text[:80]}")
+    if _DEPENDENCY_RE.match(text) is None:
+        raise ValueError(f"依赖不是合法的 PEP 508 需求：{text[:80]}")
+    return text
+
+
+def validate_dependencies(items: Iterable[str]) -> tuple[str, ...]:
+    """规范化并校验依赖列表：≤32 项、无重复、每项为合法 PEP 508。"""
+    try:
+        values = list(items)
+    except TypeError as exc:
+        raise ValueError("dependencies 必须是字符串数组") from exc
+    if len(values) > MAX_DEPENDENCIES:
+        raise ValueError(f"dependencies 最多 {MAX_DEPENDENCIES} 项")
+    normalized = tuple(normalize_dependency(item) for item in values)
+    if len(set(normalized)) != len(normalized):
+        raise ValueError("dependencies 不能包含重复项")
+    return normalized
 
 
 def _schema_path() -> Path:
@@ -134,12 +181,19 @@ class Manifest(BaseModel):
     homepage: str | None = None
     repository: str | None = None
     permissions: list[str] = Field(default_factory=list)
+    dependencies: tuple[str, ...] = ()
     allowed_hosts: list[str] = Field(default_factory=list, alias="allowedHosts")
     entry: ManifestEntry
     contributes: dict[str, Any] = Field(default_factory=dict)
     resources: ManifestResources = Field(default_factory=ManifestResources)
     update_channel: str | None = Field(default=None, alias="updateChannel")
     i18n: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("dependencies")
+    @classmethod
+    def _check_dependencies(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        # schema 已拦截同类问题；这里保证程序内直接构造 Manifest 时也安全。
+        return validate_dependencies(value)
 
     @property
     def entry_path(self) -> str:

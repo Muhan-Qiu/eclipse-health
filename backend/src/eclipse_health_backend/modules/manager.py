@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -300,6 +301,7 @@ class ModuleManager:
             "state": state,
             "requestedPermissions": list(manifest.permissions),
             "grantedPermissions": granted,
+            "dependencies": list(manifest.dependencies),
             "previousVersion": row.previous_version,
             "installedAt": registry.to_iso(row.installed_at),
             "updatedAt": registry.to_iso(row.updated_at),
@@ -391,10 +393,17 @@ class ModuleManager:
             currently_enabled = bool(existing.enabled) if existing is not None else False
             self._stop_host(manifest.id)
 
-            if target.exists():
-                shutil.rmtree(target, ignore_errors=True)
             try:
+                if target.exists():
+                    shutil.rmtree(target, ignore_errors=True)
                 staging.replace(target)
+                file_count = len([p for p in target.rglob("*") if p.is_file()])
+                # 依赖装进新版本目录的 venv；失败会抛 MODULE_INSTALL_FAILED 并按需回滚目录。
+                package.install_module_venv(
+                    target,
+                    manifest.dependencies,
+                    log=lambda text: self._append_module_log(manifest.id, text),
+                )
 
                 enabled_after = enable or currently_enabled
                 registry.upsert_installed(
@@ -420,20 +429,25 @@ class ModuleManager:
                     added, removed = diff_scopes(previously_granted, set(manifest.permissions))
                     action = "module.update"
 
+                detail: dict[str, Any] = {
+                    "version": manifest.version,
+                    "previousVersion": previous_version,
+                    "files": file_count,
+                    "bytes": package_bytes,
+                    "enabled": enabled_after,
+                    "grantedPermissions": sorted(granted),
+                    "addedPermissions": added,
+                    "removedPermissions": removed,
+                }
+                if manifest.dependencies:
+                    # 安装依赖是联网行为：记录列表 hash，不记录 pip 完整输出。
+                    detail["dependencies"] = list(manifest.dependencies)
+                    detail["dependencyHash"] = package.dependency_digest(manifest.dependencies)
                 audit.append(
                     session,
                     action,
                     module_id=manifest.id,
-                    detail={
-                        "version": manifest.version,
-                        "previousVersion": previous_version,
-                        "files": len([p for p in target.rglob("*") if p.is_file()]),
-                        "bytes": package_bytes,
-                        "enabled": enabled_after,
-                        "grantedPermissions": sorted(granted),
-                        "addedPermissions": added,
-                        "removedPermissions": removed,
-                    },
+                    detail=detail,
                 )
                 session.flush()
                 summary = self._describe(
@@ -472,6 +486,13 @@ class ModuleManager:
             check_compatibility(manifest, core_version=self.core_version)
             package.verify_layout(directory, manifest)
             package.verify_checksums(directory)
+            if manifest.dependencies and package.read_ready_venv(directory, manifest.dependencies) is None:
+                # 历史版本可能没有 venv（旧安装或手工拷贝）；切换前补齐，失败则保留当前版本。
+                package.install_module_venv(
+                    directory,
+                    manifest.dependencies,
+                    log=lambda text: self._append_module_log(module_id, text),
+                )
 
             self._stop_host(module_id)
             registry.set_version(session, row, target_version, manifest)
@@ -761,6 +782,17 @@ class ModuleManager:
         module_dir = self._version_dir(module_id, manifest.version)
         if not (module_dir / manifest.entry_path).is_file():
             raise ModuleError("MODULE_CRASH", "模块入口文件缺失")
+        venv_python = package.read_ready_venv(module_dir, manifest.dependencies)
+        if manifest.dependencies and venv_python is None:
+            # 声明的依赖没有就绪环境时不能用核心 Python 硬跑：那只会得到 ImportError 崩溃。
+            raise ModuleError(
+                "MODULE_CRASH",
+                "模块依赖环境未就绪，请重新安装该模块",
+                {"moduleId": module_id},
+            )
+        venv_path = package.module_venv_dir(module_dir) if venv_python is not None else None
+        interpreter = str(venv_python) if venv_python is not None else sys.executable
+        self._append_module_log(module_id, f"[core] worker interpreter={interpreter}")
         host = ModuleHost(
             module_id=module_id,
             module_dir=module_dir,
@@ -770,6 +802,7 @@ class ModuleManager:
             locale=self.locale,
             startup_timeout_s=manifest.startup_timeout_s,
             call_timeout_s=self.call_timeout_s,
+            venv_path=venv_path,
             core_call_handler=lambda method, params: self._handle_core_call(module_id, method, params),
         )
         host.start()

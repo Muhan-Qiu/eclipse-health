@@ -296,3 +296,52 @@ GET /api/v1/modules/contributions?type=widgets|pages|tools|recordTypes
 - 首页 widget 渲染器、模块页渲染器、工具注册表 UI（Stage B）。
 - 模块 RPC 的 `widget` / `page` 数据通道实现（当前只聚合声明，不执行）。
 - `ui.commands` / `ui.settings` 仍为保留字段，v2 不收紧。
+
+## 12. `dependencies`（每模块独立 venv，Stage G）
+
+模块可声明 Python 依赖；依赖只装进该模块版本的独立 venv，不污染核心环境。
+
+```json
+"dependencies": ["pandas>=2.1,<3", "pyedflib==0.1.38"]
+```
+
+| 规则 | 说明 |
+|---|---|
+| 类型 | 字符串数组，≤32 项，无重复；可选字段，缺省视为 `[]` |
+| 格式 | PEP 508：名称、extras、版本约束（可逗号分隔）、`;` 环境标记 |
+| 禁止 | URL（`pkg @ https://…`）、本地/绝对/相对路径、`file:`、`-e` 可编辑安装 |
+| 校验时机 | 安装、升级、回滚都走 `module.schema.json` + `validate_dependencies` 双重校验 |
+
+### 12.1 安装与联网
+
+1. 依赖非空时，在 `<data>/modules/<id>/<version>/venv/` 用核心解释器 `python -m venv` 创建 venv；
+2. 用该 venv 的 `python -m pip install --disable-pip-version-check --no-input --no-warn-script-location <deps…>` 安装，超时 300 秒；
+3. 成功后写 `venv/.ready`（依赖 hash、列表、时间、Python 版本）；失败删除半成品 venv 并让安装失败，不留下「已安装但跑不起来」的状态；
+4. 依赖为空：不创建 venv，worker 继续用核心 Python；
+5. 升级/替换：先在新版本目录装好 venv，再更新注册表；失败保留旧版本与旧 venv；
+6. 卸载：删除模块目录时一并删除各版本 venv；`keep_data` 只保留 `data/`，不保留 venv。
+
+**安装依赖属于联网行为**：即使 manifest 未声明 `network` 权限，安装阶段也会访问包索引。安装确认应展示 `dependencies`（manifest 摘要中的 `dependencies` 字段）与依赖数量；审计事件 `module.install` / `module.update` 记录依赖列表与 `dependencyHash`，不记录 pip 完整输出。
+
+失败时内核返回 `MODULE_ERROR`，并在 `details.installError` 明确标记 `MODULE_INSTALL_FAILED`；`details.reason` 取值：
+
+| reason | 场景 |
+|---|---|
+| `venv-create-failed` | `python -m venv` 非零退出 |
+| `python-venv-missing` | venv 未生成解释器 |
+| `pip-missing` | venv 内没有 pip |
+| `pip-install-failed` | 网络失败、依赖冲突或包不可用 |
+| `timeout` | 超过安装超时 |
+| `disk-full` / `io-error` | 磁盘不足或进程/文件系统错误 |
+
+### 12.2 解释器选择与模块路径
+
+- 版本目录存在与当前依赖 hash 匹配的 `venv/.ready` → worker 用 `venv/Scripts/python.exe`（POSIX 为 `venv/bin/python`）启动；
+- 否则用核心 Python；
+- 声明了依赖但 venv 未就绪时，启动直接失败（`MODULE_CRASH`），避免用核心环境硬跑出 ImportError；
+- venv 内写入 `eclipse_health_module.pth` 指向模块版本目录，等效于把模块目录加入 `PYTHONPATH`。
+
+### 12.3 许可
+
+内核不做依赖签名或许可证校验。模块作者负责确保依赖的许可证与模块分发方式兼容；官方索引仍要求 OSI 许可，社区索引允许专有模块但需显著标注。后续批次再做依赖哈希锁定与扫描。
+
