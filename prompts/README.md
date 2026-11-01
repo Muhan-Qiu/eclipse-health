@@ -1,45 +1,39 @@
-# 提示词索引 · Stage G（30 模块 + 布局编辑）
+# 提示词索引 · Stage H（模块市场）
 
-> 指挥官文件。Stage F 已验收（`2c73a0a`，710 passed / 11 skipped）。
-> 调研清单：`docs/MODULE_CANDIDATES_30.md`。用户决定：每模块 venv、30 个全做、核心声明式图表、完整拖拽布局。
+> 指挥官文件。Stage G 已验收（30 模块 + 布局 + venv）。当前批次：Stage H，3 个 Agent 并行，low。
+> 用户确认：应用内市场先跑通、官方/社区分开、GitHub PR+Actions、离线签名。
 
-## 阶段
+## 本轮
 
 | 编号 | 任务 | 提示词 | 报告 |
 |---|---|---|---|
-| H1 | 每模块独立 venv（前置） | `120-module-venv.md` | `reports/H1-module-venv-report.md` |
-| H2 | 布局编辑器 + bar/line/heatmap | `121-layout-charts.md` | `reports/H2-layout-report.md` |
-| H3–H7 | 5 × 6 个模块 | `122-module-pack.md` | `reports/H3..H7-modules-report.md` |
-
-## 启动顺序
-
-1. H1 先跑（schema/manifest/venv）。
-2. H1 完成后并行：H2 + H3 + H4 + H5 + H6 + H7（6 个 low Agent）。
+| H8 | 市场后端（签名索引/下载/安装/更新） | `130-marketplace-backend.md` | `reports/H8-marketplace-report.md` |
+| H9 | 应用内市场 UI（三 tab） | `131-marketplace-ui.md` | `reports/H9-marketplace-ui-report.md` |
+| H10 | 静态站 + 开发者 PR/Actions + 文档 | `132-marketplace-site.md` | `reports/H10-marketplace-site-report.md` |
 
 ## 启动句
 
 ```
-阅读 prompts/00-COMMON.md 和 prompts/120-module-venv.md，严格按照其中的范围执行。
-只修改「文件所有权」列出的路径；完成后写 reports/H1-module-venv-report.md。
+阅读 prompts/00-COMMON.md 和 prompts/130-marketplace-backend.md，严格按照其中的范围执行。
+只修改「文件所有权」列出的路径；完成后写 reports/H8-marketplace-report.md。
 ```
 
-模块 Agent 用 `prompts/122-module-pack.md`，并在启动句里写清分配的候选编号（H3=1–6、H4=7–12、H5=13–18、H6=19–24、H7=25–30）。
+H9/H10 同理替换。
 
-## 文件所有权
+## 所有权
 
-- H1：`schemas/module.schema.json`、`modules/{manifest,package,manager}.py`、`tests/modules/**`、`MODULE_CONTRACT_V2`。
-- H2：`schemas/module.schema.json`（H1 之后）、widgets、layout、dashboard、i18n。
-- H3–H7：只写各自 `modules/official/<slug>/**` + `tests/modules/test_official_<slug>.py` + 报告。
-- 模块 Agent 不改核心代码/UI/schema；H2 不改模块目录。
+- H8：`backend/.../marketplace/**`、api 挂载、`tests/marketplace/**`、`scripts/*marketplace*`、`marketplace/{official,community}/index.json`、`docs/MARKETPLACE.md`、`.gitignore`。
+- H9：`src/features/modules/marketplace/**`、modules 页/工作区/安装对话框/i18n。
+- H10：`marketplace/site/**`、`marketplace/CONTRIBUTING.md`、`.github/**`、`docs/MARKETPLACE_GUIDE.md`。
+- H8/H10 都碰 `marketplace/`：H8 只写 official/community/index.json 与 README，H10 只写 site/CONTRIBUTING。
 
 ## 边界
 
-- 30 个模块不预装，走官方索引按需安装。
-- 依赖写 manifest，装进模块 venv；核心安装包不变大。
-- 适配层包装，保留 LICENSE/NOTICE；双方共同作者。
-- 图表用 SVG/CSS，不引入 ECharts/uPlot/iframe。
-- 缺依赖的测试 skip，不污染核心 venv。
+- 官方索引只收 OSI 开源；社区标注未审核。
+- Ed25519 签名；私钥 `.secrets/`，不提交；dev key 可替换。
+- `.ehmod` 走 GitHub Releases；静态站不存任意二进制。
+- 不做自动更新/账号系统；安装前展示权限与依赖。
 
 ## 收尾
 
-H1 + H2 + 5 份模块报告齐后：指挥官跑全量测试/ruff/build、打包 30 个 `.ehmod`、重建官方索引条目、重打安装包、更新 release notes。
+报告齐后：指挥官跑测试/build、生成并签名索引、重打安装包、更新 release notes/校验和。

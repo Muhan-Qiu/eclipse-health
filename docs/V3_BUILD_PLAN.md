@@ -735,4 +735,22 @@
 - H3–H7：30 个模块适配包（6 类 × 5），全部 manifest 过 schema、测试通过；`dist/modules/` 660 KB，`index.json` 30 条。
 - 全量：ruff 通过；`pytest backend/tests` **954 passed / 16 skipped**；`npm run build` 通过。
 - 限制：大多数模块依赖未在核心 venv 安装，首次安装需模块 venv 联网；真实设备/API/OAuth 未实测；UI 模块目前用 stat/sparkline/list 组合，H2 图表类型已可用，可后续升级。
-- 最终安装包重打中。 
+- 最终安装包重打中。
+
+## 36. Stage H：模块市场（2026-11-01 启动）
+
+> 用户要求模块安装分「官方市场 / 社区市场 / 本地文件」；市场用 GitHub Pages 静态索引 + 签名 + GitHub Releases；开发者用 GitHub PR + Actions 提交。用户确认：应用内市场先跑通、官方/社区分开、PR+Actions、离线签名。
+
+| 编号 | 任务 |
+|---|---|
+| H8 | 市场后端：签名索引、下载/校验、安装/更新、审计 |
+| H9 | 应用内市场 UI：三 tab、搜索/详情/权限/依赖、社区警告 |
+| H10 | 静态站 + 开发者 PR/Actions + 域名/CNAME 文档 |
+
+**约束：**
+
+- 索引 Ed25519 签名；私钥离线，`.secrets/` gitignored；开发用 dev key，生产替换。
+- 官方索引只收 OSI 开源（宽松 + GPL 兼容）；社区索引标注未审核。
+- `.ehmod` 走 GitHub Releases；静态站只放索引/页面。
+- 不做自动更新；安装前展示权限/依赖/许可证。
+- 完成后全量测试、重打安装包。 
