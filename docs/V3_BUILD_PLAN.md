@@ -726,4 +726,13 @@
 - 只用清单中的许可（宽松 + GPL-3.0 兼容）；AGPL/无许可拒绝。
 - 核心图表用 SVG/CSS，不引入 ECharts/uPlot/iframe。
 - 模块测试缺依赖用 skip，不污染核心 venv。
-- 完成后全量测试、重打安装包。 
+- 完成后全量测试、重打安装包。
+
+### Stage G 验收结果（2026-11-01）
+
+- H1：每模块 venv（manifest `dependencies`、安装/回滚、解释器选择）；模块测试 175 passed。
+- H2：布局编辑器（显隐/拖拽/宽度/导入导出）+ SVG bar/line/heatmap；CDP 24/24。
+- H3–H7：30 个模块适配包（6 类 × 5），全部 manifest 过 schema、测试通过；`dist/modules/` 660 KB，`index.json` 30 条。
+- 全量：ruff 通过；`pytest backend/tests` **954 passed / 16 skipped**；`npm run build` 通过。
+- 限制：大多数模块依赖未在核心 venv 安装，首次安装需模块 venv 联网；真实设备/API/OAuth 未实测；UI 模块目前用 stat/sparkline/list 组合，H2 图表类型已可用，可后续升级。
+- 最终安装包重打中。 

@@ -106,7 +106,11 @@ _mount_metrics_router(api_router)
 def _mount_optional_router(module_name: str, prefix: str = "") -> None:
     """Stage F 路由：模块缺失/未完成时不拖垮核心。"""
     try:
-        module = __import__(f"..{module_name}.api", fromlist=["router"])
+        import importlib
+
+        module = importlib.import_module(
+            f"{__package__.rpartition('.')[0]}.{module_name}.api"
+        )
         router = module.router
     except Exception:  # noqa: BLE001
         logger.info("%s router not available; skipping", module_name)
