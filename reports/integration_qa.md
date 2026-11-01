@@ -1,7 +1,7 @@
 # A9 · 合并验收报告（集成 QA）
 
 日期：2026-11-02　分支：`feat/ui-alignment`（未合入 main 前的工作区验收）
-结论：**功能验收通过，可以今天上线**；上线动作（新安装包 + 官网文案 + 公开树）已在本次验收内执行，结果见第 6 节。
+结论：**功能验收通过，已上线**：新安装包已上传 Release，公开树与官网已推送；无阻塞项。
 
 ## 1. 自动检查
 
@@ -49,14 +49,15 @@
 | 项 | 状态 |
 |---|---|
 | 索引签名 | 仍为 **dev-2026**（未换生产钥，如实记录） |
-| GitHub Release | `v0.1.0-alpha` 已存在（旧构建） |
-| gh-pages | 已更新；线上官方 10 / 社区 22，与本地索引内容一致 |
+| GitHub Release | `v0.1.0-alpha`：新安装包已上传（388,300,172 字节，SHA-256 `A7273ED7…C184361`），`SHA256SUMS.txt` 已更新 |
+| gh-pages | 已更新（`df566f3`）；线上官方 10 / 社区 22，与本地索引内容一致；首页已标注「已发布」 |
 | 安装包 | 本次重新构建并替换 Release asset（含第 3 节修复） |
 
 ## 6. 上线动作（本次执行）
 
-- 重跑 `scripts\build_release.ps1`（PyInstaller + Tauri NSIS），替换 `v0.1.0-alpha` 安装包与 `SHA256SUMS.txt`。
-- 推送公开树到 `Muhan-Qiu/eclipse-health` main；推送官网到 `gh-pages`。
+- 重跑 `scripts\build_release.ps1`（PyInstaller + Tauri NSIS），构建耗时约 36 分钟；新包 388,300,172 字节。
+- 替换 `v0.1.0-alpha` 安装包与 `SHA256SUMS.txt`，更新 Release 说明；下载地址经 Range 请求验证返回 206。
+- 推送公开树到 `Muhan-Qiu/eclipse-health` main（`9a69356`）；推送官网到 `gh-pages`（`df566f3`）。
 - 更新 `docs/RELEASE_NOTES_DRAFT.md` 与 `website-handoff` 状态。
 
 ## 7. 遗留 / 不阻塞
@@ -64,3 +65,4 @@
 - Windows 沙箱无 OS 级文件隔离（既有设计，文档已声明）。
 - 真实云端模型未在本机联调（无 provider key / Ollama），AI 解析用确定性脚本适配器验证完整 SSE→预览→提交链路；后端 37 个导入测试覆盖 CSV/HTML/PDF。
 - 生产 Ed25519 重签与应用内置公钥替换仍需用户执行。
+- 新安装包未做「安装 → 启动 → 冒烟」全流程复测（构建前后端测试与 UI 已验证；安装器由同一脚本产出）。
