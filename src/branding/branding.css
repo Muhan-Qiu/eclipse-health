@@ -27,6 +27,35 @@
   --eh-brand-ripple: currentColor;
 }
 
+.eh-brand-mark__loop {
+  transform-origin: center;
+  animation: eh-brand-mark-breathe 8s var(--eh-ease-near-linear) infinite;
+}
+
+.eh-brand-mark__halo {
+  animation: eh-brand-mark-halo 8s var(--eh-ease-near-linear) infinite;
+}
+
+@keyframes eh-brand-mark-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.965);
+  }
+}
+
+@keyframes eh-brand-mark-halo {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
 /* 常驻标识：同心圆环由外向内收，10s 一轮，错开 2.5s，像水波回收。
  * 只缩放 / 淡入淡出，transform-box: fill-box 让每个圆以自己的圆心为原点。
  * prefers-reduced-motion 由全局规则与本文件末尾共同兜底。 */

@@ -40,6 +40,12 @@
     "externalBin": ["binaries/eclipse-health-backend"],
     "resources": {
       "_internal": "_internal"
+    },
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
     }
   },
   "plugins": {
