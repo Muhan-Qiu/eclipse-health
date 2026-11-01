@@ -112,7 +112,38 @@
         export: "导出", ai: "AI", theme: "主题", locale: "语言", data: "数据", other: "其他"
       },
       unknownType: "未知类型",
-      uncategorized: "未分类"
+      uncategorized: "未分类",
+      prompt: {
+        notProvided: "（未填写）",
+        sep: "：",
+        intro: "你是 eclipse health 的模块开发者。请为我实现一个模块。",
+        needTitle: "## 需求",
+        labels: { name: "模块名称", purpose: "用途", inputs: "输入", outputs: "输出", permissions: "需要的数据 / 权限" },
+        constraintsTitle: "## 必须遵守的约束",
+        constraints: [
+          "遵循 eclipse health 模块契约 v2：模块是独立 Python 进程，通过 stdio JSON-RPC 2.0 通信，每行一条 JSON；核心不会 import 模块代码。",
+          "产出 .ehmod 包（ZIP）：module.json、src/main.py、LICENSE、README.md、checksums.json。",
+          "module.json 必须通过 schemas/module.schema.json；schemaVersion 与 apiVersion 均为 1.0。",
+          "只申请实际需要的最小权限，并逐条解释每个权限的用途。",
+          "不要打包密钥、venv、__pycache__；模型只允许 ONNX / safetensors，远程权重必须带 sha256。",
+          "描述与 README 必须写明：不是医疗器械，输出不用于诊断或治疗。",
+          "社区模块 ID 使用 io.github.<GitHub 用户名>.<模块名>；org.eclipsehealth.* 保留给项目维护者。"
+        ],
+        deliverTitle: "## 交付内容",
+        deliver: [
+          "完整目录结构与每个文件的完整内容",
+          "如何本地校验、自测并打包为 .ehmod",
+          "initialize 与主方法的自测结果（含错误码）",
+          "在应用里用「从本地文件安装」安装的步骤"
+        ],
+        refTitle: "## 参考资料",
+        refs: [
+          "模块设计文档（Agent 版）：https://eclipse-health.fit/docs/modules-agent-guide.zh.md",
+          "Manifest schema：https://github.com/Muhan-Qiu/ecg-agent/blob/main/schemas/module.schema.json",
+          "开发者文档：https://eclipse-health.fit/developers.html"
+        ],
+        footer: "请先给出计划，再给出可以直接落地的完整代码。"
+      }
     },
     en: {
       themeToLight: "Switch to light theme",
@@ -217,7 +248,38 @@
         export: "Export", ai: "AI", theme: "Theme", locale: "Locale", data: "Data", other: "Other"
       },
       unknownType: "Unknown type",
-      uncategorized: "Uncategorised"
+      uncategorized: "Uncategorised",
+      prompt: {
+        notProvided: "(not specified)",
+        sep: ": ",
+        intro: "You are an eclipse health module developer. Build a module for me.",
+        needTitle: "## Requirement",
+        labels: { name: "Module name", purpose: "Purpose", inputs: "Inputs", outputs: "Outputs", permissions: "Data / permissions needed" },
+        constraintsTitle: "## Constraints you must follow",
+        constraints: [
+          "Follow the eclipse health module contract v2: a module is a separate Python process that speaks stdio JSON-RPC 2.0, one JSON document per line; the core never imports module code.",
+          "Produce an .ehmod package (ZIP): module.json, src/main.py, LICENSE, README.md and checksums.json.",
+          "module.json must validate against schemas/module.schema.json; schemaVersion and apiVersion are both 1.0.",
+          "Request only the minimum permissions actually needed and explain each one.",
+          "Never pack keys, venv or __pycache__; models may only be ONNX or safetensors, and remote weights must carry a sha256.",
+          "The description and README must state: not a medical device; output is not for diagnosis or treatment.",
+          "Community module IDs use io.github.<GitHub user>.<module-name>; org.eclipsehealth.* is reserved for maintainers."
+        ],
+        deliverTitle: "## Deliverables",
+        deliver: [
+          "The full directory tree and the complete content of every file",
+          "How to validate, test and pack the .ehmod locally",
+          "Self-test results for initialize and the main method, including error codes",
+          "Install steps using Install from local file in the app"
+        ],
+        refTitle: "## References",
+        refs: [
+          "Agent module design guide: https://eclipse-health.fit/docs/modules-agent-guide.en.md",
+          "Manifest schema: https://github.com/Muhan-Qiu/ecg-agent/blob/main/schemas/module.schema.json",
+          "Developer docs: https://eclipse-health.fit/en/developers.html"
+        ],
+        footer: "Give a plan first, then complete, directly usable code."
+      }
     }
   };
 
@@ -504,10 +566,12 @@
           schemaVersion: raw.schemaVersion || "",
         };
         slot.status = modules.length === 0 ? "empty" : "ready";
+        syncTabCounts();
       })
       .catch(function (error) {
         slot.status = "error";
         slot.error = friendlyLoadError(error);
+        syncTabCounts();
       });
   }
 
@@ -541,6 +605,22 @@
 
   function activeSlot() {
     return state.sources[state.source];
+  }
+
+  /* Tab labels show the live count from each index so the site and the app agree. */
+  var tabLabels = {};
+
+  function syncTabCounts() {
+    document.querySelectorAll(".tab[data-source]").forEach(function (tab) {
+      var source = tab.dataset.source;
+      if (!tabLabels[source]) tabLabels[source] = tab.textContent.trim();
+      var slot = state.sources[source];
+      if (slot && (slot.status === "ready" || slot.status === "empty")) {
+        tab.textContent = tabLabels[source] + " · " + slot.modules.length;
+      } else {
+        tab.textContent = tabLabels[source];
+      }
+    });
   }
 
   function withCopy(item) {
@@ -839,23 +919,21 @@
     if (!item.file) return null;
     var fileUrl = safeHttpUrl(item.file);
     if (fileUrl) return fileUrl;
-    var baseName = item.file.split(/[\\/]/).pop();
-    if (!baseName || baseName === ".." || baseName === ".") return null;
-    var repository = safeHttpUrl(item.repository);
-    if (repository && item.version) {
-      var trimmed = repository.replace(/\/+$/, "").replace(/\.git$/i, "");
-      if (/^https:\/\/github\.com\/[^/]+\/[^/]+$/i.test(trimmed)) {
-        return trimmed + "/releases/download/v" + encodeURIComponent(item.version) + "/" +
-          encodeURIComponent(baseName);
-      }
-    }
-    if (/^\.\.\/|^[A-Za-z0-9._/-]+$/.test(item.file) && item.file.indexOf("..") === -1) {
-      try {
-        var resolved = new URL("../" + item.file.replace(/^\/+/, ""), window.location.href);
-        if (resolved.protocol === "http:" || resolved.protocol === "https:") return resolved.href;
-      } catch (error) {
-        return null;
-      }
+
+    /* Index entries store a path relative to their own index directory
+       (e.g. "modules/<file>.ehmod" inside official/index.json). Resolve it
+       against that directory on this origin; never guess an upstream release. */
+    var clean = String(item.file).replace(/^\.?\//, "").replace(/^\/+/, "");
+    if (!clean || clean.indexOf("..") !== -1) return null;
+    if (!/^[A-Za-z0-9._/-]+$/.test(clean)) return null;
+    var baseName = clean.split("/").pop();
+    if (!baseName || baseName === "." || baseName === "..") return null;
+    var prefix = DEPTH === 2 ? "../../" : "../";
+    try {
+      var resolved = new URL(prefix + (item.source || "official") + "/" + clean, window.location.href);
+      if (resolved.protocol === "http:" || resolved.protocol === "https:") return resolved.href;
+    } catch (error) {
+      return null;
     }
     return null;
   }
@@ -1185,9 +1263,124 @@
     });
   }
 
+  /* ------------------------------------------------------------ module request prompt */
+  function buildModulePrompt(fields) {
+    var t = T.prompt;
+    var value = function (raw) {
+      var text = typeof raw === "string" ? raw.trim() : "";
+      return text || t.notProvided;
+    };
+    var lines = [];
+    lines.push(t.intro, "");
+    lines.push(t.needTitle, "");
+    [["name", fields.name], ["purpose", fields.purpose], ["inputs", fields.inputs],
+      ["outputs", fields.outputs], ["permissions", fields.permissions]].forEach(function (pair) {
+      lines.push("- " + t.labels[pair[0]] + t.sep + value(pair[1]));
+    });
+    lines.push("", t.constraintsTitle, "");
+    t.constraints.forEach(function (item) {
+      lines.push("- " + item);
+    });
+    lines.push("", t.deliverTitle, "");
+    t.deliver.forEach(function (item, index) {
+      lines.push((index + 1) + ". " + item);
+    });
+    lines.push("", t.refTitle, "");
+    t.refs.forEach(function (item) {
+      lines.push("- " + item);
+    });
+    lines.push("", t.footer);
+    return lines.join("\n");
+  }
+
+  function setupPromptBuilder() {
+    var form = document.getElementById("module-request-form");
+    var output = document.getElementById("prompt-output");
+    var pre = document.getElementById("prompt-text");
+    if (!form || !output || !pre) return;
+
+    var text = "";
+    var builder = output.parentElement;
+    var copyButton = document.getElementById("prompt-copy");
+    var copyLabel = copyButton ? copyButton.textContent : T.copy;
+    var mdButton = document.getElementById("prompt-download-md");
+    var txtButton = document.getElementById("prompt-download-txt");
+
+    function read(id) {
+      var node = document.getElementById(id);
+      return node ? node.value : "";
+    }
+
+    function download(extension) {
+      var type = extension === "md" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8";
+      var blob = new Blob([text], { type: type });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = "eclipse-health-module-prompt." + LANG + "." + extension;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 2000);
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      text = buildModulePrompt({
+        name: read("request-name"),
+        purpose: read("request-purpose"),
+        inputs: read("request-inputs"),
+        outputs: read("request-outputs"),
+        permissions: read("request-permissions"),
+      });
+      pre.textContent = text;
+      output.hidden = false;
+      if (builder) builder.classList.remove("is-empty");
+      if (typeof pre.focus === "function") pre.focus({ preventScroll: true });
+      if (typeof output.scrollIntoView === "function") output.scrollIntoView({ block: "nearest" });
+    });
+
+    form.addEventListener("reset", function () {
+      text = "";
+      pre.textContent = "";
+      output.hidden = true;
+      if (builder) builder.classList.add("is-empty");
+    });
+
+    if (copyButton) {
+      copyButton.addEventListener("click", function () {
+        if (!text) return;
+        copyText(text).then(function () {
+          copyButton.textContent = T.copied;
+          window.setTimeout(function () {
+            copyButton.textContent = copyLabel;
+          }, 1600);
+        }).catch(function () {
+          copyButton.textContent = T.copyFailed;
+          window.setTimeout(function () {
+            copyButton.textContent = copyLabel;
+          }, 1600);
+        });
+      });
+    }
+    if (mdButton) {
+      mdButton.addEventListener("click", function () {
+        if (text) download("md");
+      });
+    }
+    if (txtButton) {
+      txtButton.addEventListener("click", function () {
+        if (text) download("txt");
+      });
+    }
+  }
+
   /* ------------------------------------------------------------ boot */
   setupTheme();
   setupNav();
   setupCopyButtons();
   setupModulesPage();
+  setupPromptBuilder();
 })();

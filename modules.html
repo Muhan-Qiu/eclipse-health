@@ -9,7 +9,7 @@
   <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/modules.html">
   <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/modules.html">
   <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/modules.html">
-  <link rel="icon" href="brand/favicon.svg">
+  <link rel="icon" href="brand/favicon.svg?v=2">
   <link rel="stylesheet" href="styles.css">
   <script>
     (function () {
@@ -30,7 +30,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="eclipse health 首页">
-        <img class="brand-mark" src="brand/favicon.svg" alt="" aria-hidden="true" />
+        <img class="brand-mark" src="brand/favicon.svg?v=2" alt="" aria-hidden="true" />
         <span class="brand-name">eclipse health</span>
         <span class="brand-sub">marketplace</span>
       </a>
@@ -58,8 +58,10 @@
         <p class="eyebrow"><span class="dot" aria-hidden="true"></span>registry · static signed index</p>
         <h1>模块市场</h1>
         <p>
-          官方与社区索引来自静态签名 JSON。卡片上先看它能做什么；点开「查看详情」可以看到功能清单、输入输出、适用场景与限制。
-          社区模块未经过人工审核，风险自担。
+          官方索引收录第一方模块与通过验证的第三方适配模块，第一方模块始终排在最前；
+          社区索引收录社区提交的模块，未经过人工审核，只经过自动扫描，风险自担。
+          卡片上先看它能做什么；点开「查看详情」可以看到功能清单、输入输出、适用场景与限制。
+          条数、名称与文案与应用内市场保持一致。
         </p>
 
         <div class="market-toolbar">
@@ -93,6 +95,58 @@
         </noscript>
         <div class="module-grid" id="module-results" role="tabpanel" aria-labelledby="tab-official"></div>
         <p class="fine-print" id="index-meta"></p>
+      </div>
+    </section>
+
+    <section class="section prompt-section" id="request-module" aria-labelledby="request-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="request-title">没有你想要的模块？</h2>
+          <p>填写需求，生成一段可以直接粘贴给你自己的 AI Agent 的提示词。Agent 会按模块契约写出 <code>module.json</code>、worker、测试与打包脚本。</p>
+        </div>
+        <div class="prompt-builder is-empty">
+          <form class="prompt-form" id="module-request-form" autocomplete="off">
+            <div class="field">
+              <label for="request-name">模块名称</label>
+              <input id="request-name" name="name" type="text" maxlength="80" placeholder="例如：夜间血氧趋势">
+            </div>
+            <div class="field">
+              <label for="request-purpose">用途</label>
+              <textarea id="request-purpose" name="purpose" rows="3" maxlength="800" placeholder="它解决什么问题？谁会用它？"></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="request-inputs">输入</label>
+                <textarea id="request-inputs" name="inputs" rows="3" maxlength="500" placeholder="CSV、WFDB、设备导入、手动记录…"></textarea>
+              </div>
+              <div class="field">
+                <label for="request-outputs">输出</label>
+                <textarea id="request-outputs" name="outputs" rows="3" maxlength="500" placeholder="指标、图表、报告、新记录…"></textarea>
+              </div>
+            </div>
+            <div class="field">
+              <label for="request-permissions">需要的数据 / 权限</label>
+              <textarea id="request-permissions" name="permissions" rows="2" maxlength="300" placeholder="例如：records:read、files:user-selected；不确定就写“由 Agent 判断最小权限”"></textarea>
+            </div>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit">生成提示词</button>
+              <button class="btn btn-ghost" type="reset">清空</button>
+            </div>
+            <p class="fine-print">只在浏览器内生成，不会上传任何内容。模板跟随当前页面语言。</p>
+          </form>
+          <div class="prompt-output" id="prompt-output" hidden aria-live="polite">
+            <div class="prompt-output-head">
+              <span>可粘贴给 AI Agent 的提示词</span>
+              <div class="prompt-output-actions">
+                <button class="copy-btn" type="button" id="prompt-copy">复制</button>
+                <button class="copy-btn" type="button" id="prompt-download-md">下载 .md</button>
+                <button class="copy-btn" type="button" id="prompt-download-txt">下载 .txt</button>
+              </div>
+            </div>
+            <pre class="prompt-text" id="prompt-text" tabindex="0"></pre>
+            <p class="fine-print">建议把 <a href="docs/modules-agent-guide.zh.md" download>Agent 版模块设计文档</a> 一起交给 Agent。</p>
+          </div>
+        </div>
       </div>
     </section>
   </main>

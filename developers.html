@@ -9,7 +9,7 @@
   <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/developers.html">
   <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/developers.html">
   <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/developers.html">
-  <link rel="icon" href="brand/favicon.svg">
+  <link rel="icon" href="brand/favicon.svg?v=2">
   <link rel="stylesheet" href="styles.css">
   <script>
     (function () {
@@ -30,7 +30,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="eclipse health 首页">
-        <img class="brand-mark" src="brand/favicon.svg" alt="" aria-hidden="true" />
+        <img class="brand-mark" src="brand/favicon.svg?v=2" alt="" aria-hidden="true" />
         <span class="brand-name">eclipse health</span>
         <span class="brand-sub">marketplace</span>
       </a>
@@ -58,6 +58,7 @@
         <aside class="docs-toc" aria-label="文档目录">
           <h2>目录</h2>
           <ol>
+            <li><a href="#downloads">模块文档下载</a></li>
             <li><a href="#contract">契约概览</a></li>
             <li><a href="#package">.ehmod 包结构</a></li>
             <li><a href="#manifest">module.json 示例</a></li>
@@ -83,6 +84,38 @@
               文档与实现冲突时以 schema 为准。
             </p>
           </div>
+
+          <section id="downloads">
+            <h2>模块文档下载</h2>
+            <p>两份文档、中英文各一版，均可直接下载，不需要跳转 GitHub。用户版给使用模块的人；Agent 版可以整份交给 AI Agent，也可以给开发者当实现清单。</p>
+            <div class="download-grid">
+              <a class="download-card" href="docs/modules-user-guide.zh.md" download="modules-user-guide.zh.md">
+                <span class="badge badge-accent">用户版 · 中文</span>
+                <h3>模块使用指南</h3>
+                <p>模块能做什么、如何安装、权限怎么看，以及如何让 AI 帮你做一个模块。</p>
+                <span class="download-action">下载 modules-user-guide.zh.md</span>
+              </a>
+              <a class="download-card" href="docs/modules-user-guide.en.md" download="modules-user-guide.en.md">
+                <span class="badge">User guide · English</span>
+                <h3>Module user guide</h3>
+                <p>What modules do, how to install them, how to read permissions, and how to have an AI agent build one.</p>
+                <span class="download-action">Download modules-user-guide.en.md</span>
+              </a>
+              <a class="download-card" href="docs/modules-agent-guide.zh.md" download="modules-agent-guide.zh.md">
+                <span class="badge badge-accent">Agent 版 · 中文</span>
+                <h3>模块设计文档</h3>
+                <p>契约 v2、.ehmod 包结构、module.json、stdio JSON-RPC、权限、测试、打包与提交 PR。</p>
+                <span class="download-action">下载 modules-agent-guide.zh.md</span>
+              </a>
+              <a class="download-card" href="docs/modules-agent-guide.en.md" download="modules-agent-guide.en.md">
+                <span class="badge">Agent guide · English</span>
+                <h3>Module design guide</h3>
+                <p>Contract v2, .ehmod layout, module.json, stdio JSON-RPC, permissions, testing, packing and the PR flow.</p>
+                <span class="download-action">Download modules-agent-guide.en.md</span>
+              </a>
+            </div>
+            <p class="fine-print">文件为 Markdown，可用任意编辑器打开。内容与本站一致；没有你想要的模块时，可在<a href="modules.html#request-module">模块市场</a>生成一段给 AI Agent 的提示词。</p>
+          </section>
 
           <section id="contract">
             <h2>1 · 契约概览</h2>
