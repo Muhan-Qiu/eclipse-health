@@ -1,0 +1,13 @@
+{
+  "model": "Cardia 2.0",
+  "input_size": 104,
+  "out_dim": 4,
+  "task": "per-beat 4-class classification (N/SVEB/VEB/F)",
+  "sequence_length": 64,
+  "class_order": [
+    "N",
+    "SVEB",
+    "VEB",
+    "F"
+  ]
+}

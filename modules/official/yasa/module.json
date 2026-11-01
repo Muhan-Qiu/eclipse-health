@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.raphaelvallat.yasa",
+  "name": "YASA · 睡眠分期",
+  "description": "适配自 https://github.com/raphaelvallat/yasa 的 PSG 睡眠分期模块，调用 yasa.SleepStaging；同时提供离线睡眠效率计算。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "Raphael Vallat + eclipse health adapters", "url": "https://github.com/raphaelvallat/yasa" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/raphaelvallat/yasa",
+  "permissions": ["records:read", "llm"],
+  "dependencies": ["yasa>=0.6,<1", "mne>=1.6,<2", "lightgbm>=4,<5", "pooch>=1.8,<2", "pandas>=2.1,<3", "numpy>=1.26,<3"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "yasa-sleep-staging",
+        "name": "YASA SleepStaging",
+        "task": "psg-sleep-staging",
+        "format": "remote",
+        "input": { "modes": ["stages", "psg"], "channels": ["eeg", "eog", "emg"], "epochSeconds": 30 },
+        "output": { "hypnogram": "W/N1/N2/N3/R", "metrics": ["efficiency", "stageCounts"] },
+        "modelCard": {
+          "library": "yasa",
+          "upstream": "https://github.com/raphaelvallat/yasa",
+          "upstreamLicense": "BSD-3-Clause",
+          "weights": "bundled inside the upstream package; redistribution subject to upstream terms",
+          "limitations": ["Requires multi-channel PSG; single-device data is usually insufficient", "Not validated for clinical use"],
+          "nonDiagnostic": true
+        }
+      }
+    ],
+    "tools": [
+      {
+        "id": "sleep.efficiency",
+        "name": "Sleep efficiency",
+        "description": "Compute sleep efficiency and stage distribution from a hypnogram in 30-second epochs. Non-diagnostic.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "stages": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "epochSeconds": { "type": "number", "default": 30 }
+          },
+          "required": ["stages"]
+        },
+        "outputSchema": { "type": "object" },
+        "permissions": ["records:read"]
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "sleep.session",
+        "name": "Sleep session",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "efficiency": { "type": "number" },
+            "totalMinutes": { "type": "number" },
+            "stageCounts": { "type": "object" },
+            "nonDiagnostic": { "type": "string" }
+          },
+          "required": ["nonDiagnostic"]
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "sleep-efficiency",
+          "title": "睡眠效率",
+          "description": "最近一次睡眠分期的睡眠效率（非诊断）",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": {} },
+          "view": { "type": "stat", "valuePath": "latest.efficiency", "unit": "%", "label": "睡眠效率" },
+          "link": "/modules/io.github.raphaelvallat.yasa/pages/stages"
+        },
+        {
+          "id": "sleep-series",
+          "title": "睡眠/清醒序列",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": {} },
+          "view": { "type": "sparkline", "valuePath": "series", "min": 0, "max": 1 }
+        }
+      ],
+      "pages": [
+        {
+          "id": "stages",
+          "title": "睡眠分期",
+          "icon": "moon",
+          "layout": [
+            { "component": "text", "text": "YASA 睡眠分期结果（W/N1/N2/N3/R）。非医疗器械，不用于诊断。" },
+            {
+              "component": "table",
+              "title": "分期计数",
+              "source": { "type": "module-rpc", "method": "stats" },
+              "rowPath": "stageRows",
+              "columns": [
+                { "key": "stage", "label": "分期", "format": "text" },
+                { "key": "epochs", "label": "epoch 数", "format": "number" },
+                { "key": "minutes", "label": "时长", "unit": "min", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 1536, "cpu": 2, "startupTimeoutMs": 30000 },
+  "updateChannel": "stable"
+}

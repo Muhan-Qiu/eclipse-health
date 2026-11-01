@@ -1,0 +1,493 @@
+{
+  "schemaVersion": "1",
+  "lang": "zh",
+  "modules": {
+    "org.eclipsehealth.relay-ecg": {
+      "name": "ECG 心搏分析",
+      "tagline": "把一段心电切成心搏，标出正常搏动与早搏。",
+      "summary": "导入一段心电记录后，模块会定位每个心搏，并给出正常（N）、室上性早搏（SVEB）、室性早搏（VEB）或融合波（F）的判断，同时统计各类数量和占比、估算心率。它内置 7 个分类模型，适合把同一段数据交给不同模型对照，观察哪些心搏的结论会变化。",
+      "features": [
+        { "title": "逐搏标记", "text": "每个心搏显示四类概率与最终标签，异常搏动可以单独筛选查看。" },
+        { "title": "节律概览", "text": "汇总 N/SVEB/VEB/F 的数量、占比与发生密度，快速看出整段记录的节律构成。" },
+        { "title": "多模型对照", "text": "可在 7 个内置模型之间切换或并排比较，输出口径一致，适合科研复现与算法评估。" },
+        { "title": "三种输入", "text": "支持 WFDB 记录（含 .atr 标注）、float32 信号文件和内联采样点；单导联会自动扩展并在结果中注明。" }
+      ],
+      "usage": [
+        "选择一段记录，或拖入 WFDB / float32 文件。",
+        "确认导联与采样率，选择要使用的分类模型。",
+        "运行分析，查看逐搏列表、各类占比与文字摘要。"
+      ],
+      "inputs": [
+        "WFDB 记录（.hea / .dat，可选 .atr 标注）",
+        "float32 信号文件（360 Hz）",
+        "内联采样数组（[N] 或 [N, C]）"
+      ],
+      "outputs": [
+        "逐搏的类别与四类概率",
+        "各类心搏计数、占比与心率概览",
+        "可直接阅读的文字摘要"
+      ],
+      "goodFor": "科研与教学、公开数据集复现、多个分类模型的结果对照、长记录快速浏览。",
+      "limits": [
+        "仅接受 360 Hz 采样率，不静默重采样。",
+        "噪声、复杂心律与起搏心律需要人工复核。",
+        "输出不是医疗诊断，不能替代医生读图。"
+      ],
+      "techNote": "内置 4 个自研 Relay-LSTM 与 3 个基线模型，本地 ONNX 推理；训练与评测基于 MIT-BIH 心律失常数据库。"
+    },
+    "org.eclipsehealth.relay-sleep": {
+      "name": "睡眠分期分析",
+      "tagline": "把整夜睡眠分到五个阶段，看清睡眠结构。",
+      "summary": "输入整夜的 EEG 特征或原始 30 秒窗口，模块逐窗判断属于清醒（W）、N1、N2、N3 还是快速眼动（REM），并汇总每个阶段的时长与占比、夜间觉醒与睡眠效率。适合复现公开数据集实验，或对比不同分期模型的判断差异。",
+      "features": [
+        { "title": "五类分期", "text": "每 30 秒窗口输出 W / N1 / N2 / N3 / REM 标签与置信度。" },
+        { "title": "结构摘要", "text": "各阶段时长与占比、夜间觉醒次数与睡眠效率一眼可见。" },
+        { "title": "多模型对照", "text": "5 个内置模型（3 个自研 + 2 个公开基线）可以切换比较。" },
+        { "title": "两种输入", "text": "支持已提取的 272 维特征序列，或直接输入原始 30 秒 EEG 窗口。" }
+      ],
+      "usage": [
+        "准备特征 .npz 文件，或一段 30 秒窗口数组。",
+        "选择分期模型；自研模型使用特征输入，基线模型使用原始窗口。",
+        "运行分期，查看逐窗结果与整夜结构摘要。"
+      ],
+      "inputs": [
+        "272 维特征序列 [N×10×272]（嵌套数组或 npz）",
+        "原始 30 秒窗口 [N×3×2×3000]（基线模型）",
+        "可选的每窗时间差 dt"
+      ],
+      "outputs": [
+        "逐窗阶段标签与概率",
+        "各阶段计数、时长与占比",
+        "多数类与整夜摘要"
+      ],
+      "goodFor": "Sleep-EDF 等公开数据集复现、睡眠结构教学、分期模型对比。",
+      "limits": [
+        "只负责分期，不做 EDF 解码与特征提取。",
+        "跨数据集、跨设备泛化尚未验证。",
+        "不用于诊断或治疗。"
+      ],
+      "techNote": "基于 Sleep-EDF sleep-cassette 的 5 个模型，本地 ONNX 推理；自研模型使用 272 维冻结特征。"
+    },
+    "io.github.alexandrebarachant.muselsl": {
+      "name": "Muse 头环 EEG",
+      "tagline": "把 Muse 头环的脑电实时接入，或导入录制文件。",
+      "summary": "通过 LSL 接收 Muse 头环的 EEG 通道，边采集边写入记录；也可以导入 MuseLSL 的 CSV 录制，用于回看与后续分析。",
+      "features": [
+        { "title": "实时串流", "text": "通过 LSL 接收 Muse 头环数据，采集过程中可以查看信号。" },
+        { "title": "录制回放", "text": "导入 MuseLSL CSV，把历史录制转成应用内的 EEG 记录。" },
+        { "title": "信号检查", "text": "导入时汇总通道与采样率，缺通道或采样异常会给出提示。" }
+      ],
+      "inputs": ["Muse 头环（蓝牙）", "MuseLSL CSV 文件"],
+      "outputs": ["EEG 记录（通道、采样率、时间轴）"],
+      "limits": ["需要 Muse 头环与可用蓝牙。", "依赖上游 MuseLSL 与 pylsl。", "不是医疗器械。"],
+      "techNote": "适配自 alexandrebarachant/muse-lsl，只通过 stdio JSON-RPC 调用。"
+    },
+    "io.github.apache.echarts": {
+      "name": "ECharts · 通用图表",
+      "tagline": "用折线、柱状和分布图展示指标变化。",
+      "summary": "把心率、HRV、体重等指标画成折线、柱状或分布图。图表由应用内的受控组件渲染，不加载上游 JavaScript 包。",
+      "features": [
+        { "title": "趋势折线", "text": "按时间展示指标变化与区间。" },
+        { "title": "分类统计", "text": "把分类计数画成柱状或分布图。" },
+        { "title": "主题一致", "text": "跟随应用的设计令牌与亮暗主题。" }
+      ],
+      "inputs": ["指标时间序列或分类计数"],
+      "outputs": ["可放入概览或详情页的图表卡片"],
+      "limits": ["只做通用图表，不做统计推断。", "不是医疗器械。"],
+      "techNote": "适配自 apache/echarts 的声明式 widget；不打包上游 JS。"
+    },
+    "io.github.aura-healthcare.hrv-analysis": {
+      "name": "HRV 分析",
+      "tagline": "从 RR 间期算时域、频域与非线性 HRV 指标。",
+      "summary": "输入逐搏 RR 间期或带 R 峰标注的心电记录，模块计算 RMSSD、SDNN、pNN50、频域功率与若干非线性指标，并给出可读的 HRV 概览。",
+      "features": [
+        { "title": "时域指标", "text": "RMSSD、SDNN、pNN50 等常用指标。" },
+        { "title": "频域与非线性", "text": "频段功率与非线性指标一并输出。" },
+        { "title": "质量提示", "text": "对异常间期与过短记录给出提示。" }
+      ],
+      "inputs": ["RR 间期序列", "带 R 峰标注的心电记录"],
+      "outputs": ["HRV 指标表与摘要"],
+      "goodFor": "静息 HRV 跟踪、压力与恢复研究。",
+      "limits": ["对异位搏动和噪声敏感，需要先做心搏校正。", "不是医疗器械。"],
+      "techNote": "适配自 Aura-healthcare/hrv-analysis；上游为 GPL-3.0。"
+    },
+    "io.github.blinry.habitctl": {
+      "name": "习惯追踪",
+      "tagline": "用每日打卡和连续天数记录习惯。",
+      "summary": "通过子进程读取 habitctl 的每日打卡记录与连续天数，把习惯完成情况并入健康时间线，便于和睡眠、活动等数据一起回看。",
+      "features": [
+        { "title": "打卡清单", "text": "按习惯查看每天的完成情况。" },
+        { "title": "连续天数", "text": "统计连续坚持天数与中断。" },
+        { "title": "时间线合并", "text": "与睡眠、活动等记录放在同一条时间线上。" }
+      ],
+      "inputs": ["habitctl 数据目录"],
+      "outputs": ["每日习惯完成情况与连续天数"],
+      "limits": ["需要本机安装 habitctl CLI。", "只读取上游数据，不修改。", "不是医疗器械。"],
+      "techNote": "适配自 blinry/habitctl，通过子进程调用 CLI。"
+    },
+    "io.github.brainflow-dev.brainflow": {
+      "name": "BrainFlow · 多设备采集",
+      "tagline": "从兼容板卡采集 EEG/EMG/ECG，并检查信号质量。",
+      "summary": "支持 BrainFlow 兼容的采集板卡，实时接收多通道信号，计算信号质量摘要，也可以导入 BrainFlow 录制的 JSONL 文件。",
+      "features": [
+        { "title": "多板卡支持", "text": "覆盖 BrainFlow 支持的常见采集板卡。" },
+        { "title": "信号质量", "text": "采集时汇总通道状态与质量。" },
+        { "title": "JSONL 导入", "text": "回放已录制的 JSONL 数据。" }
+      ],
+      "inputs": ["兼容 BrainFlow 的采集板卡", "JSONL 录制文件"],
+      "outputs": ["多通道记录与质量摘要"],
+      "limits": ["需要兼容硬件与驱动。", "不是医疗器械。"],
+      "techNote": "适配自 brainflow-dev/brainflow。"
+    },
+    "io.github.coddingtonbear.myfitnesspal": {
+      "name": "MyFitnessPal 饮食导入",
+      "tagline": "把本人的饮食日记导入成营养记录。",
+      "summary": "使用本人账号拉取 MyFitnessPal 饮食日记，转换为每日热量与宏量营养记录，便于和体重、活动数据放在一起看。",
+      "features": [
+        { "title": "每日热量", "text": "按天汇总热量摄入。" },
+        { "title": "宏量营养", "text": "蛋白质、脂肪与碳水明细。" },
+        { "title": "本地保存", "text": "导入后只保存在本机记录库。" }
+      ],
+      "inputs": ["本人 MyFitnessPal 账号"],
+      "outputs": ["每日营养记录"],
+      "limits": ["非官方抓取，页面结构变化可能失效。", "需要本人账号。", "不是医疗器械。"],
+      "techNote": "适配自 coddingtonbear/python-myfitnesspal。"
+    },
+    "io.github.cyberjunky.garminconnect": {
+      "name": "Garmin Connect 导入",
+      "tagline": "拉取 Garmin 活动、睡眠与身体成分。",
+      "summary": "登录本人的 Garmin Connect 账号，导入活动、睡眠与身体成分数据；凭据只在本机使用，不写入日志。",
+      "features": [
+        { "title": "活动", "text": "导入距离、时长与心率。" },
+        { "title": "睡眠", "text": "导入睡眠时长与阶段摘要。" },
+        { "title": "身体成分", "text": "导入体重与体脂等测量。" }
+      ],
+      "inputs": ["本人 Garmin Connect 账号"],
+      "outputs": ["活动、睡眠与身体成分记录"],
+      "limits": ["非官方接口，可能随上游变化。", "仅导入本人数据。", "不是医疗器械。"],
+      "techNote": "适配自 cyberjunky/python-garminconnect。"
+    },
+    "io.github.dogsheep.healthkit-to-sqlite": {
+      "name": "Apple 健康导入",
+      "tagline": "直接解析 export.zip，导入活动、生命体征与睡眠。",
+      "summary": "读取 Apple 健康导出的 export.zip 或 export.xml，流式解析活动、生命体征与睡眠记录，全程在本机完成。",
+      "features": [
+        { "title": "大文件流式解析", "text": "不需要先解压整个导出包。" },
+        { "title": "多类健康指标", "text": "活动、心率、体重、睡眠等常见类型。" },
+        { "title": "本地处理", "text": "文件不会上传到任何服务器。" }
+      ],
+      "inputs": ["Apple 健康 export.zip 或 export.xml"],
+      "outputs": ["活动、生命体征与睡眠记录"],
+      "limits": ["只支持 Apple 健康导出格式。", "iOS 版本变化可能需要更新字段映射。", "不是医疗器械。"],
+      "techNote": "适配自 dogsheep/healthkit-to-sqlite。"
+    },
+    "io.github.dtcooper.fitparse": {
+      "name": "FIT 文件解析",
+      "tagline": "读取 .FIT 活动文件，提取时长、距离与心率。",
+      "summary": "解析 Garmin/ANT .FIT 文件中的 record 与 lap 数据，生成活动摘要，包括时长、距离、平均与最大心率。",
+      "features": [
+        { "title": "record / lap 解析", "text": "逐条读取记录点与圈速。" },
+        { "title": "活动摘要", "text": "时长、距离与心率区间。" },
+        { "title": "通用格式", "text": "适用于多数 Garmin/ANT 设备导出的 FIT。" }
+      ],
+      "inputs": [".FIT 文件"],
+      "outputs": ["活动摘要记录"],
+      "limits": ["只做读取与摘要。", "损坏或加密文件会拒绝。", "不是医疗器械。"],
+      "techNote": "适配自 dtcooper/python-fitparse。"
+    },
+    "io.github.gagebenne.pydexcom": {
+      "name": "Dexcom 连续血糖",
+      "tagline": "读取本人 CGM 血糖并计算范围内时间占比。",
+      "summary": "通过 Dexcom Share 读取本人的连续血糖读数，按时间范围统计平均值、最高/最低与目标范围内时间占比（TIR）。",
+      "features": [
+        { "title": "读数导入", "text": "拉取指定时间范围的 CGM 读数。" },
+        { "title": "TIR 统计", "text": "计算目标范围内时间占比。" },
+        { "title": "趋势回看", "text": "把读数和活动、饮食放一起看。" }
+      ],
+      "inputs": ["本人 Dexcom 账号与 Share 授权"],
+      "outputs": ["连续血糖记录与 TIR 摘要"],
+      "limits": ["需要本人账号与 Share 授权。", "读数不能用于自行调整用药。", "不是医疗器械。"],
+      "techNote": "适配自 gagebenne/pydexcom。"
+    },
+    "io.github.grubersjoe.activity-calendar": {
+      "name": "活动热力图",
+      "tagline": "把每天的活动量变成一张年度热力图。",
+      "summary": "将每日步数或活动分钟映射成热力图，用受控列表与统计组件呈现，方便一眼看出一年里的活跃与停滞。",
+      "features": [
+        { "title": "年度热力图", "text": "逐日展示活动强度。" },
+        { "title": "活动统计", "text": "汇总活跃天数与平均值。" },
+        { "title": "受控组件", "text": "不打包上游 React。" }
+      ],
+      "inputs": ["每日步数或活动分钟"],
+      "outputs": ["年度活动热力图卡片"],
+      "limits": ["只做可视化。", "需要先有活动数据。", "不是医疗器械。"],
+      "techNote": "适配自 grubersjoe/react-activity-calendar。"
+    },
+    "io.github.hbldh.bleak": {
+      "name": "蓝牙健康设备",
+      "tagline": "连接 BLE 心率带与体重秤，读取心率和体重。",
+      "summary": "通过 Windows WinRT 的 BLE 接口连接标准心率带与体重秤，读取 GATT 特征并写入记录，无需厂商网关。",
+      "features": [
+        { "title": "心率带", "text": "读取标准心率服务广播与测量值。" },
+        { "title": "体重秤", "text": "读取体重与体成分特征。" },
+        { "title": "即连即读", "text": "设备在范围内即可连接。" }
+      ],
+      "inputs": ["BLE 心率带或体重秤"],
+      "outputs": ["心率或体重记录"],
+      "limits": ["仅支持标准 GATT 服务。", "需要设备在范围内并已配对。", "不是医疗器械。"],
+      "techNote": "适配自 hbldh/bleak，使用 Windows WinRT。"
+    },
+    "io.github.holgern.pyedflib": {
+      "name": "EDF/BDF 读写",
+      "tagline": "导入 EDF/BDF 通道数据，或把记录导出为 EDF+。",
+      "summary": "读取 EDF/BDF 文件的通道与采样率，也能把应用内记录导出为 EDF+，方便交给其他睡眠或脑电软件。",
+      "features": [
+        { "title": "读取 EDF/BDF", "text": "解析通道、采样率与信号。" },
+        { "title": "导出 EDF+", "text": "把记录写成通用 EDF+ 文件。" },
+        { "title": "通道映射", "text": "导出时保留通道名称与单位。" }
+      ],
+      "inputs": ["EDF / BDF 文件"],
+      "outputs": ["应用内记录，或 EDF+ / CSV 文件"],
+      "limits": ["只处理 EDF/BDF，不支持私有格式。", "不是医疗器械。"],
+      "techNote": "适配自 holgern/pyedflib。"
+    },
+    "io.github.jrnl-org.jrnl": {
+      "name": "日记与心情",
+      "tagline": "导入加密日记，按时间和关键词回看心情。",
+      "summary": "通过子进程调用 jrnl 的 JSON 导出，把日记条目并入健康时间线；支持按时间与关键词检索，数据保留在本机。",
+      "features": [
+        { "title": "加密日记", "text": "读取 jrnl 的加密条目导出。" },
+        { "title": "关键词搜索", "text": "按词检索心情与事件。" },
+        { "title": "时间线", "text": "和睡眠、活动记录放在一起。" }
+      ],
+      "inputs": ["jrnl 数据目录"],
+      "outputs": ["日记条目与搜索结果"],
+      "limits": ["需要本机安装 jrnl。", "不解析附件。", "不是医疗器械。"],
+      "techNote": "适配自 jrnl-org/jrnl，通过子进程调用 CLI。"
+    },
+    "io.github.leeoniya.uplot": {
+      "name": "轻量趋势图",
+      "tagline": "给心率、HRV、体重等指标提供快速趋势图。",
+      "summary": "用受控的 sparkline 与表格组件呈现轻量时序图，适合在概览卡片和详情页里快速浏览趋势。",
+      "features": [
+        { "title": "Sparkline", "text": "小尺寸快速趋势。" },
+        { "title": "多指标", "text": "心率、HRV、体重等可复用。" },
+        { "title": "高性能", "text": "长序列也能流畅渲染。" }
+      ],
+      "inputs": ["指标时间序列"],
+      "outputs": ["趋势图卡片"],
+      "limits": ["只做轻量趋势，不做复杂交互分析。", "不是医疗器械。"],
+      "techNote": "适配自 leeoniya/uplot；不打包上游 JS。"
+    },
+    "io.github.mit-lcp.wfdb": {
+      "name": "WFDB 记录读写",
+      "tagline": "读取医院与数据集常见的 WFDB 记录，或导出为 WFDB。",
+      "summary": "读取 .hea/.dat 记录与通道信息，也能把应用内记录写成 WFDB 格式，方便和医院系统、PhysioNet 数据集互通。",
+      "features": [
+        { "title": "读取 .hea/.dat", "text": "解析通道、采样率与信号。" },
+        { "title": "导出 WFDB", "text": "生成标准头文件与数据文件。" },
+        { "title": "通道与单位", "text": "导出时保留导联名称与物理单位。" }
+      ],
+      "inputs": ["WFDB 记录（.hea / .dat）"],
+      "outputs": ["应用内记录，或 WFDB / CSV 文件"],
+      "limits": ["不负责波形判读。", "某些厂商私有头字段可能被忽略。", "不是医疗器械。"],
+      "techNote": "适配自 MIT-LCP/wfdb-python。"
+    },
+    "io.github.neuropsychology.neurokit2": {
+      "name": "NeuroKit2 · ECG/HRV",
+      "tagline": "用 NeuroKit2 做 ECG/PPG 处理与 HRV 分析。",
+      "summary": "调用 NeuroKit2 的 ECG 处理与 HRV 时域分析，输出 R 峰、心率与常用 HRV 指标，适合做方法对照。",
+      "features": [
+        { "title": "ECG 处理", "text": "滤波、R 峰检测与心率。" },
+        { "title": "HRV 时域", "text": "常用时域指标。" },
+        { "title": "方法对照", "text": "与内置引擎并行比较。" }
+      ],
+      "inputs": ["ECG 或 PPG 信号"],
+      "outputs": ["R 峰、心率与 HRV 指标"],
+      "limits": ["依赖上游默认参数。", "对噪声敏感。", "不是医疗器械。"],
+      "techNote": "适配自 neuropsychology/NeuroKit。"
+    },
+    "io.github.observablehq.plot": {
+      "name": "Observable Plot · 声明式图表",
+      "tagline": "快速画出趋势、直方图与分位数。",
+      "summary": "把指标序列映射成折线、直方图与分位数图，用应用内的受控组件渲染，不加载上游图表库。",
+      "features": [
+        { "title": "折线", "text": "按时间展示趋势。" },
+        { "title": "直方图", "text": "查看指标分布。" },
+        { "title": "分位数", "text": "比较不同区间的分位值。" }
+      ],
+      "inputs": ["指标时间序列"],
+      "outputs": ["声明式图表卡片"],
+      "limits": ["只做可视化。", "不是医疗器械。"],
+      "techNote": "适配自 observablehq/plot。"
+    },
+    "io.github.openbci-archive.openbci": {
+      "name": "OpenBCI 采集",
+      "tagline": "通过串口读取 OpenBCI 板卡并导入原始记录。",
+      "summary": "连接 OpenBCI 板卡，读取多通道原始数据并导入为记录；也支持导入 OpenBCI 的文本录制。",
+      "features": [
+        { "title": "串口采集", "text": "按板卡配置读取原始通道。" },
+        { "title": "多通道", "text": "保留通道与采样率信息。" },
+        { "title": "文本导入", "text": "回放 OpenBCI 录制文件。" }
+      ],
+      "inputs": ["OpenBCI 板卡", "OpenBCI 文本录制"],
+      "outputs": ["多通道原始记录"],
+      "limits": ["需要 OpenBCI 硬件。", "上游项目已归档。", "不是医疗器械。"],
+      "techNote": "适配自 openbci-archive/OpenBCI_Python。"
+    },
+    "io.github.openfoodfacts.openfoodfacts": {
+      "name": "食品营养查询",
+      "tagline": "按条码查食品营养，记录每 100g 成分。",
+      "summary": "用 Open Food Facts 数据库按条码查询食品，返回每 100g 的热量与宏量营养，并生成摄入记录。",
+      "features": [
+        { "title": "条码查询", "text": "输入条码即可查食品。" },
+        { "title": "营养明细", "text": "热量、蛋白质、脂肪与碳水。" },
+        { "title": "摄入记录", "text": "按份量生成营养记录。" }
+      ],
+      "inputs": ["食品条码"],
+      "outputs": ["每 100g 营养信息与摄入记录"],
+      "limits": ["数据由社区维护，可能缺项或过时。", "需要联网。", "不是医疗器械。"],
+      "techNote": "适配自 openfoodfacts/openfoodfacts-python；数据 © Open Food Facts 贡献者（ODbL）。"
+    },
+    "io.github.orcasgit.fitbit": {
+      "name": "Fitbit 数据同步",
+      "tagline": "导入 Fitbit 的活动、睡眠、心率与体重。",
+      "summary": "通过 Fitbit Web API 导入本人的活动、睡眠、心率与体重数据，统一进入本地记录库。",
+      "features": [
+        { "title": "活动", "text": "步数、距离与活动分钟。" },
+        { "title": "睡眠", "text": "睡眠时长与阶段。" },
+        { "title": "心率与体重", "text": "静息心率与体重测量。" }
+      ],
+      "inputs": ["Fitbit 账号与 OAuth 授权"],
+      "outputs": ["活动、睡眠、心率与体重记录"],
+      "limits": ["需要 Fitbit 开发者应用与 OAuth 授权。", "仅导入本人数据。", "不是医疗器械。"],
+      "techNote": "适配自 orcasgit/python-fitbit。"
+    },
+    "io.github.paulvangentcom.heartpy": {
+      "name": "HeartPy · 心率与 HRV",
+      "tagline": "从 PPG/ECG 计算心率、HRV 与信号质量。",
+      "summary": "调用 HeartPy 处理 PPG 或 ECG 信号，输出心率、RR 间期、常用 HRV 指标与信号质量标记。",
+      "features": [
+        { "title": "心率", "text": "从 PPG/ECG 估算心率。" },
+        { "title": "RR 与 HRV", "text": "提取间期与常用指标。" },
+        { "title": "质量标记", "text": "指出噪声与伪影区段。" }
+      ],
+      "inputs": ["PPG 或 ECG 信号"],
+      "outputs": ["心率、RR 间期、HRV 与质量标记"],
+      "limits": ["对运动伪影敏感。", "建议先检查质量标记。", "不是医疗器械。"],
+      "techNote": "适配自 paulvangentcom/heartrate_analysis_python。"
+    },
+    "io.github.pgomes92.pyhrv": {
+      "name": "pyhrv · HRV 工具箱",
+      "tagline": "提供时域、频域与非线性 HRV 指标。",
+      "summary": "调用 pyhrv 的时域与频域函数，计算常用 HRV 指标，并保留上游对短记录与异常间期的处理方式。",
+      "features": [
+        { "title": "时域", "text": "常用时域 HRV 指标。" },
+        { "title": "频域", "text": "频段功率与比值。" },
+        { "title": "非线性", "text": "样本熵等非线性指标。" }
+      ],
+      "inputs": ["RR 间期序列"],
+      "outputs": ["HRV 指标表与图"],
+      "limits": ["需要干净的 RR 间期。", "不是医疗器械。"],
+      "techNote": "适配自 PGomes92/pyhrv。"
+    },
+    "io.github.polyvertex.fitdecode": {
+      "name": "FIT 解码",
+      "tagline": "解码 Garmin/ANT .FIT 文件，输出活动摘要。",
+      "summary": "解码 .FIT 文件中的会话、圈速与记录，生成活动距离、时长与心率摘要。",
+      "features": [
+        { "title": "会话与圈速", "text": "读取 session 与 lap。" },
+        { "title": "活动摘要", "text": "距离、时长与心率。" },
+        { "title": "通用解码", "text": "支持多数 FIT 活动文件。" }
+      ],
+      "inputs": [".FIT 文件"],
+      "outputs": ["活动会话摘要"],
+      "limits": ["只做解码。", "不支持的私有字段会被跳过。", "不是医疗器械。"],
+      "techNote": "适配自 polyvertex/fitdecode。"
+    },
+    "io.github.raphaelvallat.yasa": {
+      "name": "YASA · 睡眠分期",
+      "tagline": "对 PSG 数据做睡眠分期，并计算睡眠效率。",
+      "summary": "调用 YASA 的睡眠分期算法，对多导睡眠图数据逐窗判断睡眠阶段，并可计算睡眠效率等摘要指标。",
+      "features": [
+        { "title": "自动分期", "text": "逐窗输出睡眠阶段。" },
+        { "title": "睡眠效率", "text": "计算睡眠效率等摘要。" },
+        { "title": "PSG 数据", "text": "适配常见多导睡眠通道。" }
+      ],
+      "inputs": ["PSG 数据（EEG 等通道）"],
+      "outputs": ["睡眠阶段序列与效率摘要"],
+      "limits": ["需要符合预期的通道与采样率。", "结果依赖上游默认设置。", "不是医疗器械。"],
+      "techNote": "适配自 raphaelvallat/yasa。"
+    },
+    "io.github.scientisst.biosppy": {
+      "name": "BioSPPy · ECG 处理",
+      "tagline": "ECG 信号处理与心搏检测（ECG/HRV 子集）。",
+      "summary": "调用 BioSPPy 的 ECG 与 HRV 子集，做滤波、R 峰检测与心率计算，适合和内置引擎做方法对照。",
+      "features": [
+        { "title": "滤波与 R 峰", "text": "ECG 预处理与 R 峰检测。" },
+        { "title": "心率", "text": "从 R 峰计算心率。" },
+        { "title": "方法对照", "text": "与内置引擎并行比较。" }
+      ],
+      "inputs": ["ECG 信号"],
+      "outputs": ["R 峰、心率与 HRV 指标"],
+      "limits": ["只包含 ECG/HRV 子集。", "参数为上游默认。", "不是医疗器械。"],
+      "techNote": "适配自 scientisst/BioSPPy。"
+    },
+    "io.github.stravalib.stravalib": {
+      "name": "Strava 运动导入",
+      "tagline": "导入 Strava 活动，生成本地运动记录与周汇总。",
+      "summary": "通过 Strava v3 API 读取本人活动，把距离、时长与心率规范化为本地活动记录，并按周汇总。",
+      "features": [
+        { "title": "活动导入", "text": "距离、时长与运动类型。" },
+        { "title": "周汇总", "text": "按周统计运动量。" },
+        { "title": "心率", "text": "导入活动平均与最大心率。" }
+      ],
+      "inputs": ["Strava 账号与 OAuth 授权"],
+      "outputs": ["活动记录与周汇总"],
+      "limits": ["需要 Strava 应用与 OAuth 授权。", "token 不写日志。", "不是医疗器械。"],
+      "techNote": "适配自 stravalib/stravalib。"
+    },
+    "io.github.tkrajina.gpxpy": {
+      "name": "GPX 轨迹",
+      "tagline": "解析和生成 GPX 轨迹，计算距离与爬升。",
+      "summary": "读取 GPX 轨迹并计算距离、爬升、时长与心率摘要；也能把活动导出为 GPX，方便导入其他运动软件。",
+      "features": [
+        { "title": "轨迹解析", "text": "读取轨迹点与时间。" },
+        { "title": "距离与爬升", "text": "计算里程与累计爬升。" },
+        { "title": "GPX 导出", "text": "把活动写回 GPX。" }
+      ],
+      "inputs": ["GPX 文件"],
+      "outputs": ["轨迹摘要或 GPX 文件"],
+      "limits": ["GPX 不含完整生理数据。", "不是医疗器械。"],
+      "techNote": "适配自 tkrajina/gpxpy。"
+    },
+    "io.github.tremorlabs.tremor": {
+      "name": "KPI 仪表盘",
+      "tagline": "用指标卡展示数值、变化量与进度。",
+      "summary": "把关键指标映射成 KPI 卡片，显示当前值、变化量和目标进度，适合放在概览页最上层。",
+      "features": [
+        { "title": "KPI 卡片", "text": "当前值与单位。" },
+        { "title": "变化量", "text": "与上期比较的增减。" },
+        { "title": "目标进度", "text": "显示完成比例。" }
+      ],
+      "inputs": ["指标值与目标"],
+      "outputs": ["KPI 卡片"],
+      "limits": ["只做展示。", "不是医疗器械。"],
+      "techNote": "适配自 tremorlabs/tremor；不打包上游 React。"
+    },
+    "io.github.vangorra.withings": {
+      "name": "Withings 身体测量",
+      "tagline": "导入体重、体成分与血压。",
+      "summary": "通过 Withings REST API 读取本人的体重、体成分与血压测量，写入本地记录库。",
+      "features": [
+        { "title": "体重", "text": "读取体重测量。" },
+        { "title": "体成分", "text": "体脂、肌肉等成分。" },
+        { "title": "血压", "text": "读取血压计测量。" }
+      ],
+      "inputs": ["Withings 账号与授权"],
+      "outputs": ["体重、体成分与血压记录"],
+      "limits": ["需要 Withings 应用授权。", "仅本人数据。", "不是医疗器械。"],
+      "techNote": "适配自 vangorra/python_withings_api。"
+    }
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.example.stage-c-e2e",
+  "name": "Stage C E2E Fixture",
+  "description": "Test-only health-domain module with widgets, tools and pages, used by scripts/e2e_stage_c.py.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "health-domain",
+  "author": { "name": "eclipse health tests" },
+  "license": "MIT",
+  "permissions": ["records:read", "llm"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "ui": {
+      "widgets": [
+        {
+          "id": "e2e-stat",
+          "title": "E2E 心率",
+          "description": "C2 验收用 stat 卡片。",
+          "size": "sm",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "widget.stats",
+            "params": { "days": 7 }
+          },
+          "view": {
+            "type": "stat",
+            "valuePath": "latest.bpm",
+            "unit": "bpm",
+            "label": "静息心率"
+          }
+        },
+        {
+          "id": "e2e-list",
+          "title": "E2E 列表",
+          "description": "C2 验收用 list 卡片。",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "widget.list" },
+          "view": { "type": "list", "valuePath": "items" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "e2e",
+          "title": "E2E 验收页",
+          "icon": "flask",
+          "layout": [
+            {
+              "component": "text",
+              "text": "C2 端到端验收页面：固定测试数据，不读写真实健康记录。"
+            },
+            {
+              "component": "form",
+              "title": "提交测试",
+              "source": { "type": "module-rpc", "method": "page.form" },
+              "submitMethod": "page.submit",
+              "fields": [
+                {
+                  "key": "note",
+                  "label": "备注",
+                  "type": "text",
+                  "required": true,
+                  "default": "c2"
+                },
+                {
+                  "key": "value",
+                  "label": "数值",
+                  "type": "number",
+                  "required": true,
+                  "default": 70.2
+                },
+                {
+                  "key": "date",
+                  "label": "日期",
+                  "type": "date",
+                  "default": "2026-10-30"
+                },
+                {
+                  "key": "done",
+                  "label": "完成",
+                  "type": "checkbox",
+                  "default": false
+                }
+              ]
+            },
+            {
+              "component": "table",
+              "title": "记录",
+              "source": { "type": "module-rpc", "method": "page.list" },
+              "rowPath": "items",
+              "columns": [
+                { "key": "capturedAt", "label": "时间" },
+                { "key": "value", "label": "数值" },
+                { "key": "note", "label": "备注" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "tools": [
+      {
+        "id": "e2e.echo",
+        "name": "E2E Echo",
+        "description": "Echo text back and report the call counter; verifies the module tool path.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "text": { "type": "string", "minLength": 1 } },
+          "required": ["text"],
+          "additionalProperties": false
+        },
+        "permissions": ["records:read"]
+      }
+    ]
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}

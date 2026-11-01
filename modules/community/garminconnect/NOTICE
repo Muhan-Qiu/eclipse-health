@@ -1,0 +1,21 @@
+eclipse health module: io.github.cyberjunky.garminconnect
+Adapter version: 0.1.0
+
+Upstream project: python-garminconnect
+Repository: https://github.com/cyberjunky/python-garminconnect
+Upstream SPDX: MIT
+Upstream copyright: Copyright (c) cyberjunky and contributors.
+License text: https://github.com/cyberjunky/python-garminconnect/blob/master/LICENSE
+
+Modification: adapted as eclipse health module — thin login/fetch wrapper plus
+pure JSON normalizers for activities, sleep and body composition. No upstream
+source or user data is bundled. Upstream license text is not bundled here; see
+the URL above.
+
+This adapter layer is licensed GPL-3.0-only (see LICENSE). Upstream runs inside
+the module's own venv/process; credentials are passed in-memory only and are
+never logged or persisted by this adapter.
+
+This is an unofficial client. Garmin's terms of service apply; only the user's
+own data should be imported. Upstream project does not endorse this adapter.
+Not a medical device, not for diagnosis.

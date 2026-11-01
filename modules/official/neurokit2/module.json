@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.neuropsychology.neurokit2",
+  "name": "NeuroKit2 · ECG/HRV",
+  "description": "适配自 https://github.com/neuropsychology/NeuroKit 的 ECG/PPG 处理与 HRV 分析模块，调用 nk.ecg_process 与 nk.hrv_time。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "NeuroKit2 authors + eclipse health adapters", "url": "https://github.com/neuropsychology/NeuroKit" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/neuropsychology/NeuroKit",
+  "permissions": ["records:read", "llm"],
+  "dependencies": [],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "neurokit2-ecg-hrv",
+        "name": "NeuroKit2 ECG/HRV",
+        "task": "ecg-hrv-analysis",
+        "format": "remote",
+        "input": { "modes": ["rr", "signalRef"], "fs": "required for signalRef", "leads": "single" },
+        "output": { "metrics": ["meanRr", "meanHr", "sdnn", "rmssd", "pnn50"] },
+        "modelCard": {
+          "library": "neurokit2",
+          "upstream": "https://github.com/neuropsychology/NeuroKit",
+          "upstreamLicense": "MIT",
+          "remoteness": "algorithm library executed locally; no data leaves the machine",
+          "limitations": ["Rule-based peak detection can mislabel noisy segments", "Not validated for clinical use"],
+          "nonDiagnostic": true
+        }
+      }
+    ],
+    "tools": [
+      {
+        "id": "hrv.summary",
+        "name": "Summarize HRV",
+        "description": "Compute time-domain HRV metrics (mean RR, SDNN, RMSSD, pNN50) from RR intervals in milliseconds. Non-diagnostic.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "rr": { "type": "array", "items": { "type": "number" }, "minItems": 2 } },
+          "required": ["rr"]
+        },
+        "outputSchema": { "type": "object" },
+        "permissions": ["records:read"]
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "analysis.hrv",
+        "name": "HRV analysis",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "rmssd": { "type": "number" },
+            "sdnn": { "type": "number" },
+            "meanHr": { "type": "number" },
+            "nonDiagnostic": { "type": "string" }
+          },
+          "required": ["nonDiagnostic"]
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "hrv-rmssd",
+          "title": "HRV · RMSSD",
+          "description": "最近一次分析得到的 RMSSD（非诊断）",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "stat", "valuePath": "latest.rmssd", "unit": "ms", "label": "RMSSD" },
+          "link": "/modules/io.github.neuropsychology.neurokit2/pages/hrv"
+        },
+        {
+          "id": "rr-trend",
+          "title": "RR 间期趋势",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "sparkline", "valuePath": "series", "unit": "ms" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "hrv",
+          "title": "HRV 指标",
+          "icon": "activity",
+          "layout": [
+            { "component": "text", "text": "时域 HRV 指标。非医疗器械，不用于诊断。" },
+            {
+              "component": "table",
+              "title": "最近结果",
+              "source": { "type": "module-rpc", "method": "stats" },
+              "rowPath": "series",
+              "columns": [
+                { "key": "value", "label": "RR 间期", "unit": "ms", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 512, "cpu": 1, "startupTimeoutMs": 15000 },
+  "updateChannel": "stable"
+}

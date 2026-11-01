@@ -1,0 +1,14 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "LICENSE": "f81964f5162c5a408356c044fbe2b36bb05acf116ea0d20edff4d6603e58e32f",
+    "LICENSES/gpxpy-upstream.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "NOTICE": "3caa21e47827a6f5031daf818d46cc41af58a6d20d783a3f37f91c2c0a64e7a6",
+    "README.md": "b7c54d499b56ea517e2b8457eb84db1b02950dc49070da5f60622f5c163015d9",
+    "module.json": "749420cad5481b56a6a9ffb927350ec08b576d0e426d5b7942d4d6114c2bc138",
+    "src/__pycache__/adapter.cpython-312.pyc": "8fe642f19e5215a6302d093629bdcb693dafabc4ebbfcee05a6f0929a5df2a77",
+    "src/__pycache__/main.cpython-312.pyc": "0259754e12458233611bfa15e5961f468918b2bb9ac3b375caa33c7475c0157a",
+    "src/adapter.py": "758320cd1138776c45568831abbdabfdd05f6f7fc1dc118f848f1a2d1c91c2ef",
+    "src/main.py": "b2ed5037e6bc74f2cd7843886879877d144f5212965c4d35d8f661bcfbf1fb1e"
+  }
+}

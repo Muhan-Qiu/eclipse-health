@@ -1,0 +1,64 @@
+[project]
+name = "eclipse-health-backend"
+version = "0.1.0"
+description = "Local-first desktop health app for ECG analysis, records and reports"
+readme = "README.md"
+authors = [
+    { name = "Muhan Qiu", email = "280846993+Muhan-Qiu@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.0",
+    "httpx>=0.28.1",
+    "jsonschema>=4.26.0",
+    "jinja2>=3.1.6",
+    "litellm>=1.106.5",
+    "mcp>=2.3.0",
+    "matplotlib>=3.11.2",
+    "neurokit2>=0.2.13",
+    "numpy>=2.5.4",
+    "onnxruntime>=1.31.1",
+    "openpyxl>=3.1.5",
+    "orjson>=3.13.0",
+    "pandas>=2.3.3",
+    "pillow>=13.0.0",
+    "pydantic>=2.14.1",
+    "pydantic-ai>=2.31.1",
+    "pydantic-settings>=2.16.2",
+    "pypdf>=6.21.0",
+    "python-multipart>=0.0.32",
+    "pywavelets>=1.10.0",
+    "scipy>=1.18.1",
+    "sqlalchemy>=2.1.6",
+    "sqlmodel>=0.0.48",
+    "starlette>=1.10.0",
+    "uvicorn[standard]>=0.54.0",
+    "wfdb>=4.3.1",
+]
+
+[project.scripts]
+eclipse-health-backend = "eclipse_health_backend:main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.22.3",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+markers = [
+    "slow: 需要真实 ONNX 会话（本机初始化约 150 秒）的测试；默认不跳过，可用 -m 'not slow' 排除",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]

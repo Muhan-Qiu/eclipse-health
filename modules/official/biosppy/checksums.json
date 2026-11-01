@@ -1,0 +1,12 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "NOTICE": "ceca7cb0f0fc38af2955e149b1fd15547620ce940835d319ad6b05ba99a2cdbe",
+    "README.md": "7ad751f80836d650d4aa63c1b898a25f28f66f123f44288fe5995523ede0028b",
+    "module.json": "23ee19116163d2d63016ff1d9c2b66233ac7a8bfaf89df7b4025cf1d29c535ed",
+    "src/__pycache__/adapter.cpython-312.pyc": "0c8f1a081fffb4e83065f4676c9c60fa7f5bfce44014a5a0b9131b28002cb664",
+    "src/adapter.py": "a049f583ad0de2831cc13673542c5a7a90a983ffa6c7313e424491d8de41568b",
+    "src/main.py": "4703902bc258a0251ed606472be88fbcf91dc48361e3bf2bfed4ca02902a69fe"
+  }
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-label="eclipse health">
+  <title>eclipse health</title>
+  <!-- 亮色版：深墨圆盘 + 暖金/深青日冕环。
+       var() 的兜底值就是当前亮色令牌值，接入主题后由品牌令牌覆盖。 -->
+  <defs>
+    <radialGradient id="eh-corona-light" cx="64" cy="64" r="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0.60" stop-color="var(--eh-logo-ring, #9A6A1E)" stop-opacity="0" />
+      <stop offset="0.72" stop-color="var(--eh-logo-ring, #9A6A1E)" stop-opacity="0.26" />
+      <stop offset="0.84" stop-color="var(--eh-logo-ring, #9A6A1E)" stop-opacity="0.10" />
+      <stop offset="1" stop-color="var(--eh-logo-ring, #9A6A1E)" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <circle cx="64" cy="64" r="64" fill="url(#eh-corona-light)" />
+  <circle cx="64" cy="64" r="52" stroke="var(--eh-logo-ring, #9A6A1E)" stroke-width="3.2" />
+  <circle cx="64" cy="64" r="40" fill="var(--eh-logo-disk, #14181C)" />
+  <circle cx="64" cy="64" r="40" stroke="var(--eh-logo-ring, #9A6A1E)" stroke-width="1" opacity="0.28" />
+</svg>

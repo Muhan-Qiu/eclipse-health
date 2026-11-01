@@ -1,0 +1,859 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eclipse.health/schemas/module.schema.json",
+  "title": "eclipse health module manifest",
+  "description": "Manifest (module.json) of an .ehmod package. JSON Schema is the source of truth (Q14).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "description",
+    "version",
+    "apiVersion",
+    "engines",
+    "type",
+    "author",
+    "license",
+    "permissions",
+    "entry"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Manifest structure version."
+    },
+    "id": {
+      "$ref": "#/$defs/moduleId"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "version": {
+      "$ref": "#/$defs/semver"
+    },
+    "apiVersion": {
+      "$ref": "#/$defs/apiVersion"
+    },
+    "engines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eclipse"],
+      "properties": {
+        "eclipse": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^\\s*(?:(?:>=|<=|>|<|=|\\^|~)?\\s*[0-9]+\\.[0-9]+(?:\\.[0-9]+)?\\s*)+$"
+        }
+      }
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "device-adapter",
+        "signal-engine",
+        "analysis-model",
+        "health-domain",
+        "dashboard-widget",
+        "exporter",
+        "ai-tool",
+        "theme",
+        "locale",
+        "data-source"
+      ]
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "email": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "SPDX license identifier."
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "permissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/permission" }
+    },
+    "dependencies": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/dependency" },
+      "description": "PEP 508 requirements installed into the module's own venv. URLs, local paths and editable installs are rejected."
+    },
+    "allowedHosts": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "maxLength": 253,
+        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+      },
+      "description": "Required when the network permission is requested."
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "factory"],
+      "properties": {
+        "python": {
+          "$ref": "#/$defs/relativePath",
+          "pattern": "^(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\\.py$"
+        },
+        "factory": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+        }
+      }
+    },
+    "contributes": {
+      "$ref": "#/$defs/contributes"
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "memoryMb": { "type": "integer", "minimum": 32, "maximum": 32768 },
+        "cpu": { "type": "number", "minimum": 0.1, "maximum": 16 },
+        "startupTimeoutMs": { "type": "integer", "minimum": 500, "maximum": 120000 }
+      }
+    },
+    "updateChannel": {
+      "type": "string",
+      "enum": ["stable", "beta"]
+    },
+    "i18n": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/jsonRelativePath"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "const": "device-adapter" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["importFormats"],
+            "properties": { "importFormats": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "signal-engine" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["pipelines"],
+            "properties": { "pipelines": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "analysis-model" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["models"],
+            "properties": { "models": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "health-domain" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "anyOf": [
+              { "required": ["recordTypes"] },
+              { "required": ["ui"] }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "dashboard-widget" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["ui"],
+            "properties": {
+              "ui": {
+                "required": ["widgets"],
+                "properties": { "widgets": { "minItems": 1 } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "exporter" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["exporters"],
+            "properties": { "exporters": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "ai-tool" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["tools"],
+            "properties": { "tools": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "theme" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["themes"],
+            "properties": { "themes": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "locale" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["locales"],
+            "properties": { "locales": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "data-source" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["contributes"],
+        "properties": {
+          "contributes": {
+            "required": ["sources"],
+            "properties": { "sources": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "permissions": { "contains": { "const": "network" } } },
+        "required": ["permissions"]
+      },
+      "then": {
+        "required": ["allowedHosts"],
+        "properties": { "allowedHosts": { "minItems": 1 } }
+      }
+    }
+  ],
+  "$defs": {
+    "moduleId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^(?:org\\.eclipsehealth|io\\.github\\.[a-z0-9][a-z0-9-]*)(?:\\.[a-z0-9][a-z0-9-]*)+$",
+      "description": "Reverse-domain id. Official: org.eclipsehealth.*, community: io.github.<owner>.<name>."
+    },
+    "semver": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?$"
+    },
+    "apiVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Module contract version, major.minor."
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "not": {
+        "pattern": "(^|/)\\.\\.(/|$)|^/|^[A-Za-z]:|\\\\|//"
+      }
+    },
+    "jsonRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\\.json$",
+      "not": {
+        "pattern": "(^|/)\\.\\.(/|$)|^/|^[A-Za-z]:|\\\\|//"
+      }
+    },
+    "permission": {
+      "type": "string",
+      "enum": [
+        "records:read",
+        "records:write",
+        "records:delete",
+        "files:user-selected",
+        "files:export",
+        "network",
+        "llm",
+        "models:download",
+        "ui:custom",
+        "system:notify",
+        "system:background"
+      ]
+    },
+    "dependency": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?(?:\\s*\\[[A-Za-z0-9._,-]+\\])?(?:\\s*(?:===|==|!=|~=|<=|>=|<|>)\\s*[A-Za-z0-9*][A-Za-z0-9.*+!_-]*(?:\\s*,\\s*(?:===|==|!=|~=|<=|>=|<|>)\\s*[A-Za-z0-9*][A-Za-z0-9.*+!_-]*)*)?(?:\\s*;\\s*[A-Za-z0-9._\\s<>=!()\"',+-]+)?$",
+      "description": "PEP 508 requirement (name, extras, version specifiers, environment marker). No URL ('@'), local path, 'file:' or '-e' forms."
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "importFormats": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/importFormat" }
+        },
+        "pipelines": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/pipeline" }
+        },
+        "models": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/model" }
+        },
+        "recordTypes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/recordType" }
+        },
+        "ui": { "$ref": "#/$defs/ui" },
+        "exporters": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/exporter" }
+        },
+        "tools": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/tool" }
+        },
+        "themes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/theme" }
+        },
+        "locales": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/locale" }
+        },
+        "sources": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/source" }
+        }
+      }
+    },
+    "importFormat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ext", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "ext": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9]+$" },
+          "description": "Extensions without the leading dot."
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "name", "task", "format", "modelCard"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "task": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "format": { "type": "string", "enum": ["onnx", "safetensors", "remote"] },
+        "files": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/modelFile" }
+        },
+        "endpoint": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "input": { "type": "object" },
+        "output": { "type": "object" },
+        "preprocess": { "type": "object" },
+        "runtime": { "type": "object" },
+        "modelCard": { "type": "object" }
+      }
+    },
+    "modelFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+      }
+    },
+    "recordType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "schema"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "schema": { "type": "object" },
+        "indexes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "display": { "type": "object" }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "widgets": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/widget" } },
+        "pages": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/page" } },
+        "commands": { "type": "array", "maxItems": 64, "items": { "type": "object" } },
+        "settings": { "type": "array", "maxItems": 64, "items": { "type": "object" } }
+      }
+    },
+    "exporter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "format"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "format": { "type": "string", "enum": ["pdf", "png", "csv", "svg", "fhir-json"] },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "LLM/agent tool; executed only through the module's own RPC.",
+      "required": ["id", "name", "description"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "inputSchema": { "type": "object" },
+        "parameters": {
+          "type": "object",
+          "description": "Accepted alias of inputSchema (contract v2); do not set both."
+        },
+        "outputSchema": { "type": "object" },
+        "longRunning": { "type": "boolean" },
+        "permissions": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/permission" },
+          "description": "Scopes the tool needs in addition to llm; checked again at RPC time."
+        }
+      },
+      "not": { "required": ["inputSchema", "parameters"] }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "path"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "preview": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "locale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "path"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "path": { "$ref": "#/$defs/jsonRelativePath" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "moduleRpcSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Declarative data binding: the core calls the owning module over RPC. No expressions.",
+      "required": ["type", "method"],
+      "properties": {
+        "type": { "type": "string", "enum": ["module-rpc"] },
+        "method": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_.:-]+$"
+        },
+        "params": { "type": "object", "maxProperties": 32 }
+      }
+    },
+    "valuePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+|\\[[0-9]+\\])*$",
+      "description": "Restricted dotted path into an RPC result (e.g. latest.weight). No expressions."
+    },
+    "widget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "size", "dataSource", "view"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 300 },
+        "size": { "type": "string", "enum": ["sm", "md", "lg"] },
+        "dataSource": { "$ref": "#/$defs/moduleRpcSource" },
+        "view": { "$ref": "#/$defs/widgetView" },
+        "link": { "$ref": "#/$defs/internalLink" }
+      }
+    },
+    "widgetView": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Controlled view components only; arbitrary React/CSS/iframe is forbidden. bar/line accept valuePath (number array) or seriesPath + labelPath; heatmap reads valuePath as [{date,value}] or a 2D number array.",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "stat",
+            "sparkline",
+            "list",
+            "progress",
+            "text",
+            "bar",
+            "line",
+            "heatmap"
+          ]
+        },
+        "valuePath": { "$ref": "#/$defs/valuePath" },
+        "seriesPath": {
+          "$ref": "#/$defs/valuePath",
+          "description": "bar/line numeric series; alternative to valuePath."
+        },
+        "labelPath": {
+          "$ref": "#/$defs/valuePath",
+          "description": "Optional bar/line labels aligned with the series."
+        },
+        "unit": { "type": "string", "maxLength": 32 },
+        "label": { "type": "string", "maxLength": 120 },
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["stat", "sparkline", "list", "progress", "text", "heatmap"]
+              }
+            },
+            "required": ["type"]
+          },
+          "then": { "required": ["valuePath"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "enum": ["bar", "line"] } },
+            "required": ["type"]
+          },
+          "then": {
+            "anyOf": [
+              { "required": ["valuePath"] },
+              { "required": ["seriesPath"] }
+            ]
+          }
+        }
+      ]
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "layout"],
+      "properties": {
+        "id": { "$ref": "#/$defs/localId" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "icon": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "layout": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/pageBlock" }
+        }
+      }
+    },
+    "pageBlock": {
+      "description": "Declarative, script-free page block.",
+      "oneOf": [
+        { "$ref": "#/$defs/pageText" },
+        { "$ref": "#/$defs/pageList" },
+        { "$ref": "#/$defs/pageTable" },
+        { "$ref": "#/$defs/pageForm" },
+        { "$ref": "#/$defs/pageDetail" }
+      ]
+    },
+    "pageText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "text"],
+      "properties": {
+        "component": { "const": "text" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 }
+      }
+    },
+    "pageList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source"],
+      "properties": {
+        "component": { "const": "list" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "itemPath": { "$ref": "#/$defs/valuePath" },
+        "primaryPath": { "$ref": "#/$defs/valuePath" },
+        "secondaryPath": { "$ref": "#/$defs/valuePath" }
+      }
+    },
+    "pageTable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source", "columns"],
+      "properties": {
+        "component": { "const": "table" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "rowPath": { "$ref": "#/$defs/valuePath" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/column" }
+        }
+      }
+    },
+    "pageDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source"],
+      "properties": {
+        "component": { "const": "detail" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "fields": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/column" }
+        }
+      }
+    },
+    "pageForm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "source", "fields"],
+      "properties": {
+        "component": { "const": "form" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "$ref": "#/$defs/moduleRpcSource" },
+        "submitMethod": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_.:-]+$"
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/formField" }
+        }
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "label"],
+      "properties": {
+        "key": { "$ref": "#/$defs/valuePath" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "unit": { "type": "string", "maxLength": 32 },
+        "format": { "$ref": "#/$defs/valueFormat" }
+      }
+    },
+    "formField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "label", "type"],
+      "properties": {
+        "key": { "$ref": "#/$defs/valuePath" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "type": {
+          "type": "string",
+          "enum": ["text", "textarea", "number", "date", "select", "checkbox"]
+        },
+        "required": { "type": "boolean" },
+        "format": { "$ref": "#/$defs/valueFormat" },
+        "default": { "type": ["string", "number", "boolean"] },
+        "options": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string", "maxLength": 120 },
+              "label": { "type": "string", "maxLength": 120 }
+            }
+          }
+        }
+      }
+    },
+    "localId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "internalLink": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^/(?!/)(?!.*//)(?!.*\\.\\.)(?!.*://)[^\\s\\\\]*$",
+      "description": "In-app route: starts with a single '/', no protocol, '//', '..' or backslash."
+    },
+    "valueFormat": {
+      "type": "string",
+      "enum": ["text", "number", "date", "datetime"],
+      "description": "Display format hint for page values; rendering stays declarative."
+    }
+  }
+}

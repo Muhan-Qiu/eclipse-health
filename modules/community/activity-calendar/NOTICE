@@ -1,0 +1,16 @@
+Activity Calendar heatmap widget · eclipse health module adapter
+================================================================
+
+Upstream project  : react-activity-calendar
+Upstream repository: https://github.com/grubersjoe/react-activity-calendar
+Upstream SPDX     : MIT
+Upstream LICENSE  : https://github.com/grubersjoe/react-activity-calendar/blob/main/LICENSE
+Original copyright: Copyright (c) 2020 Jonas Gruber.
+  (Upstream copyright line could not be re-fetched offline; see LICENSE URL.)
+
+Modification notice: adapted as eclipse health module. This package does NOT
+copy, vendor, relink or build the upstream React component. It is an
+independent declarative heatmap adapter rendered by core-controlled widgets;
+only capability ideas are referenced.
+
+Adapter license: GPL-3.0-only.

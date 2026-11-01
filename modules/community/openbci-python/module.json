@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.openbci-archive.openbci",
+  "name": "OpenBCI Serial Capture",
+  "description": "Adapted from https://github.com/openbci-archive/OpenBCI_Python. Reads OpenBCI boards over serial and imports OpenBCI raw text recordings. Requires OpenBCI hardware; upstream is archived. Non-medical, not for diagnosis.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "device-adapter",
+  "author": { "name": "OpenBCI & eclipse health adapters", "url": "https://github.com/openbci-archive/OpenBCI_Python" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/openbci-archive/OpenBCI_Python",
+  "permissions": ["files:user-selected", "records:write"],
+  "dependencies": ["pyserial>=3.5,<4"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "importFormats": [
+      {
+        "id": "openbci-text",
+        "ext": ["txt"],
+        "label": "OpenBCI raw text recording",
+        "description": "OpenBCI GUI text export: sample index, channel columns, optional accelerometer."
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "eeg.session",
+        "name": "EEG session",
+        "schema": {
+          "type": "object",
+          "required": ["capturedAt", "board", "sampleRate", "channelCount", "source"],
+          "properties": {
+            "capturedAt": { "type": "string" },
+            "board": { "type": "string" },
+            "sampleRate": { "type": "number", "exclusiveMinimum": 0 },
+            "channelCount": { "type": "integer", "minimum": 1 },
+            "durationSeconds": { "type": "number", "minimum": 0 },
+            "quality": { "type": "number", "minimum": 0, "maximum": 100 },
+            "source": { "type": "string" }
+          }
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "openbci-channels",
+          "title": "OpenBCI 通道数",
+          "description": "最近一次导入/采集的通道数",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": {} },
+          "view": { "type": "stat", "valuePath": "latest.channelCount" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "openbci-channels",
+          "title": "OpenBCI 通道",
+          "icon": "activity",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。上游 OpenBCI_Python 自 2022 年后停更；串口与驱动兼容性可能变化。"
+            },
+            {
+              "component": "table",
+              "title": "通道质量",
+              "source": { "type": "module-rpc", "method": "channels.list" },
+              "rowPath": "items",
+              "columns": [
+                { "key": "name", "label": "通道" },
+                { "key": "quality", "label": "质量", "unit": "%", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 15000 },
+  "updateChannel": "stable"
+}

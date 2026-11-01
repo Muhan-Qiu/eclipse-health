@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.leeoniya.uplot",
+  "name": "uPlot · 轻量趋势图",
+  "description": "适配自 https://github.com/leeoniya/uPlot 的声明式趋势 widget：用核心受控 sparkline/table 表达轻量时序图能力，不打包上游 JS。适合心率、HRV、体重等趋势展示。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "dashboard-widget",
+  "author": {
+    "name": "leeoniya + eclipse health adapters",
+    "url": "https://github.com/leeoniya/uPlot"
+  },
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/leeoniya/uPlot",
+  "repository": "https://github.com/leeoniya/uPlot",
+  "permissions": ["records:read"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "ui": {
+      "widgets": [
+        {
+          "id": "trend-line",
+          "title": "趋势",
+          "description": "最近采样点的趋势线（sparkline），数值由调用方经 RPC 传入。",
+          "size": "lg",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "trend",
+            "params": { "hours": 24, "maxPoints": 120 }
+          },
+          "view": {
+            "type": "sparkline",
+            "valuePath": "latest.value",
+            "unit": "bpm",
+            "label": "最近值"
+          },
+          "link": "/modules/io.github.leeoniya.uplot/pages/trend"
+        }
+      ],
+      "pages": [
+        {
+          "id": "trend",
+          "title": "趋势",
+          "icon": "activity",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。本页只渲染调用方经 RPC 传入的采样点。"
+            },
+            {
+              "component": "table",
+              "title": "采样点",
+              "source": {
+                "type": "module-rpc",
+                "method": "trend",
+                "params": { "hours": 24, "maxPoints": 120 }
+              },
+              "rowPath": "points",
+              "columns": [
+                { "key": "t", "label": "时间", "format": "datetime" },
+                { "key": "v", "label": "数值", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}

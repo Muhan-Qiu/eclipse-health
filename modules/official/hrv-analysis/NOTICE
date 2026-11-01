@@ -1,0 +1,22 @@
+hrv-analysis · eclipse health 适配层
+
+Upstream project : hrv-analysis
+Upstream URL     : https://github.com/Aura-healthcare/hrv-analysis
+Upstream SPDX    : GPL-3.0
+Upstream copyright: Copyright (c) Aura Healthcare (see upstream LICENSE)
+Upstream license : NOT FETCHED — 上游许可见 https://github.com/Aura-healthcare/hrv-analysis/blob/master/LICENSE
+                   (本机 raw.githubusercontent.com 不可达；安装模块 venv 时可将该文件放入 LICENSES/hrv-analysis-upstream.txt)
+
+License note: upstream is GPL-3.0 and this adapter is GPL-3.0-only, so the
+combination is license-compatible. Upstream code is NOT linked into the core:
+it runs only inside this module process and is reached over stdio JSON-RPC.
+
+This module is a thin adapter around the upstream library:
+- the upstream source code is NOT vendored or copied;
+- the adapter calls `get_frequency_domain_features` at runtime;
+- modifications: adapted as eclipse health module (stdio JSON-RPC wrapper,
+  RR validation, result mapping, non-diagnostic notices).
+
+No endorsement by the upstream authors is implied.
+
+All analysis output is non-diagnostic: 非医疗器械，不用于诊断。

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.tkrajina.gpxpy",
+  "name": "GPX Track",
+  "description": "适配自 tkrajina/gpxpy：解析与生成 GPX 轨迹，计算距离、爬升、时长与心率摘要。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "device-adapter",
+  "author": { "name": "Tomo Krajina + eclipse health adapters", "url": "https://github.com/tkrajina/gpxpy" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/tkrajina/gpxpy",
+  "dependencies": ["gpxpy>=1.6,<2"],
+  "permissions": ["files:user-selected", "files:export", "records:write"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "importFormats": [
+      {
+        "id": "gpx",
+        "ext": ["gpx"],
+        "label": "GPX 轨迹",
+        "description": "GPS 轨迹文件；心率与功率依赖 Garmin 扩展字段。"
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "activity.session",
+        "name": "Activity session",
+        "schema": {
+          "type": "object",
+          "required": ["startedAt", "durationSeconds"],
+          "properties": {
+            "startedAt": { "type": ["string", "null"] },
+            "endedAt": { "type": ["string", "null"] },
+            "durationSeconds": { "type": ["number", "null"] },
+            "distanceKm": { "type": ["number", "null"] },
+            "elevationGainM": { "type": ["number", "null"] },
+            "elevationLossM": { "type": ["number", "null"] },
+            "avgHeartRate": { "type": ["number", "null"] },
+            "maxHeartRate": { "type": ["number", "null"] },
+            "source": { "type": "string" },
+            "nonDiagnostic": { "type": "string" }
+          }
+        },
+        "indexes": ["startedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "gpx-distance",
+          "title": "最近 GPX 距离",
+          "description": "最近一次 GPX 导入的轨迹距离",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "latestSummary" },
+          "view": { "type": "stat", "valuePath": "distanceKm", "unit": "km", "label": "距离" }
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 128, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "stable"
+}

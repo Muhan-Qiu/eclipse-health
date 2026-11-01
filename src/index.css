@@ -1,0 +1,1091 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ------------------------------------------------------------------
+ * eclipse health · 设计令牌
+ * 组件只允许使用语义令牌（--eh-* 或其 Tailwind 映射），不得写死颜色。
+ * 主题：亮色（默认，暖白）/ 暗色（近黑）
+ * 配色：data-palette="a|b|c"（A 睡莲 / B 日出·印象 / C 日本桥）
+ * ------------------------------------------------------------------ */
+
+:root {
+  /* 字体 */
+  --eh-font-display: "Source Han Serif SC", "Noto Serif SC", "Songti SC",
+    Georgia, "SimSun", serif;
+  --eh-font-body: "Inter", "Geist Variable", "Noto Sans SC", "Microsoft YaHei UI",
+    "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --eh-font-mono: "Geist Mono", "JetBrains Mono", "Cascadia Mono", ui-monospace,
+    Consolas, "Liberation Mono", monospace;
+
+  /* 间距 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64
+     对应 Tailwind 的 1 / 2 / 3 / 4 / 5 / 6 / 8 / 10 / 12 / 16 */
+  --eh-space-1: 4px;
+  --eh-space-2: 8px;
+  --eh-space-3: 12px;
+  --eh-space-4: 16px;
+  --eh-space-5: 20px;
+  --eh-space-6: 24px;
+  --eh-space-8: 32px;
+  --eh-space-10: 40px;
+  --eh-space-12: 48px;
+  --eh-space-16: 64px;
+
+  /* 圆角 8 / 12 / 16 / 24 */
+  --eh-radius-sm: 8px;
+  --eh-radius-md: 12px;
+  --eh-radius-lg: 16px;
+  --eh-radius-xl: 24px;
+
+  /* 动效 */
+  --eh-duration-fast: 120ms;
+  --eh-duration-base: 200ms;
+  --eh-duration-slow: 320ms;
+  --eh-duration-emphasis: 480ms;
+  --eh-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* 常规动效统一缓动；启动收束用近乎线性的曲线，避免顿挫感。 */
+  --eh-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --eh-ease-near-linear: cubic-bezier(0.33, 0, 0.67, 1);
+
+  /* 亮色（暖白） */
+  --eh-bg: #f7f5f1;
+  --eh-bg-subtle: #efebe4;
+  --eh-surface: #ffffff;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #171a1d 6%, transparent);
+  --eh-border: rgba(20, 24, 28, 0.1);
+  --eh-border-strong: rgba(20, 24, 28, 0.2);
+  --eh-text: #171a1d;
+  --eh-text-muted: #5e6974;
+
+  --eh-accent: #9a6a1e;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, var(--eh-accent) 12%, transparent);
+
+  --eh-signal: #0f7c72;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+
+  --eh-chart-1: #4f6b6b;
+  --eh-chart-2: #2c5aa0;
+  --eh-chart-3: #8a5a00;
+  --eh-chart-4: #9c6f6a;
+  --eh-chart-5: #5f7357;
+
+  --eh-shadow-card: 0 1px 2px rgba(20, 24, 28, 0.06),
+    0 8px 24px rgba(20, 24, 28, 0.06);
+  --eh-grid-line: rgba(20, 24, 28, 0.08);
+
+  /* 品牌标识（日食：深墨圆盘 + 暖色光环） */
+  --eh-logo-disk: #14181c;
+  --eh-logo-ring: var(--eh-accent);
+
+  /* shadcn/ui 兼容层：组件只读这些变量 */
+  --background: var(--eh-bg);
+  --foreground: var(--eh-text);
+  --card: var(--eh-surface);
+  --card-foreground: var(--eh-text);
+  --popover: var(--eh-surface-raised);
+  --popover-foreground: var(--eh-text);
+  --primary: var(--eh-accent);
+  --primary-foreground: var(--eh-accent-contrast);
+  --secondary: var(--eh-bg-subtle);
+  --secondary-foreground: var(--eh-text);
+  --muted: var(--eh-bg-subtle);
+  --muted-foreground: var(--eh-text-muted);
+  --accent: var(--eh-hover);
+  --accent-foreground: var(--eh-text);
+  --destructive: var(--eh-danger);
+  --border: var(--eh-border);
+  --input: var(--eh-border-strong);
+  --ring: var(--eh-accent);
+  --chart-1: var(--eh-chart-1);
+  --chart-2: var(--eh-chart-2);
+  --chart-3: var(--eh-chart-3);
+  --chart-4: var(--eh-chart-4);
+  --chart-5: var(--eh-chart-5);
+  --radius: 12px;
+  --sidebar: var(--eh-bg-subtle);
+  --sidebar-foreground: var(--eh-text);
+  --sidebar-primary: var(--eh-accent);
+  --sidebar-primary-foreground: var(--eh-accent-contrast);
+  --sidebar-accent: var(--eh-hover);
+  --sidebar-accent-foreground: var(--eh-text);
+  --sidebar-border: var(--eh-border);
+  --sidebar-ring: var(--eh-accent);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --eh-bg: #0a0c0f;
+  --eh-bg-subtle: #0e1216;
+  --eh-surface: #12171d;
+  --eh-surface-raised: #171d24;
+  --eh-hover: rgba(255, 255, 255, 0.06);
+  --eh-border: rgba(255, 255, 255, 0.08);
+  --eh-border-strong: rgba(255, 255, 255, 0.16);
+  --eh-text: #f1f4f6;
+  --eh-text-muted: #98a4b0;
+
+  --eh-accent: #d8a657;
+  --eh-accent-contrast: #1a1206;
+  --eh-accent-soft: color-mix(in srgb, var(--eh-accent) 16%, transparent);
+
+  --eh-signal: #6fe7d8;
+  --eh-danger: #e06c75;
+  --eh-warning: #e5c07b;
+  --eh-success: #98c379;
+  --eh-info: #7aa2f7;
+
+  --eh-chart-1: #6fe7d8;
+  --eh-chart-2: #7aa2f7;
+  --eh-chart-3: #e5c07b;
+  --eh-chart-4: #d8a657;
+  --eh-chart-5: #98c379;
+
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --eh-grid-line: rgba(255, 255, 255, 0.06);
+}
+
+/* A · 睡莲（默认） */
+html:not(.dark)[data-palette="a"] {
+  --eh-accent: #4f6b6b;
+  --eh-accent-contrast: #ffffff;
+  --eh-signal: #2f6a63;
+  --eh-bg: #f7f5f1;
+  --eh-bg-subtle: #efebe4;
+  --eh-chart-1: #4f6b6b;
+  --eh-chart-4: #9c7c78;
+  --eh-chart-5: #6f8368;
+}
+
+/* B · 日出·印象 */
+html:not(.dark)[data-palette="b"] {
+  --eh-accent: #3e5a6b;
+  --eh-accent-contrast: #ffffff;
+  --eh-signal: #2f6e7a;
+  --eh-bg: #f5f1e9;
+  --eh-bg-subtle: #ece6da;
+  --eh-chart-1: #3e5a6b;
+  --eh-chart-4: #a8817c;
+  --eh-chart-5: #7e97a8;
+}
+
+/* C · 日本桥 */
+html:not(.dark)[data-palette="c"] {
+  --eh-accent: #3f5f55;
+  --eh-accent-contrast: #ffffff;
+  --eh-signal: #35604c;
+  --eh-bg: #f3eee3;
+  --eh-bg-subtle: #eae2d3;
+  --eh-chart-1: #3f5f55;
+  --eh-chart-4: #a3827c;
+  --eh-chart-5: #7c8b6b;
+}
+
+/* 暗色下的配色：只换品牌色与波形色，保持近黑底 */
+.dark[data-palette="a"] {
+  --eh-accent: #c9b27c;
+  --eh-accent-contrast: #1a1206;
+  --eh-signal: #8fa6b2;
+  --eh-chart-1: #8fa6b2;
+  --eh-chart-5: #93a68f;
+}
+
+.dark[data-palette="b"] {
+  --eh-accent: #d9b36c;
+  --eh-accent-contrast: #1a1206;
+  --eh-signal: #7e97a8;
+  --eh-chart-1: #7e97a8;
+  --eh-chart-5: #a49bb0;
+}
+
+.dark[data-palette="c"] {
+  --eh-accent: #b7a77a;
+  --eh-accent-contrast: #14160f;
+  --eh-signal: #8aa3a8;
+  --eh-chart-1: #8aa3a8;
+  --eh-chart-5: #7c8b6b;
+}
+
+/* ------------------------------------------------------------------
+ * 新增配色 5 套：高饱和（星夜 / 向日葵 / 神奈川冲浪里）
+ *              玻璃（晨雾 / 琉璃）
+ * 每套都给出完整亮/暗变量；高饱和但压低明度，正文与背景保持 WCAG AA。
+ * ------------------------------------------------------------------ */
+
+/* 星夜 · The Starry Night */
+html:not(.dark)[data-palette="starry"] {
+  --eh-bg: #eef3fb;
+  --eh-bg-subtle: #e2e9f6;
+  --eh-surface: #ffffff;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #14213d 6%, transparent);
+  --eh-border: rgba(20, 33, 61, 0.12);
+  --eh-border-strong: rgba(20, 33, 61, 0.22);
+  --eh-text: #101a2e;
+  --eh-text-muted: #4c5f80;
+  --eh-accent: #1f4fa8;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #1f4fa8 12%, transparent);
+  --eh-signal: #0b6fa4;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #1f4fa8;
+  --eh-chart-2: #b8860b;
+  --eh-chart-3: #0b6fa4;
+  --eh-chart-4: #6b4fa8;
+  --eh-chart-5: #2f8f6b;
+  --eh-grid-line: rgba(20, 33, 61, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(16, 26, 46, 0.06),
+    0 8px 24px rgba(16, 26, 46, 0.06);
+}
+
+.dark[data-palette="starry"] {
+  --eh-bg: #070b18;
+  --eh-bg-subtle: #0c1226;
+  --eh-surface: #101a33;
+  --eh-surface-raised: #16223f;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(150, 180, 255, 0.16);
+  --eh-border-strong: rgba(150, 180, 255, 0.28);
+  --eh-text: #eef3ff;
+  --eh-text-muted: #a3b4d6;
+  --eh-accent: #f2c14e;
+  --eh-accent-contrast: #1a1305;
+  --eh-accent-soft: color-mix(in srgb, #f2c14e 16%, transparent);
+  --eh-signal: #6fd3ff;
+  --eh-danger: #ff7b8a;
+  --eh-warning: #ffd166;
+  --eh-success: #7fe0a8;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #6fd3ff;
+  --eh-chart-2: #f2c14e;
+  --eh-chart-3: #9d8cff;
+  --eh-chart-4: #67e8b9;
+  --eh-chart-5: #ff9db1;
+  --eh-grid-line: rgba(150, 180, 255, 0.1);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 向日葵 · Sunflowers */
+html:not(.dark)[data-palette="sunflower"] {
+  --eh-bg: #fbf6e9;
+  --eh-bg-subtle: #f3ead3;
+  --eh-surface: #fffdf7;
+  --eh-surface-raised: #fffefb;
+  --eh-hover: color-mix(in srgb, #3a2c10 6%, transparent);
+  --eh-border: rgba(90, 70, 20, 0.14);
+  --eh-border-strong: rgba(90, 70, 20, 0.24);
+  --eh-text: #2a210f;
+  --eh-text-muted: #6a5a3a;
+  --eh-accent: #a05f00;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #a05f00 12%, transparent);
+  --eh-signal: #6a6f1a;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #a05f00;
+  --eh-chart-2: #6a7f2a;
+  --eh-chart-3: #b8860b;
+  --eh-chart-4: #4f6b6b;
+  --eh-chart-5: #8a5a00;
+  --eh-grid-line: rgba(90, 70, 20, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(42, 33, 15, 0.06),
+    0 8px 24px rgba(42, 33, 15, 0.06);
+}
+
+.dark[data-palette="sunflower"] {
+  --eh-bg: #120e06;
+  --eh-bg-subtle: #1a1409;
+  --eh-surface: #20190d;
+  --eh-surface-raised: #2a210f;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(255, 220, 140, 0.16);
+  --eh-border-strong: rgba(255, 220, 140, 0.28);
+  --eh-text: #fff6e0;
+  --eh-text-muted: #c9b78a;
+  --eh-accent: #ffcf4a;
+  --eh-accent-contrast: #241a00;
+  --eh-accent-soft: color-mix(in srgb, #ffcf4a 16%, transparent);
+  --eh-signal: #ffd45e;
+  --eh-danger: #ff7b7b;
+  --eh-warning: #ffd166;
+  --eh-success: #b8d46a;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #ffcf4a;
+  --eh-chart-2: #b8d46a;
+  --eh-chart-3: #ff9d4a;
+  --eh-chart-4: #7fd4c1;
+  --eh-chart-5: #e8a0ff;
+  --eh-grid-line: rgba(255, 220, 140, 0.09);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 神奈川冲浪里 · The Great Wave off Kanagawa */
+html:not(.dark)[data-palette="wave"] {
+  --eh-bg: #eef6f8;
+  --eh-bg-subtle: #e0eef2;
+  --eh-surface: #ffffff;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #0c2430 6%, transparent);
+  --eh-border: rgba(10, 50, 70, 0.14);
+  --eh-border-strong: rgba(10, 50, 70, 0.24);
+  --eh-text: #0c2430;
+  --eh-text-muted: #476875;
+  --eh-accent: #0b5d8a;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #0b5d8a 12%, transparent);
+  --eh-signal: #0f766e;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #0b5d8a;
+  --eh-chart-2: #b0721a;
+  --eh-chart-3: #0f766e;
+  --eh-chart-4: #5b6b8a;
+  --eh-chart-5: #2a8fa8;
+  --eh-grid-line: rgba(10, 50, 70, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(12, 36, 48, 0.06),
+    0 8px 24px rgba(12, 36, 48, 0.06);
+}
+
+.dark[data-palette="wave"] {
+  --eh-bg: #04121c;
+  --eh-bg-subtle: #071c2a;
+  --eh-surface: #0a2637;
+  --eh-surface-raised: #0e3145;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(150, 220, 255, 0.16);
+  --eh-border-strong: rgba(150, 220, 255, 0.28);
+  --eh-text: #eaf7ff;
+  --eh-text-muted: #9cc2d4;
+  --eh-accent: #4fc3f7;
+  --eh-accent-contrast: #05202e;
+  --eh-accent-soft: color-mix(in srgb, #4fc3f7 16%, transparent);
+  --eh-signal: #64e0d0;
+  --eh-danger: #ff7b8a;
+  --eh-warning: #ffd166;
+  --eh-success: #7fe0a8;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #4fc3f7;
+  --eh-chart-2: #ffd166;
+  --eh-chart-3: #64e0d0;
+  --eh-chart-4: #a8b8ff;
+  --eh-chart-5: #ff9f7a;
+  --eh-grid-line: rgba(150, 220, 255, 0.1);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 晨雾（玻璃）· Morning Mist */
+html:not(.dark)[data-palette="mist"] {
+  --eh-bg: #eef1f4;
+  --eh-bg-subtle: #e3e9ee;
+  --eh-surface: #fbfcfd;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #1e3246 5%, transparent);
+  --eh-border: rgba(30, 50, 70, 0.12);
+  --eh-border-strong: rgba(30, 50, 70, 0.22);
+  --eh-text: #16232e;
+  --eh-text-muted: #536573;
+  --eh-accent: #3d6b80;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #3d6b80 12%, transparent);
+  --eh-signal: #2f7d7a;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #3d6b80;
+  --eh-chart-2: #6d8ea0;
+  --eh-chart-3: #7f9a8a;
+  --eh-chart-4: #a08c9e;
+  --eh-chart-5: #4f7f9a;
+  --eh-grid-line: rgba(30, 50, 70, 0.07);
+  --eh-shadow-card: 0 1px 2px rgba(22, 35, 46, 0.06),
+    0 8px 24px rgba(22, 35, 46, 0.06);
+  --eh-glass-border: rgba(30, 50, 70, 0.18);
+}
+
+.dark[data-palette="mist"] {
+  --eh-bg: #0b1218;
+  --eh-bg-subtle: #111b23;
+  --eh-surface: #15212b;
+  --eh-surface-raised: #1a2934;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(200, 225, 240, 0.14);
+  --eh-border-strong: rgba(200, 225, 240, 0.26);
+  --eh-text: #eef4f7;
+  --eh-text-muted: #a8bac5;
+  --eh-accent: #8fc7db;
+  --eh-accent-contrast: #0b1a22;
+  --eh-accent-soft: color-mix(in srgb, #8fc7db 16%, transparent);
+  --eh-signal: #7fd8cf;
+  --eh-danger: #ff8a94;
+  --eh-warning: #ffd27f;
+  --eh-success: #8fe0b0;
+  --eh-info: #96b8ff;
+  --eh-chart-1: #8fc7db;
+  --eh-chart-2: #a8b8d8;
+  --eh-chart-3: #9fd8c8;
+  --eh-chart-4: #d8b8c8;
+  --eh-chart-5: #7fa8c8;
+  --eh-grid-line: rgba(200, 225, 240, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-glass-border: rgba(200, 225, 240, 0.22);
+}
+
+/* 琉璃（玻璃）· Glaze */
+html:not(.dark)[data-palette="glaze"] {
+  --eh-bg: #eef4f2;
+  --eh-bg-subtle: #e2ece9;
+  --eh-surface: #f8fcfb;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #10302a 5%, transparent);
+  --eh-border: rgba(20, 70, 60, 0.12);
+  --eh-border-strong: rgba(20, 70, 60, 0.22);
+  --eh-text: #10241f;
+  --eh-text-muted: #4b6a61;
+  --eh-accent: #176b5c;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #176b5c 12%, transparent);
+  --eh-signal: #0f7c8a;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
+  --eh-chart-1: #176b5c;
+  --eh-chart-2: #2f8f9a;
+  --eh-chart-3: #c08a3e;
+  --eh-chart-4: #5c6f9a;
+  --eh-chart-5: #6a8a4a;
+  --eh-grid-line: rgba(20, 70, 60, 0.07);
+  --eh-shadow-card: 0 1px 2px rgba(16, 36, 31, 0.06),
+    0 8px 24px rgba(16, 36, 31, 0.06);
+  --eh-glass-border: rgba(20, 70, 60, 0.18);
+}
+
+.dark[data-palette="glaze"] {
+  --eh-bg: #06110f;
+  --eh-bg-subtle: #0b1a17;
+  --eh-surface: #0f231f;
+  --eh-surface-raised: #14302a;
+  --eh-hover: rgba(255, 255, 255, 0.07);
+  --eh-border: rgba(170, 240, 220, 0.14);
+  --eh-border-strong: rgba(170, 240, 220, 0.26);
+  --eh-text: #eafaf5;
+  --eh-text-muted: #a2c4b9;
+  --eh-accent: #5fe0c0;
+  --eh-accent-contrast: #04201a;
+  --eh-accent-soft: color-mix(in srgb, #5fe0c0 16%, transparent);
+  --eh-signal: #7fe0ff;
+  --eh-danger: #ff8a94;
+  --eh-warning: #ffd27f;
+  --eh-success: #9fe08a;
+  --eh-info: #8fb4ff;
+  --eh-chart-1: #5fe0c0;
+  --eh-chart-2: #7fd8ff;
+  --eh-chart-3: #ffd27f;
+  --eh-chart-4: #b8a8ff;
+  --eh-chart-5: #a8e07f;
+  --eh-grid-line: rgba(170, 240, 220, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-glass-border: rgba(170, 240, 220, 0.22);
+}
+
+/* ------------------------------------------------------------------
+ * 玻璃层：只在 html[data-glass="true"]（mist / glaze）下启用。
+ * 侧栏、顶栏、卡片、弹窗使用半透明表面 + Gaussian blur；
+ * 不支持 backdrop-filter 时退回不透明表面，保证低端机可读。
+ * ------------------------------------------------------------------ */
+
+/* 给模糊层一点可感知的底色；颜色全部来自当前配色令牌。 */
+html[data-glass="true"] .eh-brand-app > div {
+  background-image:
+    radial-gradient(
+      circle at 12% 8%,
+      color-mix(in srgb, var(--eh-accent) 20%, transparent),
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 88% 0%,
+      color-mix(in srgb, var(--eh-signal) 15%, transparent),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 70% 92%,
+      color-mix(in srgb, var(--eh-chart-3) 12%, transparent),
+      transparent 45%
+    );
+  background-attachment: fixed;
+}
+
+html[data-glass="true"] aside,
+html[data-glass="true"] .eh-brand-app > div > div > header,
+html[data-glass="true"] [data-slot="card"],
+html[data-glass="true"] [data-slot="dialog-content"],
+html[data-glass="true"] [data-slot="alert-dialog-content"],
+html[data-glass="true"] [data-slot="popover-content"],
+html[data-glass="true"] [data-slot="dropdown-menu-content"] {
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+  border-color: var(--eh-glass-border);
+}
+
+html[data-glass="true"] aside {
+  background-color: color-mix(in srgb, var(--eh-surface) 62%, transparent);
+}
+
+html[data-glass="true"] .eh-brand-app > div > div > header {
+  background-color: color-mix(in srgb, var(--eh-bg) 70%, transparent);
+}
+
+html[data-glass="true"] [data-slot="card"] {
+  background-color: color-mix(in srgb, var(--eh-surface) 66%, transparent);
+  --tw-ring-color: var(--eh-glass-border);
+}
+
+html[data-glass="true"] [data-slot="dialog-content"],
+html[data-glass="true"] [data-slot="alert-dialog-content"],
+html[data-glass="true"] [data-slot="popover-content"],
+html[data-glass="true"] [data-slot="dropdown-menu-content"] {
+  background-color: color-mix(
+    in srgb,
+    var(--eh-surface-raised) 72%,
+    transparent
+  );
+  --tw-ring-color: var(--eh-glass-border);
+}
+
+/* 无 backdrop-filter（旧 WebView / 低端机）：退回不透明表面。 */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  html[data-glass="true"] aside,
+  html[data-glass="true"] [data-slot="card"] {
+    background-color: var(--eh-surface);
+  }
+  html[data-glass="true"] .eh-brand-app > div > div > header {
+    background-color: var(--eh-bg);
+  }
+  html[data-glass="true"] [data-slot="dialog-content"],
+  html[data-glass="true"] [data-slot="alert-dialog-content"],
+  html[data-glass="true"] [data-slot="popover-content"],
+  html[data-glass="true"] [data-slot="dropdown-menu-content"] {
+    background-color: var(--eh-surface-raised);
+  }
+}
+
+@theme inline {
+  --breakpoint-desk: 60rem;
+
+  --font-sans: var(--eh-font-body);
+  --font-heading: var(--eh-font-display);
+  --font-mono: var(--eh-font-mono);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-surface: var(--eh-surface);
+  --color-surface-raised: var(--eh-surface-raised);
+  --color-subtle: var(--eh-bg-subtle);
+  --color-ink: var(--eh-text);
+  --color-signal: var(--eh-signal);
+  --color-danger: var(--eh-danger);
+  --color-warning: var(--eh-warning);
+  --color-success: var(--eh-success);
+  --color-info: var(--eh-info);
+  --color-accent-soft: var(--eh-accent-soft);
+  --color-grid-line: var(--eh-grid-line);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 9999px;
+
+  --shadow-card: var(--eh-shadow-card);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--eh-font-body);
+    font-size: 15px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--eh-font-display);
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--eh-accent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--eh-accent-soft);
+    color: var(--eh-text);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--eh-border-strong) transparent;
+  }
+}
+
+@layer components {
+  /* 排版层级（见 UI_COMPONENT_SPEC_V1 §1.3） */
+  .eh-display {
+    font-family: var(--eh-font-display);
+    font-size: 40px;
+    line-height: 48px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .eh-h1 {
+    font-family: var(--eh-font-display);
+    font-size: 28px;
+    line-height: 36px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .eh-h2 {
+    font-family: var(--eh-font-display);
+    font-size: 22px;
+    line-height: 30px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .eh-h3 {
+    font-family: var(--eh-font-display);
+    font-size: 18px;
+    line-height: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .eh-body {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .eh-small {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .eh-caption {
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+  .eh-metric {
+    font-family: var(--eh-font-mono);
+    font-size: 40px;
+    line-height: 44px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .eh-num {
+    font-family: var(--eh-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* 页面容器：最大 1440，外边距 32 */
+  .eh-page {
+    width: 100%;
+    max-width: 1440px;
+    margin-inline: auto;
+    padding: 32px;
+  }
+  @media (max-width: 959px) {
+    .eh-page {
+      padding: 24px 16px;
+    }
+  }
+
+  /* 12 / 8 / 单列 网格（列间距 16）
+   * 行高默认拉伸；所有直接子项都允许收缩，长 id / 长标题不会把列撑破。 */
+  .eh-grid {
+    display: grid;
+    align-items: stretch;
+    gap: 16px;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  .eh-grid > * {
+    min-width: 0;
+  }
+
+  /* 仪表盘布局单元（LayoutGrid）：
+   * 网格子项本身纵向 flex，卡片填满剩余高度，保证同排卡片上下边对齐。
+   * 浏览与编辑模式共用同一套宽度计算，编辑模式只叠加 outline，不再加内边距。 */
+  .eh-layout-cell {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+  .eh-layout-cell > [data-slot="card"] {
+    flex: 1 1 auto;
+  }
+  @media (min-width: 960px) {
+    .eh-grid {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1280px) {
+    .eh-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+  }
+
+  /* 页面淡入：淡入 + 8px 上移 + 轻微缩放，320ms（A5 / D1） */
+  .eh-page-enter {
+    animation: eh-fade-up var(--eh-duration-slow) var(--eh-ease-standard) both;
+  }
+
+  .eh-wave-grid line {
+    stroke: var(--eh-grid-line);
+    stroke-width: 1;
+  }
+}
+
+@keyframes eh-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * D1 · 动画基线
+ * 只动 transform / opacity / filter；分组 stagger 40–60ms。
+ * ------------------------------------------------------------------ */
+
+/* 分组入场：直接子元素依次上浮；刷新数据不会重新挂载，因此不会重播。 */
+.eh-stagger > *,
+.eh-widget-stagger .eh-grid > * {
+  animation: eh-stagger-in 420ms var(--eh-ease-standard) both;
+}
+
+.eh-stagger > *:nth-child(1),
+.eh-widget-stagger .eh-grid > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.eh-stagger > *:nth-child(2),
+.eh-widget-stagger .eh-grid > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+.eh-stagger > *:nth-child(3),
+.eh-widget-stagger .eh-grid > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+.eh-stagger > *:nth-child(4),
+.eh-widget-stagger .eh-grid > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+.eh-stagger > *:nth-child(5),
+.eh-widget-stagger .eh-grid > *:nth-child(5) {
+  animation-delay: 200ms;
+}
+.eh-stagger > *:nth-child(6),
+.eh-widget-stagger .eh-grid > *:nth-child(6) {
+  animation-delay: 250ms;
+}
+.eh-stagger > *:nth-child(7),
+.eh-widget-stagger .eh-grid > *:nth-child(7) {
+  animation-delay: 300ms;
+}
+.eh-stagger > *:nth-child(8),
+.eh-widget-stagger .eh-grid > *:nth-child(8) {
+  animation-delay: 350ms;
+}
+.eh-stagger > *:nth-child(9),
+.eh-widget-stagger .eh-grid > *:nth-child(9) {
+  animation-delay: 400ms;
+}
+.eh-stagger > *:nth-child(10),
+.eh-widget-stagger .eh-grid > *:nth-child(10) {
+  animation-delay: 450ms;
+}
+.eh-stagger > *:nth-child(11),
+.eh-widget-stagger .eh-grid > *:nth-child(11) {
+  animation-delay: 500ms;
+}
+/* 长列表只让前 12 行参与，避免滚动时整屏重排式动画。 */
+.eh-stagger > *:nth-child(12),
+.eh-widget-stagger .eh-grid > *:nth-child(12) {
+  animation-delay: 550ms;
+}
+
+@keyframes eh-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 单块内容首次出现（波形预览、心搏详情等）。 */
+.eh-reveal {
+  animation: eh-reveal 480ms var(--eh-ease-standard) both;
+}
+
+@keyframes eh-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 骨架 → 内容、空状态切换。 */
+.eh-fade-in {
+  animation: eh-fade-in var(--eh-duration-base) var(--eh-ease-standard) both;
+}
+
+@keyframes eh-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 微反馈统一 120ms（按钮自带 transition-all，这里只改时长） */
+[data-slot="button"] {
+  transition-duration: var(--eh-duration-fast);
+}
+
+/* 卡片 hover 轻微抬升；不用位移改变布局。
+ * 提高一点优先级，避免被后面的主题颜色过渡规则覆盖掉 transform 过渡。 */
+.eh-lift.eh-lift {
+  transition:
+    transform var(--eh-duration-base) var(--eh-ease-standard),
+    box-shadow var(--eh-duration-base) var(--eh-ease-standard),
+    background-color var(--eh-duration-base) var(--eh-ease-standard);
+}
+
+.eh-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--eh-shadow-card);
+}
+
+/* Sparkline 首次绘制：从左到右（pathLength=1 + dashoffset）。 */
+.eh-sparkline__line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: eh-spark-draw 600ms var(--eh-ease-standard) 120ms both;
+}
+
+@keyframes eh-spark-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 侧栏导航斜向展开遮罩（PageTransition 驱动 clip-path）。 */
+.eh-nav-sweep {
+  position: fixed;
+  z-index: 40;
+  display: none;
+  pointer-events: none;
+  opacity: 0;
+  /* 低饱和品牌色薄雾：既要看清斜边，又不能像弹窗遮罩那样压暗页面。 */
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--eh-accent) 14%, var(--eh-bg-subtle)) 0%,
+    color-mix(in srgb, var(--eh-accent) 9%, var(--eh-bg-subtle)) 55%,
+    color-mix(in srgb, var(--eh-accent) 6%, var(--eh-bg-subtle)) 100%
+  );
+  will-change: clip-path, opacity;
+}
+
+/* 收藏星标：切换时缩放一次，给点击一个明确回声。 */
+.eh-star-pop {
+  animation: eh-star-pop 240ms var(--eh-ease-standard);
+}
+
+@keyframes eh-star-pop {
+  0% {
+    transform: scale(0.75);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 主题/配色切换：只过渡颜色，避免整页闪白。卡片本身没有别的 transition。 */
+body,
+main,
+[data-slot="card"],
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  transition:
+    background-color var(--eh-duration-base) var(--eh-ease-standard),
+    color var(--eh-duration-base) var(--eh-ease-standard),
+    border-color var(--eh-duration-base) var(--eh-ease-standard);
+}
+
+/* 弹窗：入场 200ms、退出 160ms；只动 opacity/scale，保留 Tailwind 的居中 translate。 */
+[data-slot="dialog-content"][data-state="open"],
+[data-slot="alert-dialog-content"][data-state="open"] {
+  animation: eh-dialog-in var(--eh-duration-base) var(--eh-ease-standard) both;
+}
+
+[data-slot="dialog-content"][data-state="closed"],
+[data-slot="alert-dialog-content"][data-state="closed"] {
+  animation: eh-dialog-out 160ms var(--eh-ease-standard) both;
+}
+
+[data-slot="dialog-overlay"][data-state="open"],
+[data-slot="alert-dialog-overlay"][data-state="open"] {
+  animation: eh-overlay-in var(--eh-duration-base) linear both;
+}
+
+[data-slot="dialog-overlay"][data-state="closed"],
+[data-slot="alert-dialog-overlay"][data-state="closed"] {
+  animation: eh-overlay-out 160ms linear both;
+}
+
+@keyframes eh-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes eh-dialog-out {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+@keyframes eh-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes eh-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Toast：滑入/滑出由 Sonner 控制，这里只统一时长与缓动。 */
+[data-sonner-toast] {
+  transition:
+    transform 240ms var(--eh-ease-standard),
+    opacity 240ms var(--eh-ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .eh-page-enter {
+    animation: none;
+  }
+  .eh-stagger > *,
+  .eh-widget-stagger .eh-grid > *,
+  .eh-reveal,
+  .eh-fade-in,
+  .eh-sparkline__line,
+  .eh-star-pop,
+  .eh-lift:hover {
+    animation: none;
+    transform: none;
+  }
+}

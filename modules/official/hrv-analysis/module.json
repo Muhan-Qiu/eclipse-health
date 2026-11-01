@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.aura-healthcare.hrv-analysis",
+  "name": "hrv-analysis · HRV",
+  "description": "适配自 https://github.com/Aura-healthcare/hrv-analysis 的 HRV 时域/频域/非线性分析模块。上游为 GPL-3.0，只经 stdio JSON-RPC 调用。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "Aura Healthcare + eclipse health adapters", "url": "https://github.com/Aura-healthcare/hrv-analysis" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/Aura-healthcare/hrv-analysis",
+  "permissions": ["records:read", "llm"],
+  "dependencies": ["hrv-analysis>=1.0,<2", "pandas>=2.1,<3", "numpy>=1.26,<3", "scipy>=1.11,<2", "astropy>=6,<8", "nolds>=0.5.2,<1"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "hrv-analysis",
+        "name": "hrv-analysis",
+        "task": "rr-hrv-analysis",
+        "format": "remote",
+        "input": { "modes": ["rr"], "unit": "ms" },
+        "output": { "timeDomain": ["meanRr", "sdnn", "rmssd", "pnn50"], "frequencyDomain": ["vlf", "lf", "hf", "lf_hf_ratio"] },
+        "modelCard": {
+          "library": "hrv-analysis",
+          "upstream": "https://github.com/Aura-healthcare/hrv-analysis",
+          "upstreamLicense": "GPL-3.0",
+          "isolation": "invoked in the module process over stdio JSON-RPC; no static linking",
+          "limitations": ["Frequency bands depend on record length and stationarity", "Not validated for clinical use"],
+          "nonDiagnostic": true
+        }
+      }
+    ],
+    "tools": [
+      {
+        "id": "hrv.frequency",
+        "name": "HRV frequency domain",
+        "description": "Compute VLF/LF/HF and LF/HF ratio from RR intervals (ms) using hrv-analysis. Non-diagnostic.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "rr": { "type": "array", "items": { "type": "number" }, "minItems": 30 } },
+          "required": ["rr"]
+        },
+        "outputSchema": { "type": "object" },
+        "permissions": ["records:read"]
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "analysis.hrv.aura",
+        "name": "HRV analysis (hrv-analysis)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "rmssd": { "type": "number" },
+            "sdnn": { "type": "number" },
+            "lf_hf_ratio": { "type": "number" },
+            "nonDiagnostic": { "type": "string" }
+          },
+          "required": ["nonDiagnostic"]
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "rmssd-trend",
+          "title": "RMSSD 趋势",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "sparkline", "valuePath": "series", "unit": "ms" },
+          "link": "/modules/io.github.aura-healthcare.hrv-analysis/pages/frequency"
+        }
+      ],
+      "pages": [
+        {
+          "id": "frequency",
+          "title": "频域指标",
+          "icon": "activity",
+          "layout": [
+            { "component": "text", "text": "HRV 频域与非线性指标。非医疗器械，不用于诊断。" },
+            {
+              "component": "table",
+              "title": "频域",
+              "source": { "type": "module-rpc", "method": "stats" },
+              "rowPath": "frequency",
+              "columns": [
+                { "key": "band", "label": "频带", "format": "text" },
+                { "key": "power", "label": "功率", "unit": "ms2", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 768, "cpu": 1, "startupTimeoutMs": 20000 },
+  "updateChannel": "stable"
+}

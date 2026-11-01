@@ -1,0 +1,20 @@
+eclipse health module: io.github.tkrajina.gpxpy
+
+Adaptation copyright (c) 2026 eclipse health adapters.
+Adaptation license: GPL-3.0-only (see LICENSE).
+Modification: "adapted as eclipse health module" - a thin stdio JSON-RPC
+wrapper; no upstream source code is copied into this repository.
+
+Upstream project: gpxpy
+Upstream repository: https://github.com/tkrajina/gpxpy
+Upstream SPDX: Apache-2.0
+Upstream copyright: the upstream Apache-2.0 LICENSE text contains no
+  copyright line; project author is Tomo Krajina and contributors (see
+  repository). Full upstream license text is vendored at
+  LICENSES/gpxpy-upstream.txt (retrieved 2026-11-01 from
+  https://raw.githubusercontent.com/tkrajina/gpxpy/master/LICENSE.txt).
+Apache-2.0 NOTICE requirement: this module is a modified work; changes are
+  limited to the wrapper/adapter files listed above.
+
+Non-diagnostic notice: analysis output is not a medical device and must not be
+used for diagnosis.

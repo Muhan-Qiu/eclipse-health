@@ -1,0 +1,50 @@
+/* ------------------------------------------------------------------
+ * F1 · 页面转场：只做交叉淡入淡出。
+ * 新页面 200ms 淡入，旧页面 180ms 淡出后卸载；两者同在内容区，
+ * 侧栏在 main 之外，永远不会被覆盖。
+ * ------------------------------------------------------------------ */
+
+.eh-page-stack {
+  position: relative;
+}
+
+.eh-page-layer {
+  position: relative;
+}
+
+.eh-page-layer--in {
+  animation: eh-page-fade-in 200ms linear both;
+}
+
+/* 旧页面脱离文档流叠在下方：不改变新页面布局，也不拦截点击。 */
+.eh-page-layer--out {
+  position: absolute;
+  inset: 0 0 auto;
+  pointer-events: none;
+  animation: eh-page-fade-out 180ms linear both;
+}
+
+@keyframes eh-page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes eh-page-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eh-page-layer--in,
+  .eh-page-layer--out {
+    animation: none;
+  }
+}

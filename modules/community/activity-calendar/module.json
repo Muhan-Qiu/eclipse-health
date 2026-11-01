@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.grubersjoe.activity-calendar",
+  "name": "Activity Calendar · 活动热力图",
+  "description": "适配自 https://github.com/grubersjoe/react-activity-calendar 的活动热力图 widget：把每日活动计数映射为受控列表/统计，不打包上游 React。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "dashboard-widget",
+  "author": {
+    "name": "Jonas Gruber + eclipse health adapters",
+    "url": "https://github.com/grubersjoe/react-activity-calendar"
+  },
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/grubersjoe/react-activity-calendar",
+  "repository": "https://github.com/grubersjoe/react-activity-calendar",
+  "permissions": ["records:read"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "ui": {
+      "widgets": [
+        {
+          "id": "active-days",
+          "title": "活跃天数",
+          "description": "最近一年的活跃天数。",
+          "size": "sm",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "heatmap",
+            "params": { "days": 365 }
+          },
+          "view": {
+            "type": "stat",
+            "valuePath": "activeDays",
+            "unit": "d",
+            "label": "活跃"
+          },
+          "link": "/modules/io.github.grubersjoe.activity-calendar/pages/calendar"
+        },
+        {
+          "id": "recent-activity",
+          "title": "最近活动",
+          "description": "最近 14 天的活动计数（heatmap 类型落地前先用 list）。",
+          "size": "md",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "heatmap",
+            "params": { "days": 365 }
+          },
+          "view": { "type": "list", "valuePath": "recent" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "calendar",
+          "title": "活动日历",
+          "icon": "calendar",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。热力图只统计每日记录条数，不代表健康评分。"
+            },
+            {
+              "component": "table",
+              "title": "每日活动",
+              "source": {
+                "type": "module-rpc",
+                "method": "heatmap",
+                "params": { "days": 365 }
+              },
+              "rowPath": "days",
+              "columns": [
+                { "key": "date", "label": "日期", "format": "date" },
+                { "key": "count", "label": "记录数", "format": "number" },
+                { "key": "level", "label": "等级", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}

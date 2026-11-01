@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.stravalib.stravalib",
+  "name": "Strava Sync · 运动数据导入",
+  "description": "适配自 https://github.com/stravalib/stravalib 的 Strava v3 活动导入适配层：把活动距离、时长、心率规范化为本地活动记录与周汇总。仅处理用户本人数据，token 不写日志。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "data-source",
+  "author": {
+    "name": "stravalib contributors + eclipse health adapters",
+    "url": "https://github.com/stravalib/stravalib"
+  },
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/stravalib/stravalib",
+  "repository": "https://github.com/stravalib/stravalib",
+  "permissions": ["records:read", "records:write", "network"],
+  "allowedHosts": ["www.strava.com"],
+  "dependencies": ["stravalib>=2.0,<3"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "sources": [
+      {
+        "id": "strava",
+        "name": "Strava",
+        "description": "用户本人的 Strava 活动；OAuth2 access token 由调用方逐次传入，不落盘、不写日志。"
+      }
+    ],
+    "importFormats": [
+      {
+        "id": "strava-json",
+        "ext": ["json"],
+        "label": "Strava API JSON",
+        "description": "Strava v3 API 的 activity 对象数组或活动导出 JSON。"
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "strava.activity",
+        "name": "Strava Activity",
+        "schema": {
+          "type": "object",
+          "required": ["id", "sport", "startDate", "distanceM", "movingTimeS"],
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "sport": { "type": "string" },
+            "startDate": { "type": "string" },
+            "distanceM": { "type": "number" },
+            "distanceKm": { "type": "number" },
+            "movingTimeS": { "type": "integer" },
+            "avgHeartRate": { "type": ["number", "null"] },
+            "maxHeartRate": { "type": ["number", "null"] }
+          }
+        },
+        "indexes": ["startDate", "sport"]
+      }
+    ]
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 10000 },
+  "updateChannel": "stable"
+}

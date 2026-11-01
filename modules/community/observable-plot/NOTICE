@@ -1,0 +1,15 @@
+Observable Plot declarative widget · eclipse health module adapter
+=================================================================
+
+Upstream project  : Observable Plot
+Upstream repository: https://github.com/observablehq/plot
+Upstream SPDX     : ISC
+Upstream LICENSE  : https://github.com/observablehq/plot/blob/main/LICENSE
+Original copyright: Copyright 2021 Observable, Inc.
+
+Modification notice: adapted as eclipse health module. This package does NOT
+copy, vendor, relink or execute upstream JavaScript or D3. It is an independent
+declarative adapter rendered by core-controlled widgets; only capability ideas
+are referenced.
+
+Adapter license: GPL-3.0-only.

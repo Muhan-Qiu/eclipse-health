@@ -1,0 +1,161 @@
+{
+  "opset": 17,
+  "classes": [
+    "W",
+    "N1",
+    "N2",
+    "N3",
+    "R"
+  ],
+  "models": [
+    {
+      "id": "paper-highway-h-k2-c256",
+      "name": "Relay paper-highway K=2 (C256)",
+      "class": "ours",
+      "score": 0.8139,
+      "metric": "balanced_accuracy",
+      "file": "relay_paper_highway_h_k2_c256.onnx",
+      "sha256": "07561bfbf8d3d5374e1a07afb6399365e5efa992e1c4579b7e7571e7e42f489b",
+      "seqLen": 10,
+      "classes": [
+        "W",
+        "N1",
+        "N2",
+        "N3",
+        "R"
+      ],
+      "parameters": 2973237,
+      "inputShape": [
+        10,
+        272
+      ],
+      "inputKind": "features-dt",
+      "verification": {
+        "agreement": 1.0,
+        "maxAbsDiff": 5.7220458984375e-06,
+        "batch": 256
+      },
+      "opset": 17
+    },
+    {
+      "id": "paper-highway-h-k2-b256",
+      "name": "Relay paper-highway K=2 (B256)",
+      "class": "ours",
+      "score": 0.8118,
+      "metric": "balanced_accuracy",
+      "file": "relay_paper_highway_h_k2_b256.onnx",
+      "sha256": "c96f77167c46789a75e1286f72995744ac3ce0b0e9871df670d6177fb4f9cc4e",
+      "seqLen": 10,
+      "classes": [
+        "W",
+        "N1",
+        "N2",
+        "N3",
+        "R"
+      ],
+      "parameters": 2973237,
+      "inputShape": [
+        10,
+        272
+      ],
+      "inputKind": "features-dt",
+      "verification": {
+        "agreement": 1.0,
+        "maxAbsDiff": 3.814697265625e-06,
+        "batch": 256
+      },
+      "opset": 17
+    },
+    {
+      "id": "bilstm-l4-b256",
+      "name": "BiLSTM 4-layer (B256)",
+      "class": "ours",
+      "score": 0.8083,
+      "metric": "balanced_accuracy",
+      "file": "relay_bilstm_l4_b256.onnx",
+      "sha256": "15fd6a405039be189ac5cfdaeca846ec505fb3c4ec900440984ed436e808cc7b",
+      "seqLen": 10,
+      "classes": [
+        "W",
+        "N1",
+        "N2",
+        "N3",
+        "R"
+      ],
+      "parameters": 6532901,
+      "inputShape": [
+        10,
+        272
+      ],
+      "inputKind": "features-dt",
+      "verification": {
+        "agreement": 1.0,
+        "maxAbsDiff": 4.76837158203125e-06,
+        "batch": 256
+      },
+      "opset": 17
+    },
+    {
+      "id": "chambon2018-seed4",
+      "name": "Chambon2018 (2ch)",
+      "class": "baseline",
+      "score": 0.7695,
+      "metric": "balanced_accuracy",
+      "file": "chambon2018_seed4.onnx",
+      "sha256": "694bf4003f3b7eb4042ec7a7ca73c5864da20601fbf522de36847656e2b36ea3",
+      "seqLen": 3,
+      "classes": [
+        "W",
+        "N1",
+        "N2",
+        "N3",
+        "R"
+      ],
+      "parameters": 7707,
+      "inputShape": [
+        3,
+        2,
+        3000
+      ],
+      "inputKind": "raw-windows",
+      "channels": 2,
+      "verification": {
+        "agreement": 1.0,
+        "maxAbsDiff": 2.86102294921875e-06,
+        "batch": 8
+      },
+      "opset": 17
+    },
+    {
+      "id": "attnsleep-seed1",
+      "name": "AttnSleep (1ch)",
+      "class": "baseline",
+      "score": 0.7499,
+      "metric": "balanced_accuracy",
+      "file": "attnsleep_seed1.onnx",
+      "sha256": "49ef5e3927d1ec01683403af6a0c5bb104cf75681905f6e11d323eff92fc63b5",
+      "seqLen": 3,
+      "classes": [
+        "W",
+        "N1",
+        "N2",
+        "N3",
+        "R"
+      ],
+      "parameters": 546805,
+      "inputShape": [
+        3,
+        1,
+        3000
+      ],
+      "inputKind": "raw-windows",
+      "channels": 1,
+      "verification": {
+        "agreement": 1.0,
+        "maxAbsDiff": 7.152557373046875e-07,
+        "batch": 8
+      },
+      "opset": 17
+    }
+  ]
+}

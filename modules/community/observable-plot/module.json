@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.observablehq.plot",
+  "name": "Observable Plot · 声明式图形",
+  "description": "适配自 https://github.com/observablehq/plot 的声明式图形 widget：把趋势、直方图与分位数映射到核心受控组件，不打包上游 JS。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "dashboard-widget",
+  "author": {
+    "name": "Observable Plot + eclipse health adapters",
+    "url": "https://github.com/observablehq/plot"
+  },
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/observablehq/plot",
+  "repository": "https://github.com/observablehq/plot",
+  "permissions": ["records:read"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "ui": {
+      "widgets": [
+        {
+          "id": "trend",
+          "title": "趋势",
+          "description": "声明式趋势线（sparkline）。",
+          "size": "lg",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "plot.trend",
+            "params": { "unit": "bpm" }
+          },
+          "view": {
+            "type": "sparkline",
+            "valuePath": "latest.value",
+            "unit": "bpm",
+            "label": "最近值"
+          },
+          "link": "/modules/io.github.observablehq.plot/pages/plot"
+        },
+        {
+          "id": "histogram",
+          "title": "分布",
+          "description": "直方图区间与计数。",
+          "size": "md",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "plot.histogram",
+            "params": { "bins": 10 }
+          },
+          "view": { "type": "list", "valuePath": "items" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "plot",
+          "title": "图形",
+          "icon": "chart-line",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。数据由调用方经 RPC 传入，本页不做医学解释。"
+            },
+            {
+              "component": "table",
+              "title": "直方图",
+              "source": {
+                "type": "module-rpc",
+                "method": "plot.histogram",
+                "params": { "bins": 10 }
+              },
+              "rowPath": "items",
+              "columns": [
+                { "key": "label", "label": "区间" },
+                { "key": "count", "label": "计数", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}

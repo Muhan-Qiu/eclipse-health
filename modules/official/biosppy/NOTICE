@@ -1,0 +1,20 @@
+BioSPPy · eclipse health 适配层
+
+Upstream project : BioSPPy
+Upstream URL     : https://github.com/scientisst/BioSPPy
+Upstream SPDX    : BSD-3-Clause
+Upstream copyright: Copyright (c) BioSPPy authors (see upstream LICENSE)
+Upstream license : NOT FETCHED — 上游许可见 https://github.com/scientisst/BioSPPy/blob/master/LICENSE
+                   (本机 raw.githubusercontent.com 不可达；安装模块 venv 时可将该文件放入 LICENSES/biosppy-upstream.txt)
+
+This module is a thin adapter around the upstream library, exposing only the
+ECG/HRV subset:
+- the upstream source code is NOT vendored or copied;
+- the adapter calls `biosppy.signals.ecg.ecg` at runtime;
+- the adapter layer itself is licensed GPL-3.0-only (see LICENSE);
+- modifications: adapted as eclipse health module (stdio JSON-RPC wrapper,
+  R-peak to RR conversion, quality flags, result mapping).
+
+No endorsement by the upstream authors is implied.
+
+All analysis output is non-diagnostic: 非医疗器械，不用于诊断。

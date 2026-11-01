@@ -1,0 +1,19 @@
+HeartPy · eclipse health 适配层
+
+Upstream project : HeartPy (heartrate_analysis_python)
+Upstream URL     : https://github.com/paulvangentcom/heartrate_analysis_python
+Upstream SPDX    : MIT
+Upstream copyright: Copyright (c) Paul van Gent (see upstream LICENSE)
+Upstream license : NOT FETCHED — 上游许可见 https://github.com/paulvangentcom/heartrate_analysis_python/blob/master/LICENSE
+                   (本机 raw.githubusercontent.com 不可达；安装模块 venv 时可将该文件放入 LICENSES/heartpy-upstream.txt)
+
+This module is a thin adapter around the upstream library:
+- the upstream source code is NOT vendored or copied;
+- the adapter calls `heartpy.process` at runtime;
+- the adapter layer itself is licensed GPL-3.0-only (see LICENSE);
+- modifications: adapted as eclipse health module (stdio JSON-RPC wrapper,
+  RR validation, quality flags, result mapping, Windows path handling).
+
+No endorsement by the upstream authors is implied.
+
+All analysis output is non-diagnostic: 非医疗器械，不用于诊断。

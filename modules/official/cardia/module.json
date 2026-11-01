@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0",
+  "id": "org.eclipsehealth.cardia",
+  "name": "Cardia 2.0 · ECG 心搏分类",
+  "description": "Single-lead ECG beat classification (N/SVEB/VEB/F) with the Cardia 2.0 ONNX model, using the 104-dimensional feature pipeline.",
+  "version": "1.0.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "eclipse health" },
+  "license": "GPL-3.0-only",
+  "permissions": ["files:user-selected"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "cardia-2.0",
+        "name": "Cardia 2.0",
+        "task": "beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/cardia_k4_best_sim.onnx",
+            "sha256": "f59128614d185076926f9943f514fa94774cd99319a6a6cf14686bd08237bf53"
+          }
+        ],
+        "input": {
+          "leads": ["MLII"],
+          "fs": 360,
+          "windowSamples": 180,
+          "beatsPerWindow": 64,
+          "features": "cardia-104d",
+          "tensors": {
+            "x": { "dtype": "float32", "shape": [1, 64, 104] },
+            "dt": { "dtype": "float32", "shape": [1, 64] }
+          }
+        },
+        "output": { "classes": ["N", "SVEB", "VEB", "F"], "tensor": "logits", "shape": [1, 64, 4] },
+        "preprocess": { "pipeline": "mondejar-104-v1", "version": "2.0" },
+        "runtime": { "format": "onnx", "device": "cpu", "memoryMb": 1024 },
+        "modelCard": {
+          "parameters": 722327,
+          "parametersNote": "Torch 参数量。ONNX initializer 元素数：原图 721,972 / 简化图 727,939（导出按窗口展开常量）。",
+          "trainingData": "MIT-BIH Arrhythmia Database (MLII)",
+          "metrics": { "composite": 74.0 },
+          "limitations": [
+            "Single lead (MLII) only",
+            "Trained and evaluated at 360 Hz",
+            "No waveform delineation (QRS/PR/QT unavailable)",
+            "Research/education use; not a medical device"
+          ],
+          "license": "GPL-3.0-only",
+          "nonDiagnostic": true,
+          "evaluation": "onnxsim fixed-shape graph; MIT-BIH 100/200/208 per-beat |Δp| vs original < 1e-4; B1-03 vs V2 max 6.2e-7"
+        }
+      }
+    ]
+  },
+  "resources": { "memoryMb": 1024, "cpu": 1, "startupTimeoutMs": 10000 },
+  "updateChannel": "stable"
+}

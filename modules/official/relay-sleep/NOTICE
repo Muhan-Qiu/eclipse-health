@@ -1,0 +1,20 @@
+Relay Sleep · 睡眠分期
+======================
+
+模块代码许可证：GPL-3.0-only（与 eclipse health 核心一致）。
+
+权重来源
+--------
+1. 自研 Relay paper-highway / BiLSTM 权重：由项目所有者基于 Sleep-EDF
+   sleep-cassette 训练（78 名受试者，受试者级 60/9/9 划分），本仓库不包含权重文件。
+2. Chambon2018 / AttnSleep 基线权重：由项目所有者使用 braindecode 1.8.1
+   官方模型实现训练。braindecode 为 BSD-3-Clause
+   （https://github.com/braindecode/braindecode）。
+   相关论文：
+   - Chambon et al. 2018, IEEE TNSRE 26(4):758-769.
+   - Eldele et al. 2021, IEEE TNSRE 29:809-818.
+
+数据
+----
+模型派生自 Sleep-EDF Database（PhysioNet）。本仓库与模块包均不包含原始数据；
+数据使用遵守其 PhysioNet 许可。模型仅用于研究与教育，非医疗器械，不用于诊断。

@@ -1,0 +1,20 @@
+eclipse health module: io.github.mit-lcp.wfdb
+Adapter version: 0.1.0
+
+Upstream project: wfdb-python (wfdb)
+Repository: https://github.com/MIT-LCP/wfdb-python
+Upstream SPDX: MIT
+Upstream copyright: Copyright (C) the wfdb-python contributors.
+License text: https://github.com/MIT-LCP/wfdb-python/blob/main/LICENSE
+
+Modification: adapted as eclipse health module — calls the installed `wfdb`
+library to write and read WFDB records, with a small CSV exporter. No upstream
+source or sample data is bundled. Upstream license text is not bundled here;
+see the URL above.
+
+This adapter layer is licensed GPL-3.0-only (see LICENSE). Upstream is invoked
+as a library inside the module's own process, isolated from the core by stdio
+JSON-RPC.
+
+Upstream project does not endorse this adapter. Not a medical device; WFDB
+records and derived signals must not be used for diagnosis.

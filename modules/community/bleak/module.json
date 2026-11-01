@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.hbldh.bleak",
+  "name": "BLE Health",
+  "description": "适配自 hbldh/bleak：通过 Windows WinRT 读取 BLE 心率带与体重秤的 GATT 特征，输出心率/体重记录。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "device-adapter",
+  "author": { "name": "Henrik Blidh + eclipse health adapters", "url": "https://github.com/hbldh/bleak" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/hbldh/bleak",
+  "dependencies": ["bleak>=0.22,<2"],
+  "permissions": ["files:user-selected", "records:write"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "importFormats": [
+      {
+        "id": "ble-capture",
+        "ext": ["json"],
+        "label": "BLE 采集 JSON",
+        "description": "适配层采集/回放的心率与体重 JSON，格式见 README。"
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "hr.sample",
+        "name": "Heart rate sample",
+        "schema": {
+          "type": "object",
+          "required": ["heartRate", "measuredAt"],
+          "properties": {
+            "heartRate": { "type": "integer", "minimum": 20, "maximum": 300 },
+            "measuredAt": { "type": "string" },
+            "rrIntervalsMs": { "type": "array", "items": { "type": "number" } },
+            "source": { "type": "string" },
+            "nonDiagnostic": { "type": "string" }
+          }
+        },
+        "indexes": ["measuredAt"]
+      },
+      {
+        "id": "weight",
+        "name": "Body weight",
+        "schema": {
+          "type": "object",
+          "required": ["weightKg", "measuredAt"],
+          "properties": {
+            "weightKg": { "type": "number", "minimum": 1, "maximum": 500 },
+            "bodyFatPercent": { "type": ["number", "null"] },
+            "measuredAt": { "type": "string" },
+            "source": { "type": "string" },
+            "nonDiagnostic": { "type": "string" }
+          }
+        },
+        "indexes": ["measuredAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "ble-heart-rate",
+          "title": "最近 BLE 心率",
+          "description": "最近一次 BLE 读取的心率",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "latestSample" },
+          "view": { "type": "stat", "valuePath": "heartRate", "unit": "bpm", "label": "心率" }
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 128, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "stable"
+}

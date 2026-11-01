@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.openfoodfacts.openfoodfacts",
+  "name": "Open Food Facts",
+  "description": "适配自 openfoodfacts/openfoodfacts-python：按条码查询食品营养，输出每 100g 营养与摄入记录。数据 © Open Food Facts 贡献者（ODbL）。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "data-source",
+  "author": { "name": "Open Food Facts + eclipse health adapters", "url": "https://github.com/openfoodfacts/openfoodfacts-python" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/openfoodfacts/openfoodfacts-python",
+  "dependencies": ["openfoodfacts>=1.0,<2"],
+  "permissions": ["network", "llm", "records:write"],
+  "allowedHosts": ["world.openfoodfacts.org"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "sources": [
+      {
+        "id": "openfoodfacts",
+        "name": "Open Food Facts",
+        "description": "社区维护的食品条码与营养成分数据库，ODbL 许可。"
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "nutrition.entry",
+        "name": "Nutrition entry",
+        "schema": {
+          "type": "object",
+          "required": ["barcode", "name", "consumedGrams"],
+          "properties": {
+            "barcode": { "type": "string", "pattern": "^[0-9]{8,14}$" },
+            "name": { "type": "string" },
+            "consumedGrams": { "type": "number", "minimum": 0.1, "maximum": 5000 },
+            "energyKcal": { "type": ["number", "null"] },
+            "proteinG": { "type": ["number", "null"] },
+            "carbohydrateG": { "type": ["number", "null"] },
+            "fatG": { "type": ["number", "null"] },
+            "sugarsG": { "type": ["number", "null"] },
+            "saltG": { "type": ["number", "null"] },
+            "source": { "type": "string" },
+            "nonDiagnostic": { "type": "string" }
+          }
+        },
+        "indexes": ["barcode"]
+      }
+    ],
+    "tools": [
+      {
+        "id": "food.lookup",
+        "name": "Lookup food",
+        "description": "Look up a food product by EAN/UPC barcode on Open Food Facts and return per-100g nutrition. Non-diagnostic.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "barcode": { "type": "string", "pattern": "^[0-9]{8,14}$" }
+          },
+          "required": ["barcode"],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "found": { "type": "boolean" },
+            "barcode": { "type": "string" },
+            "product": { "type": ["object", "null"] }
+          }
+        },
+        "longRunning": false,
+        "permissions": ["network"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "food-energy",
+          "title": "最近食品能量",
+          "description": "最近查询食品每 100g 能量",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "latestProduct" },
+          "view": { "type": "stat", "valuePath": "per100g.energyKcal", "unit": "kcal", "label": "每 100g" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "food-lookup",
+          "title": "食品查询",
+          "icon": "search",
+          "layout": [
+            { "component": "text", "text": "输入 EAN/UPC 条码查询 Open Food Facts。数据由社区贡献，可能不完整；非医疗器械，不用于诊断。" },
+            {
+              "component": "form",
+              "title": "条码",
+              "source": { "type": "module-rpc", "method": "lookup" },
+              "submitMethod": "lookup",
+              "fields": [
+                { "key": "barcode", "label": "条码", "type": "text", "required": true }
+              ]
+            },
+            {
+              "component": "detail",
+              "title": "最近查询",
+              "source": { "type": "module-rpc", "method": "latestProduct" },
+              "fields": [
+                { "key": "name", "label": "名称" },
+                { "key": "brands", "label": "品牌" },
+                { "key": "per100g.energyKcal", "label": "能量", "unit": "kcal", "format": "number" },
+                { "key": "per100g.proteinG", "label": "蛋白质", "unit": "g", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 128, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "stable"
+}

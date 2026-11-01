@@ -1,0 +1,71 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python / backend
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+backend/.data/
+
+# User-provided files: keep out of version control
+uploads/
+
+# Large relay-ecg ONNX weights (exported locally, packed into .ehmod at build time)
+modules/official/relay-ecg/models/*.onnx
+
+# Relay sleep ONNX weights (large; staged from uploads/ when packing)
+modules/official/relay-sleep/models/*.onnx
+
+# Marketplace signing key (dev or production private key)
+.secrets/
+
+# Local build output
+src-tauri/target/
+backend/build/
+backend/dist/
+
+# Local agent config / generated analysis output
+.claude/settings.local.json
+reports/analysis-*.json
+
+# Release build artifacts (large, generated)
+backend/packaging/build/
+backend/packaging/dist/
+backend/packaging/eclipse-health-backend/
+src-tauri/binaries/
+src-tauri/_internal/
+.playwright-mcp/
+
+# Internal working docs and local agent config (not part of the public repo)
+reports/
+prompts/
+uploads/
+website-handoff/
+.claude/
+.secrets/
+.mcp.json
+.tmp-public/

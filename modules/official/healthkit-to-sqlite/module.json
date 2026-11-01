@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.dogsheep.healthkit-to-sqlite",
+  "name": "Apple Health 导入",
+  "description": "适配自 https://github.com/dogsheep/healthkit-to-sqlite：用 stdlib zipfile/plistlib 流式解析 Apple Health export.zip 或 export.xml，导入活动、生命体征与睡眠记录。数据只在本机处理。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "data-source",
+  "author": { "name": "Simon Willison + eclipse health adapters", "url": "https://github.com/dogsheep/healthkit-to-sqlite" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/dogsheep/healthkit-to-sqlite",
+  "permissions": ["files:user-selected", "records:write"],
+  "dependencies": [],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "sources": [
+      {
+        "id": "apple-health",
+        "name": "Apple Health",
+        "description": "导入 iPhone/Apple Watch 导出的 export.zip 或 export.xml。"
+      }
+    ],
+    "importFormats": [
+      {
+        "id": "apple-health-export",
+        "ext": ["zip", "xml"],
+        "label": "Apple Health 导出",
+        "description": "健康 App → 导出所有健康数据生成的 export.zip / export.xml。"
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "vital.measurement",
+        "name": "Vital measurement",
+        "schema": {
+          "type": "object",
+          "required": ["metric", "start", "value"],
+          "properties": {
+            "metric": { "type": "string", "maxLength": 64 },
+            "unit": { "type": "string", "maxLength": 32 },
+            "start": { "type": "string" },
+            "end": { "type": "string" },
+            "value": { "type": ["number", "string"] }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["start", "metric"]
+      },
+      {
+        "id": "activity.sample",
+        "name": "Activity sample",
+        "schema": {
+          "type": "object",
+          "required": ["metric", "start", "value"],
+          "properties": {
+            "metric": { "type": "string", "maxLength": 64 },
+            "unit": { "type": "string", "maxLength": 32 },
+            "start": { "type": "string" },
+            "end": { "type": "string" },
+            "value": { "type": ["number", "string"] }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["start", "metric"]
+      },
+      {
+        "id": "sleep.session",
+        "name": "Sleep session",
+        "schema": {
+          "type": "object",
+          "required": ["start", "end", "category"],
+          "properties": {
+            "start": { "type": "string" },
+            "end": { "type": "string" },
+            "category": { "type": "string", "maxLength": 64 },
+            "value": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["start"]
+      },
+      {
+        "id": "activity.workout",
+        "name": "Workout",
+        "schema": {
+          "type": "object",
+          "required": ["start", "end", "activityType"],
+          "properties": {
+            "start": { "type": "string" },
+            "end": { "type": "string" },
+            "activityType": { "type": "string", "maxLength": 64 },
+            "durationSeconds": { "type": "number" },
+            "energyKcal": { "type": "number" },
+            "distanceKm": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["start"]
+      }
+    ]
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "stable"
+}

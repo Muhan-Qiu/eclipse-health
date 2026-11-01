@@ -1,0 +1,19 @@
+Strava Sync · eclipse health module adapter
+===========================================
+
+Upstream project  : stravalib
+Upstream repository: https://github.com/stravalib/stravalib
+Upstream SPDX     : Apache-2.0
+Upstream LICENSE  : https://github.com/stravalib/stravalib/blob/main/LICENSE
+Original copyright: Copyright stravalib contributors.
+  (Upstream copyright line could not be re-fetched offline; see LICENSE URL.)
+
+Modification notice: adapted as eclipse health module. No upstream source code
+is bundled or copied; the adapter calls the separately installed `stravalib`
+package over an in-process import inside the module venv. This repository's
+adapter layer is licensed GPL-3.0-only.
+
+Apache-2.0 NOTICE retention: because no upstream source or NOTICE file is
+redistributed here, upstream NOTICE is not bundled. If upstream code is ever
+vendored into this package, its NOTICE must be included and modified files
+must be marked.

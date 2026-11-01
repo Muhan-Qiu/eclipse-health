@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" color="#14181C" role="img" aria-label="eclipse health">
+  <title>eclipse health</title>
+  <!-- 单色版：靠圆盘与环之间的留白区分层次，颜色跟随 currentColor。 -->
+  <circle cx="64" cy="64" r="52" stroke="currentColor" stroke-width="3.2" />
+  <circle cx="64" cy="64" r="40" fill="currentColor" />
+</svg>

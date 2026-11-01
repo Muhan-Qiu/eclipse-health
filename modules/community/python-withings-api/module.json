@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.vangorra.withings",
+  "name": "Withings Body Measurements",
+  "description": "Adapted from https://github.com/vangorra/python_withings_api. Imports the user's own Withings weight, body composition and blood-pressure measurements via the Withings REST API. Non-medical; not for diagnosis.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "data-source",
+  "author": { "name": "vangorra & eclipse health adapters", "url": "https://github.com/vangorra/python_withings_api" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/vangorra/python_withings_api",
+  "permissions": ["network", "records:write"],
+  "allowedHosts": ["wbsapi.withings.net", "account.withings.com"],
+  "dependencies": ["requests>=2.31,<3", "requests-oauthlib>=1.3,<2"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "sources": [
+      {
+        "id": "withings-api",
+        "name": "Withings API",
+        "description": "OAuth2 read access to the user's own Withings body measurements."
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "body.measurement",
+        "name": "Body measurement",
+        "schema": {
+          "type": "object",
+          "required": ["capturedAt", "source"],
+          "properties": {
+            "capturedAt": { "type": "string" },
+            "weightKg": { "type": "number", "exclusiveMinimum": 0 },
+            "heightM": { "type": "number", "exclusiveMinimum": 0 },
+            "fatFreeMassKg": { "type": "number", "minimum": 0 },
+            "fatMassKg": { "type": "number", "minimum": 0 },
+            "fatRatioPct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "systolicMmHg": { "type": "integer", "minimum": 1 },
+            "diastolicMmHg": { "type": "integer", "minimum": 1 },
+            "heartRateBpm": { "type": "integer", "minimum": 1 },
+            "temperatureC": { "type": "number" },
+            "source": { "type": "string" }
+          }
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "withings-weight",
+          "title": "Withings 体重",
+          "description": "最近一次 Withings 体重",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "stat", "valuePath": "latest.weightKg", "unit": "kg" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "withings-measurements",
+          "title": "Withings 测量",
+          "icon": "scale",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。数据来自用户本人的 Withings 账户，仅在本机处理。"
+            },
+            {
+              "component": "table",
+              "title": "最近测量",
+              "source": { "type": "module-rpc", "method": "measurements.list" },
+              "rowPath": "items",
+              "columns": [
+                { "key": "capturedAt", "label": "时间", "format": "datetime" },
+                { "key": "weightKg", "label": "体重", "unit": "kg", "format": "number" },
+                { "key": "fatRatioPct", "label": "体脂", "unit": "%", "format": "number" },
+                { "key": "systolicMmHg", "label": "收缩压", "unit": "mmHg", "format": "number" },
+                { "key": "diastolicMmHg", "label": "舒张压", "unit": "mmHg", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 10000 },
+  "updateChannel": "stable"
+}

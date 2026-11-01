@@ -1,0 +1,19 @@
+eclipse health module: io.github.jrnl-org.jrnl
+Adapter version: 0.1.0
+
+Upstream project: jrnl
+Repository: https://github.com/jrnl-org/jrnl
+Upstream SPDX: GPL-3.0
+Upstream copyright: Copyright (C) jrnl-org and jrnl contributors.
+License text: https://github.com/jrnl-org/jrnl/blob/develop/LICENSE.txt
+
+Modification: adapted as eclipse health module — a thin subprocess wrapper around
+`jrnl --export json` plus a JSON parser/search layer. No upstream source or
+assets are bundled in this repository. Upstream license text is not bundled
+here; see the URL above.
+
+The module invokes upstream as a separate process and exchanges JSON-RPC 2.0 on
+stdio, so GPL code is not statically linked into the core. This adapter layer is
+licensed GPL-3.0-only (see LICENSE).
+
+Upstream project does not endorse this adapter. Not a medical device.

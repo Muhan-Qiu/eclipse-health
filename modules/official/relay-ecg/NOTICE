@@ -1,0 +1,34 @@
+Relay ECG · org.eclipsehealth.relay-ecg
+=======================================
+
+本模块是 eclipse health 的官方适配层，不含重新训练。
+模块代码（manifest、adapter、worker、导出脚本）由 eclipse health 维护，
+许可 GPL-3.0-only，与核心一致。
+
+模型来源
+--------
+- 模型结构、训练代码与权重：用户提供的 V1 研究代码（`relay LSTM V1`）。
+  7 个 checkpoint：relay_k2 / relay_k4 / relay_k8 / relay_k12 /
+  bilstm / resnet1d / tlstm。
+- 本模块只做：加载 checkpoint → torch.onnx.export（opset 17，动态 batch）→
+  适配推理协议。未修改 V1 训练代码，未重新训练。
+- ONNX 权重不随 git 提交；索引 `models/index.json` 记录 sha256。
+
+评估口径
+--------
+- 4 类（N/SVEB/VEB/F）macro F1：DS1 训 / DS2 测、5 种子均值，来自
+  `relay LSTM/10月19日WFDB基线测试/results_features/总表.md`。
+- 这是精选子集，不是 V1 全量排行榜；分数表与导出权重不是同一次实验，
+  详见 README “模型与分数”。
+
+训练数据
+--------
+- MIT-BIH Arrhythmia Database（PhysioNet）。
+  https://physionet.org/content/mitdb/
+- 使用、再分发与署名遵循 MIT-BIH 数据许可；本模块不再分发原始数据。
+- 输入信号来自用户本地记录，不上传网络、不写日志。
+
+医疗声明
+--------
+非医疗器械，不用于诊断、治疗或任何临床决策。
+输出仅用于科研、教学与模型对比，必须结合信号质量与专业判断。

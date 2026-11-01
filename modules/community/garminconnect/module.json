@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.cyberjunky.garminconnect",
+  "name": "Garmin Connect 导入",
+  "description": "适配自 https://github.com/cyberjunky/python-garminconnect 的非官方 Garmin Connect 客户端：登录后拉取活动、睡眠与身体成分。仅导入用户本人数据，凭据不落盘、不写日志。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "data-source",
+  "author": { "name": "cyberjunky + eclipse health adapters", "url": "https://github.com/cyberjunky/python-garminconnect" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/cyberjunky/python-garminconnect",
+  "permissions": ["network", "records:write"],
+  "allowedHosts": ["connect.garmin.com", "sso.garmin.com"],
+  "dependencies": ["garminconnect>=0.2,<1", "curl_cffi>=0.7,<1"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "sources": [
+      {
+        "id": "garmin-connect",
+        "name": "Garmin Connect",
+        "description": "非官方客户端；受 Garmin 服务条款约束，只导入账户本人数据。"
+      }
+    ],
+    "importFormats": [
+      {
+        "id": "garmin-json",
+        "ext": ["json"],
+        "label": "Garmin Connect JSON",
+        "description": "离线导入已下载的 Garmin Connect 活动/睡眠/体重 JSON。"
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "activity.session",
+        "name": "Activity session",
+        "schema": {
+          "type": "object",
+          "required": ["activityId", "activityType", "startTime"],
+          "properties": {
+            "activityId": { "type": ["string", "number"] },
+            "activityType": { "type": "string", "maxLength": 64 },
+            "name": { "type": "string", "maxLength": 200 },
+            "startTime": { "type": "string" },
+            "durationSeconds": { "type": "number" },
+            "distanceMeters": { "type": "number" },
+            "averageHeartRate": { "type": "number" },
+            "calories": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["startTime"]
+      },
+      {
+        "id": "sleep.session",
+        "name": "Sleep session",
+        "schema": {
+          "type": "object",
+          "required": ["start", "end", "totalSleepSeconds"],
+          "properties": {
+            "start": { "type": "string" },
+            "end": { "type": "string" },
+            "totalSleepSeconds": { "type": "number" },
+            "deepSleepSeconds": { "type": "number" },
+            "lightSleepSeconds": { "type": "number" },
+            "remSleepSeconds": { "type": "number" },
+            "awakeSeconds": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["start"]
+      },
+      {
+        "id": "body.measurement",
+        "name": "Body measurement",
+        "schema": {
+          "type": "object",
+          "required": ["date"],
+          "properties": {
+            "date": { "type": "string" },
+            "weightKg": { "type": "number" },
+            "bmi": { "type": "number" },
+            "bodyFatPercent": { "type": "number" },
+            "bodyWaterPercent": { "type": "number" },
+            "muscleMassKg": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["date"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "garmin-steps",
+          "title": "Garmin 最近活动",
+          "description": "最近一次导入的活动数量与总距离",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "import.summary" },
+          "view": { "type": "stat", "unit": "km", "valuePath": "distanceKm" },
+          "link": "/modules/io.github.cyberjunky.garminconnect/pages/garmin"
+        }
+      ],
+      "pages": [
+        {
+          "id": "garmin",
+          "title": "Garmin",
+          "icon": "activity",
+          "layout": [
+            { "component": "text", "text": "非官方 Garmin Connect 客户端，仅导入本人数据；非医疗器械，不用于诊断。" },
+            {
+              "component": "table",
+              "title": "最近活动",
+              "source": { "type": "module-rpc", "method": "import.summary" },
+              "rowPath": "activities",
+              "columns": [
+                { "key": "startTime", "label": "开始", "format": "datetime" },
+                { "key": "activityType", "label": "类型" },
+                { "key": "distanceMeters", "label": "距离", "unit": "m", "format": "number" },
+                { "key": "durationSeconds", "label": "时长", "unit": "s", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 15000 },
+  "updateChannel": "stable"
+}

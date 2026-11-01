@@ -1,0 +1,17 @@
+eclipse health module: io.github.blinry.habitctl
+Adapter version: 0.1.0
+
+Upstream project: habitctl
+Repository: https://github.com/blinry/habitctl
+Upstream SPDX: GPL-2.0-or-later
+Upstream copyright: Copyright (C) blinry and habitctl contributors.
+License text: https://github.com/blinry/habitctl/blob/main/LICENSE
+
+Modification: adapted as eclipse health module — a thin subprocess wrapper plus
+a text-output parser. No upstream Rust source or assets are bundled in this
+repository. Upstream license text is not bundled here; see the URL above.
+
+This adapter layer is licensed GPL-3.0-only (see LICENSE). The module
+communicates with the core only over stdio JSON-RPC, satisfying GPL isolation.
+
+Upstream project does not endorse this adapter. Not a medical device.

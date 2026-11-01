@@ -1,0 +1,492 @@
+{
+  "schemaVersion": "1.0",
+  "id": "org.eclipsehealth.relay-sleep",
+  "name": "睡眠分期分析",
+  "description": "把整夜睡眠逐窗分成清醒（W）、N1、N2、N3 与快速眼动（REM）五个阶段，输出每段标签、各阶段时长与占比，并给出睡眠结构摘要。支持已提取的 272 维 EEG 特征或原始 30 秒窗口，内置 5 个分期模型可切换对照。非医疗器械，不用于诊断，适合科研、教学与模型比较。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": {
+    "eclipse": ">=1.0 <2.0"
+  },
+  "type": "analysis-model",
+  "author": {
+    "name": "eclipse health"
+  },
+  "license": "GPL-3.0-only",
+  "permissions": [
+    "records:read"
+  ],
+  "dependencies": [
+    "numpy>=1.26,<3",
+    "onnxruntime>=1.17,<2"
+  ],
+  "entry": {
+    "python": "src/main.py",
+    "factory": "create_module"
+  },
+  "contributes": {
+    "models": [
+      {
+        "id": "paper-highway-h-k2-c256",
+        "name": "Relay paper-highway K=2 · C256 · BA 0.8139",
+        "task": "sleep-staging",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/relay_paper_highway_h_k2_c256.onnx",
+            "sha256": "07561bfbf8d3d5374e1a07afb6399365e5efa992e1c4579b7e7571e7e42f489b"
+          }
+        ],
+        "input": {
+          "kind": "features-dt",
+          "tensors": {
+            "features": {
+              "dtype": "float32",
+              "shape": [
+                10,
+                272
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                10,
+                1
+              ]
+            }
+          }
+        },
+        "output": {
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "tensor": "logits",
+          "shape": [
+            10,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "sleep-edf-272d-chambon-frozen-v1",
+          "seqLen": 10,
+          "note": "输入为已缓存的 272 维冻结特征；本模块不做 EDF 解码"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512
+        },
+        "modelCard": {
+          "source": "relay",
+          "class": "ours",
+          "score": 0.8139,
+          "metric": "balanced_accuracy",
+          "seqLen": 10,
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "parameters": 2973237,
+          "trainingData": "Sleep-EDF (sleep-cassette), 78 subjects, subject-level 60/9/9 split",
+          "evaluation": "onnxruntime vs PyTorch argmax agreement 1.0 (see models/verify.json); balanced accuracy 0.8139",
+          "limitations": [
+            "Research/education use only; not a medical device",
+            "Trained and evaluated on Sleep-EDF sleep-cassette",
+            "Input must follow the declared tensor layout"
+          ],
+          "license": "GPL-3.0-only (module code); weights trained by the project owner",
+          "nonDiagnostic": true
+        }
+      },
+      {
+        "id": "paper-highway-h-k2-b256",
+        "name": "Relay paper-highway K=2 · B256 · BA 0.8118",
+        "task": "sleep-staging",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/relay_paper_highway_h_k2_b256.onnx",
+            "sha256": "c96f77167c46789a75e1286f72995744ac3ce0b0e9871df670d6177fb4f9cc4e"
+          }
+        ],
+        "input": {
+          "kind": "features-dt",
+          "tensors": {
+            "features": {
+              "dtype": "float32",
+              "shape": [
+                10,
+                272
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                10,
+                1
+              ]
+            }
+          }
+        },
+        "output": {
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "tensor": "logits",
+          "shape": [
+            10,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "sleep-edf-272d-chambon-frozen-v1",
+          "seqLen": 10,
+          "note": "输入为已缓存的 272 维冻结特征；本模块不做 EDF 解码"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512
+        },
+        "modelCard": {
+          "source": "relay",
+          "class": "ours",
+          "score": 0.8118,
+          "metric": "balanced_accuracy",
+          "seqLen": 10,
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "parameters": 2973237,
+          "trainingData": "Sleep-EDF (sleep-cassette), 78 subjects, subject-level 60/9/9 split",
+          "evaluation": "onnxruntime vs PyTorch argmax agreement 1.0 (see models/verify.json); balanced accuracy 0.8118",
+          "limitations": [
+            "Research/education use only; not a medical device",
+            "Trained and evaluated on Sleep-EDF sleep-cassette",
+            "Input must follow the declared tensor layout"
+          ],
+          "license": "GPL-3.0-only (module code); weights trained by the project owner",
+          "nonDiagnostic": true
+        }
+      },
+      {
+        "id": "bilstm-l4-b256",
+        "name": "BiLSTM 4 层 · B256 · BA 0.8083",
+        "task": "sleep-staging",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/relay_bilstm_l4_b256.onnx",
+            "sha256": "15fd6a405039be189ac5cfdaeca846ec505fb3c4ec900440984ed436e808cc7b"
+          }
+        ],
+        "input": {
+          "kind": "features-dt",
+          "tensors": {
+            "features": {
+              "dtype": "float32",
+              "shape": [
+                10,
+                272
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                10,
+                1
+              ]
+            }
+          }
+        },
+        "output": {
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "tensor": "logits",
+          "shape": [
+            10,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "sleep-edf-272d-chambon-frozen-v1",
+          "seqLen": 10,
+          "note": "输入为已缓存的 272 维冻结特征；本模块不做 EDF 解码"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 1024
+        },
+        "modelCard": {
+          "source": "relay",
+          "class": "ours",
+          "score": 0.8083,
+          "metric": "balanced_accuracy",
+          "seqLen": 10,
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "parameters": 6532901,
+          "trainingData": "Sleep-EDF (sleep-cassette), 78 subjects, subject-level 60/9/9 split",
+          "evaluation": "onnxruntime vs PyTorch argmax agreement 1.0 (see models/verify.json); balanced accuracy 0.8083",
+          "limitations": [
+            "Research/education use only; not a medical device",
+            "Trained and evaluated on Sleep-EDF sleep-cassette",
+            "Input must follow the declared tensor layout"
+          ],
+          "license": "GPL-3.0-only (module code); weights trained by the project owner",
+          "nonDiagnostic": true
+        }
+      },
+      {
+        "id": "chambon2018-seed4",
+        "name": "Chambon2018 · 2 通道基线 · BA 0.7695",
+        "task": "sleep-staging",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/chambon2018_seed4.onnx",
+            "sha256": "694bf4003f3b7eb4042ec7a7ca73c5864da20601fbf522de36847656e2b36ea3"
+          }
+        ],
+        "input": {
+          "kind": "raw-windows",
+          "eeg": {
+            "sfreq": 100,
+            "windowSamples": 3000,
+            "channels": 2,
+            "windowsPerSequence": 3
+          },
+          "tensors": {
+            "windows": {
+              "dtype": "float32",
+              "shape": [
+                3,
+                2,
+                3000
+              ]
+            }
+          }
+        },
+        "output": {
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "tensor": "logits",
+          "shape": [
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "sleep-edf-mrcnn-e2e-v1",
+          "windowSeconds": 30,
+          "windowsPerSequence": 3,
+          "note": "原始 EEG 端到端模型；输入为 3 个连续 30 秒窗"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 1024
+        },
+        "modelCard": {
+          "source": "relay",
+          "class": "baseline",
+          "score": 0.7695,
+          "metric": "balanced_accuracy",
+          "seqLen": 3,
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "parameters": 7707,
+          "trainingData": "Sleep-EDF (sleep-cassette), 78 subjects, subject-level 60/9/9 split",
+          "evaluation": "onnxruntime vs PyTorch argmax agreement 1.0 (see models/verify.json); balanced accuracy 0.7695",
+          "limitations": [
+            "Research/education use only; not a medical device",
+            "Trained and evaluated on Sleep-EDF sleep-cassette",
+            "Input must follow the declared tensor layout"
+          ],
+          "license": "GPL-3.0-only (module code); weights trained by the project owner",
+          "nonDiagnostic": true
+        }
+      },
+      {
+        "id": "attnsleep-seed1",
+        "name": "AttnSleep · 单通道基线 · BA 0.7499",
+        "task": "sleep-staging",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/attnsleep_seed1.onnx",
+            "sha256": "49ef5e3927d1ec01683403af6a0c5bb104cf75681905f6e11d323eff92fc63b5"
+          }
+        ],
+        "input": {
+          "kind": "raw-windows",
+          "eeg": {
+            "sfreq": 100,
+            "windowSamples": 3000,
+            "channels": 1,
+            "windowsPerSequence": 3
+          },
+          "tensors": {
+            "windows": {
+              "dtype": "float32",
+              "shape": [
+                3,
+                1,
+                3000
+              ]
+            }
+          }
+        },
+        "output": {
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "tensor": "logits",
+          "shape": [
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "sleep-edf-mrcnn-e2e-v1",
+          "windowSeconds": 30,
+          "windowsPerSequence": 3,
+          "note": "原始 EEG 端到端模型；输入为 3 个连续 30 秒窗"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 1024
+        },
+        "modelCard": {
+          "source": "relay",
+          "class": "baseline",
+          "score": 0.7499,
+          "metric": "balanced_accuracy",
+          "seqLen": 3,
+          "classes": [
+            "W",
+            "N1",
+            "N2",
+            "N3",
+            "R"
+          ],
+          "parameters": 546805,
+          "trainingData": "Sleep-EDF (sleep-cassette), 78 subjects, subject-level 60/9/9 split",
+          "evaluation": "onnxruntime vs PyTorch argmax agreement 1.0 (see models/verify.json); balanced accuracy 0.7499",
+          "limitations": [
+            "Research/education use only; not a medical device",
+            "Trained and evaluated on Sleep-EDF sleep-cassette",
+            "Input must follow the declared tensor layout"
+          ],
+          "license": "GPL-3.0-only (module code); weights trained by the project owner",
+          "nonDiagnostic": true
+        }
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "sleep-summary",
+          "title": "睡眠分期摘要",
+          "description": "最近一次推理的 5 类睡眠分期分布",
+          "size": "md",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "stats"
+          },
+          "view": {
+            "type": "bar",
+            "seriesPath": "counts",
+            "labelPath": "labels"
+          },
+          "link": "/modules/org.eclipsehealth.relay-sleep/pages/sleep"
+        }
+      ],
+      "pages": [
+        {
+          "id": "sleep",
+          "title": "睡眠分期",
+          "icon": "moon",
+          "layout": [
+            {
+              "component": "text",
+              "text": "Sleep-EDF 5 类睡眠分期（W/N1/N2/N3/R）。3 个自研模型使用 272 维冻结特征，2 个基线使用原始 EEG。非医疗器械，不用于诊断。"
+            },
+            {
+              "component": "table",
+              "title": "分期分布",
+              "source": {
+                "type": "module-rpc",
+                "method": "stats"
+              },
+              "rowPath": "stages",
+              "columns": [
+                {
+                  "key": "stage",
+                  "label": "分期",
+                  "format": "text"
+                },
+                {
+                  "key": "count",
+                  "label": "窗口数",
+                  "format": "number"
+                },
+                {
+                  "key": "percent",
+                  "label": "占比",
+                  "unit": "%",
+                  "format": "number"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": {
+    "memoryMb": 1024,
+    "cpu": 1,
+    "startupTimeoutMs": 30000
+  },
+  "updateChannel": "stable"
+}
