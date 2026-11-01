@@ -354,7 +354,7 @@ print(output, output.stat().st_size, "bytes")
 
 ## 10. 提交 PR
 
-1. Fork `https://github.com/Muhan-Qiu/ecg-agent`；
+1. Fork `https://github.com/Muhan-Qiu/eclipse-health`；
 2. 在 `marketplace/submissions/<module-id>/` 放入 `module.json`、`src/`、`LICENSE`、`README.md`（Apache-2.0 另需 `NOTICE`）；
 3. 运行本地校验与打包，确认 `.ehmod` 可解包、校验和一致；
 4. 填写 PR 模板：作者、许可证、上游、权限、测试、截图与非诊断声明；
@@ -387,4 +387,4 @@ print(output, output.stat().st_size, "bytes")
 - 契约 v2：`docs/MODULE_CONTRACT_V2.md`
 - Manifest schema：`schemas/module.schema.json`
 - 开发者页：https://eclipse-health.fit/developers.html
-- 仓库：https://github.com/Muhan-Qiu/ecg-agent
+- 仓库：https://github.com/Muhan-Qiu/eclipse-health

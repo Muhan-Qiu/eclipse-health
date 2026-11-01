@@ -110,5 +110,5 @@ Only with `records:read`. A module can only read and write records it created, o
 - Marketplace: https://eclipse-health.fit/en/modules.html
 - Developer docs: https://eclipse-health.fit/en/developers.html
 - Agent design guide: https://eclipse-health.fit/docs/modules-agent-guide.en.md
-- Source and submissions: https://github.com/Muhan-Qiu/ecg-agent
+- Source and submissions: https://github.com/Muhan-Qiu/eclipse-health
 - Licence: the core is GPL-3.0-only; module licences are declared in each manifest.

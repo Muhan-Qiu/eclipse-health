@@ -110,5 +110,5 @@ eclipse health 的核心只保留数据、权限、生命周期与审计。其�
 - 模块市场：https://eclipse-health.fit/modules.html
 - 开发者文档：https://eclipse-health.fit/developers.html
 - Agent 版模块设计文档：https://eclipse-health.fit/docs/modules-agent-guide.zh.md
-- 源码与提交：https://github.com/Muhan-Qiu/ecg-agent
+- 源码与提交：https://github.com/Muhan-Qiu/eclipse-health
 - 许可证：核心为 GPL-3.0-only；模块许可证以各自 manifest 为准。

@@ -139,7 +139,7 @@
         refTitle: "## 参考资料",
         refs: [
           "模块设计文档（Agent 版）：https://eclipse-health.fit/docs/modules-agent-guide.zh.md",
-          "Manifest schema：https://github.com/Muhan-Qiu/ecg-agent/blob/main/schemas/module.schema.json",
+          "Manifest schema：https://github.com/Muhan-Qiu/eclipse-health/blob/main/schemas/module.schema.json",
           "开发者文档：https://eclipse-health.fit/developers.html"
         ],
         footer: "请先给出计划，再给出可以直接落地的完整代码。"
@@ -275,7 +275,7 @@
         refTitle: "## References",
         refs: [
           "Agent module design guide: https://eclipse-health.fit/docs/modules-agent-guide.en.md",
-          "Manifest schema: https://github.com/Muhan-Qiu/ecg-agent/blob/main/schemas/module.schema.json",
+          "Manifest schema: https://github.com/Muhan-Qiu/eclipse-health/blob/main/schemas/module.schema.json",
           "Developer docs: https://eclipse-health.fit/en/developers.html"
         ],
         footer: "Give a plan first, then complete, directly usable code."

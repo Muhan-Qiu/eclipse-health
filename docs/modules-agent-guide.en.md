@@ -354,7 +354,7 @@ Install test: app → Modules → Install from local file → pick the `.ehmod` 
 
 ## 10. Submitting a PR
 
-1. Fork `https://github.com/Muhan-Qiu/ecg-agent`;
+1. Fork `https://github.com/Muhan-Qiu/eclipse-health`;
 2. Put `module.json`, `src/`, `LICENSE` and `README.md` (plus `NOTICE` for Apache-2.0) under `marketplace/submissions/<module-id>/`;
 3. Run the local validator and packer; confirm the `.ehmod` unpacks and its checksums match;
 4. Fill in the PR template: author, licence, upstream, permissions, tests, screenshots and the non-diagnostic notice;
@@ -387,4 +387,4 @@ References:
 - Contract v2: `docs/MODULE_CONTRACT_V2.md`
 - Manifest schema: `schemas/module.schema.json`
 - Developer page: https://eclipse-health.fit/en/developers.html
-- Repository: https://github.com/Muhan-Qiu/ecg-agent
+- Repository: https://github.com/Muhan-Qiu/eclipse-health
