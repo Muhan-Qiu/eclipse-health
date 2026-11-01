@@ -1,0 +1,824 @@
+{
+  "schemaVersion": "1.0",
+  "id": "org.eclipsehealth.relay-ecg",
+  "name": "Relay ECG · V1 精选模型包",
+  "description": "7 个 V1/MIT-BIH 心搏分类模型（4 个 Relay-LSTM + 3 个更低基线），本地 ONNX 推理，支持 WFDB/float32 输入与 modelId 选择。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": {
+    "eclipse": ">=1.0 <2.0"
+  },
+  "type": "analysis-model",
+  "author": {
+    "name": "eclipse health"
+  },
+  "license": "GPL-3.0-only",
+  "permissions": [
+    "records:read"
+  ],
+  "dependencies": [
+    "numpy",
+    "onnxruntime",
+    "wfdb"
+  ],
+  "entry": {
+    "python": "src/main.py",
+    "factory": "create_module"
+  },
+  "contributes": {
+    "models": [
+      {
+        "id": "relay-k2",
+        "name": "Relay-LSTM K=2",
+        "task": "ecg-beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/relay_k2.onnx",
+            "sha256": "d629a3014cdc1b400649fdae15b1c531d3abd7d470cda3db73b7ffb9014a8de2"
+          }
+        ],
+        "input": {
+          "mode": "sequence",
+          "fs": 360,
+          "leads": 2,
+          "windowSamples": 234,
+          "windowBefore": 90,
+          "windowAfter": 144,
+          "beatsPerWindow": 64,
+          "zscorePerLead": true,
+          "dtMedianSeconds": 0.763888889,
+          "tensors": {
+            "x": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64,
+                2,
+                234
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64
+              ]
+            }
+          }
+        },
+        "output": {
+          "tensor": "logits",
+          "classes": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "shape": [
+            1,
+            64,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "relay-v1-beat-window",
+          "fs": 360,
+          "windowBeforeSeconds": 0.25,
+          "windowAfterSeconds": 0.4,
+          "zscore": "per-lead",
+          "dt": "rr_seconds / (275/360)"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512,
+          "dynamicBatch": true,
+          "opset": 17
+        },
+        "modelCard": {
+          "source": "relay-v1",
+          "group": "ours",
+          "score": 0.5706,
+          "metric": "macro_f1",
+          "scoreScope": "4-class AAMI (N/SVEB/VEB/F), DS1 train / DS2 test, 5 seeds mean",
+          "scoreSource": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+          "scoreCaveat": "精选子集；分数来自特征标尺评测，ONNX 权重是 V1 raw-window checkpoint，不是同一实验重测。",
+          "parameters": 740613,
+          "trainingData": "MIT-BIH Arrhythmia Database (PhysioNet); DS1 train / DS2 test",
+          "inputSummary": "360 Hz, 2 leads, 234-sample window (R-90/+144), z-score per lead, 64-beat sequences, dt = RR / (275/360)",
+          "outputClasses": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "export": {
+            "opset": 17,
+            "torch": "2.5.1+cu121",
+            "exportedAt": "2026-11-01T12:29:18+00:00",
+            "argmaxAgreement": 1.0,
+            "maxAbsLogitDiff": 2.86102294921875e-06
+          },
+          "limitations": [
+            "Research/education use; not a medical device",
+            "MIT-BIH 360 Hz two-lead domain; other sampling rates must be resampled",
+            "Minority classes (SVEB/F) have low F1; never read as a diagnosis",
+            "Scores come from the feature-benchmark subset, not a re-evaluation of these ONNX weights"
+          ],
+          "nonDiagnostic": true,
+          "license": "GPL-3.0-only"
+        }
+      },
+      {
+        "id": "relay-k12",
+        "name": "Relay-LSTM K=12",
+        "task": "ecg-beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/relay_k12.onnx",
+            "sha256": "b7fcf3d862b6ebcebe331c38bb33edfd292004dfa16b0b22541395ed3d65145c"
+          }
+        ],
+        "input": {
+          "mode": "sequence",
+          "fs": 360,
+          "leads": 2,
+          "windowSamples": 234,
+          "windowBefore": 90,
+          "windowAfter": 144,
+          "beatsPerWindow": 64,
+          "zscorePerLead": true,
+          "dtMedianSeconds": 0.763888889,
+          "tensors": {
+            "x": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64,
+                2,
+                234
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64
+              ]
+            }
+          }
+        },
+        "output": {
+          "tensor": "logits",
+          "classes": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "shape": [
+            1,
+            64,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "relay-v1-beat-window",
+          "fs": 360,
+          "windowBeforeSeconds": 0.25,
+          "windowAfterSeconds": 0.4,
+          "zscore": "per-lead",
+          "dt": "rr_seconds / (275/360)"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512,
+          "dynamicBatch": true,
+          "opset": 17
+        },
+        "modelCard": {
+          "source": "relay-v1",
+          "group": "ours",
+          "score": 0.5417,
+          "metric": "macro_f1",
+          "scoreScope": "4-class AAMI (N/SVEB/VEB/F), DS1 train / DS2 test, 5 seeds mean",
+          "scoreSource": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+          "scoreCaveat": "精选子集；分数来自特征标尺评测，ONNX 权重是 V1 raw-window checkpoint，不是同一实验重测。",
+          "parameters": 2889733,
+          "trainingData": "MIT-BIH Arrhythmia Database (PhysioNet); DS1 train / DS2 test",
+          "inputSummary": "360 Hz, 2 leads, 234-sample window (R-90/+144), z-score per lead, 64-beat sequences, dt = RR / (275/360)",
+          "outputClasses": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "export": {
+            "opset": 17,
+            "torch": "2.5.1+cu121",
+            "exportedAt": "2026-11-01T12:40:52+00:00",
+            "argmaxAgreement": 1.0,
+            "maxAbsLogitDiff": 1.1801719665527344e-05
+          },
+          "limitations": [
+            "Research/education use; not a medical device",
+            "MIT-BIH 360 Hz two-lead domain; other sampling rates must be resampled",
+            "Minority classes (SVEB/F) have low F1; never read as a diagnosis",
+            "Scores come from the feature-benchmark subset, not a re-evaluation of these ONNX weights"
+          ],
+          "nonDiagnostic": true,
+          "license": "GPL-3.0-only"
+        }
+      },
+      {
+        "id": "relay-k4",
+        "name": "Relay-LSTM K=4",
+        "task": "ecg-beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/relay_k4.onnx",
+            "sha256": "2d598bcff9a2b8b89b1c9628fe339fb79b16b98fdbf0ee1c035c0eaa4b9003b4"
+          }
+        ],
+        "input": {
+          "mode": "sequence",
+          "fs": 360,
+          "leads": 2,
+          "windowSamples": 234,
+          "windowBefore": 90,
+          "windowAfter": 144,
+          "beatsPerWindow": 64,
+          "zscorePerLead": true,
+          "dtMedianSeconds": 0.763888889,
+          "tensors": {
+            "x": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64,
+                2,
+                234
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64
+              ]
+            }
+          }
+        },
+        "output": {
+          "tensor": "logits",
+          "classes": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "shape": [
+            1,
+            64,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "relay-v1-beat-window",
+          "fs": 360,
+          "windowBeforeSeconds": 0.25,
+          "windowAfterSeconds": 0.4,
+          "zscore": "per-lead",
+          "dt": "rr_seconds / (275/360)"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512,
+          "dynamicBatch": true,
+          "opset": 17
+        },
+        "modelCard": {
+          "source": "relay-v1",
+          "group": "ours",
+          "score": 0.5397,
+          "metric": "macro_f1",
+          "scoreScope": "4-class AAMI (N/SVEB/VEB/F), DS1 train / DS2 test, 5 seeds mean",
+          "scoreSource": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+          "scoreCaveat": "精选子集；分数来自特征标尺评测，ONNX 权重是 V1 raw-window checkpoint，不是同一实验重测。",
+          "parameters": 1170437,
+          "trainingData": "MIT-BIH Arrhythmia Database (PhysioNet); DS1 train / DS2 test",
+          "inputSummary": "360 Hz, 2 leads, 234-sample window (R-90/+144), z-score per lead, 64-beat sequences, dt = RR / (275/360)",
+          "outputClasses": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "export": {
+            "opset": 17,
+            "torch": "2.5.1+cu121",
+            "exportedAt": "2026-11-01T12:41:54+00:00",
+            "argmaxAgreement": 1.0,
+            "maxAbsLogitDiff": 2.384185791015625e-06
+          },
+          "limitations": [
+            "Research/education use; not a medical device",
+            "MIT-BIH 360 Hz two-lead domain; other sampling rates must be resampled",
+            "Minority classes (SVEB/F) have low F1; never read as a diagnosis",
+            "Scores come from the feature-benchmark subset, not a re-evaluation of these ONNX weights"
+          ],
+          "nonDiagnostic": true,
+          "license": "GPL-3.0-only"
+        }
+      },
+      {
+        "id": "relay-k8",
+        "name": "Relay-LSTM K=8",
+        "task": "ecg-beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/relay_k8.onnx",
+            "sha256": "405842b825da63d825e9cf8db86592b212f14d5a612befba92743baf5b9ffb5f"
+          }
+        ],
+        "input": {
+          "mode": "sequence",
+          "fs": 360,
+          "leads": 2,
+          "windowSamples": 234,
+          "windowBefore": 90,
+          "windowAfter": 144,
+          "beatsPerWindow": 64,
+          "zscorePerLead": true,
+          "dtMedianSeconds": 0.763888889,
+          "tensors": {
+            "x": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64,
+                2,
+                234
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64
+              ]
+            }
+          }
+        },
+        "output": {
+          "tensor": "logits",
+          "classes": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "shape": [
+            1,
+            64,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "relay-v1-beat-window",
+          "fs": 360,
+          "windowBeforeSeconds": 0.25,
+          "windowAfterSeconds": 0.4,
+          "zscore": "per-lead",
+          "dt": "rr_seconds / (275/360)"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512,
+          "dynamicBatch": true,
+          "opset": 17
+        },
+        "modelCard": {
+          "source": "relay-v1",
+          "group": "ours",
+          "score": 0.5199,
+          "metric": "macro_f1",
+          "scoreScope": "4-class AAMI (N/SVEB/VEB/F), DS1 train / DS2 test, 5 seeds mean",
+          "scoreSource": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+          "scoreCaveat": "精选子集；分数来自特征标尺评测，ONNX 权重是 V1 raw-window checkpoint，不是同一实验重测。",
+          "parameters": 2030085,
+          "trainingData": "MIT-BIH Arrhythmia Database (PhysioNet); DS1 train / DS2 test",
+          "inputSummary": "360 Hz, 2 leads, 234-sample window (R-90/+144), z-score per lead, 64-beat sequences, dt = RR / (275/360)",
+          "outputClasses": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "export": {
+            "opset": 17,
+            "torch": "2.5.1+cu121",
+            "exportedAt": "2026-11-01T12:46:30+00:00",
+            "argmaxAgreement": 1.0,
+            "maxAbsLogitDiff": 2.384185791015625e-06
+          },
+          "limitations": [
+            "Research/education use; not a medical device",
+            "MIT-BIH 360 Hz two-lead domain; other sampling rates must be resampled",
+            "Minority classes (SVEB/F) have low F1; never read as a diagnosis",
+            "Scores come from the feature-benchmark subset, not a re-evaluation of these ONNX weights"
+          ],
+          "nonDiagnostic": true,
+          "license": "GPL-3.0-only"
+        }
+      },
+      {
+        "id": "bilstm",
+        "name": "BiLSTM 基线",
+        "task": "ecg-beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/bilstm.onnx",
+            "sha256": "592dfdcaca0807d5f5d65e8e123be0905eda6c4bc2b8d145ec4dbb0306bd3b34"
+          }
+        ],
+        "input": {
+          "mode": "sequence",
+          "fs": 360,
+          "leads": 2,
+          "windowSamples": 234,
+          "windowBefore": 90,
+          "windowAfter": 144,
+          "beatsPerWindow": 64,
+          "zscorePerLead": true,
+          "dtMedianSeconds": 0.763888889,
+          "tensors": {
+            "x": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64,
+                2,
+                234
+              ]
+            }
+          }
+        },
+        "output": {
+          "tensor": "logits",
+          "classes": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "shape": [
+            1,
+            64,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "relay-v1-beat-window",
+          "fs": 360,
+          "windowBeforeSeconds": 0.25,
+          "windowAfterSeconds": 0.4,
+          "zscore": "per-lead",
+          "dt": "rr_seconds / (275/360)"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512,
+          "dynamicBatch": true,
+          "opset": 17
+        },
+        "modelCard": {
+          "source": "relay-v1",
+          "group": "baseline",
+          "score": 0.4186,
+          "metric": "macro_f1",
+          "scoreScope": "4-class AAMI (N/SVEB/VEB/F), DS1 train / DS2 test, 5 seeds mean",
+          "scoreSource": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+          "scoreCaveat": "精选子集；分数来自特征标尺评测，ONNX 权重是 V1 raw-window checkpoint，不是同一实验重测。",
+          "parameters": 613637,
+          "trainingData": "MIT-BIH Arrhythmia Database (PhysioNet); DS1 train / DS2 test",
+          "inputSummary": "360 Hz, 2 leads, 234-sample window (R-90/+144), z-score per lead, 64-beat sequences, dt = RR / (275/360)",
+          "outputClasses": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "export": {
+            "opset": 17,
+            "torch": "2.5.1+cu121",
+            "exportedAt": "2026-11-01T12:46:30+00:00",
+            "argmaxAgreement": 1.0,
+            "maxAbsLogitDiff": 8.344650268554688e-07
+          },
+          "limitations": [
+            "Research/education use; not a medical device",
+            "MIT-BIH 360 Hz two-lead domain; other sampling rates must be resampled",
+            "Minority classes (SVEB/F) have low F1; never read as a diagnosis",
+            "Scores come from the feature-benchmark subset, not a re-evaluation of these ONNX weights"
+          ],
+          "nonDiagnostic": true,
+          "license": "GPL-3.0-only"
+        }
+      },
+      {
+        "id": "resnet1d",
+        "name": "1D-ResNet18 基线",
+        "task": "ecg-beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/resnet1d.onnx",
+            "sha256": "af86ef75d9f8cadaf6ca49da8e9054c0d161b67292c363d57682ce5477e90507"
+          }
+        ],
+        "input": {
+          "mode": "beat",
+          "fs": 360,
+          "leads": 2,
+          "windowSamples": 234,
+          "windowBefore": 90,
+          "windowAfter": 144,
+          "beatsPerWindow": 1,
+          "zscorePerLead": true,
+          "dtMedianSeconds": 0.763888889,
+          "tensors": {
+            "x": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                2,
+                234
+              ]
+            }
+          }
+        },
+        "output": {
+          "tensor": "logits",
+          "classes": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "shape": [
+            1,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "relay-v1-beat-window",
+          "fs": 360,
+          "windowBeforeSeconds": 0.25,
+          "windowAfterSeconds": 0.4,
+          "zscore": "per-lead",
+          "dt": "rr_seconds / (275/360)"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512,
+          "dynamicBatch": true,
+          "opset": 17
+        },
+        "modelCard": {
+          "source": "relay-v1",
+          "group": "baseline",
+          "score": 0.4178,
+          "metric": "macro_f1",
+          "scoreScope": "4-class AAMI (N/SVEB/VEB/F), DS1 train / DS2 test, 5 seeds mean",
+          "scoreSource": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+          "scoreCaveat": "精选子集；分数来自特征标尺评测，ONNX 权重是 V1 raw-window checkpoint，不是同一实验重测。",
+          "parameters": 240901,
+          "trainingData": "MIT-BIH Arrhythmia Database (PhysioNet); DS1 train / DS2 test",
+          "inputSummary": "360 Hz, 2 leads, 234-sample window (R-90/+144), z-score per lead, 64-beat sequences, dt = RR / (275/360)",
+          "outputClasses": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "export": {
+            "opset": 17,
+            "torch": "2.5.1+cu121",
+            "exportedAt": "2026-11-01T12:46:30+00:00",
+            "argmaxAgreement": 1.0,
+            "maxAbsLogitDiff": 9.5367431640625e-06
+          },
+          "limitations": [
+            "Research/education use; not a medical device",
+            "MIT-BIH 360 Hz two-lead domain; other sampling rates must be resampled",
+            "Minority classes (SVEB/F) have low F1; never read as a diagnosis",
+            "Scores come from the feature-benchmark subset, not a re-evaluation of these ONNX weights"
+          ],
+          "nonDiagnostic": true,
+          "license": "GPL-3.0-only"
+        }
+      },
+      {
+        "id": "tlstm",
+        "name": "T-LSTM 基线",
+        "task": "ecg-beat-classification",
+        "format": "onnx",
+        "files": [
+          {
+            "path": "models/tlstm.onnx",
+            "sha256": "8a04493be41e5e939aafefae2d133258409fb0f992d84f752a5311f1a8a34153"
+          }
+        ],
+        "input": {
+          "mode": "sequence",
+          "fs": 360,
+          "leads": 2,
+          "windowSamples": 234,
+          "windowBefore": 90,
+          "windowAfter": 144,
+          "beatsPerWindow": 64,
+          "zscorePerLead": true,
+          "dtMedianSeconds": 0.763888889,
+          "tensors": {
+            "x": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64,
+                2,
+                234
+              ]
+            },
+            "dt": {
+              "dtype": "float32",
+              "shape": [
+                1,
+                64
+              ]
+            }
+          }
+        },
+        "output": {
+          "tensor": "logits",
+          "classes": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "shape": [
+            1,
+            64,
+            5
+          ]
+        },
+        "preprocess": {
+          "pipeline": "relay-v1-beat-window",
+          "fs": 360,
+          "windowBeforeSeconds": 0.25,
+          "windowAfterSeconds": 0.4,
+          "zscore": "per-lead",
+          "dt": "rr_seconds / (275/360)"
+        },
+        "runtime": {
+          "format": "onnx",
+          "device": "cpu",
+          "memoryMb": 512,
+          "dynamicBatch": true,
+          "opset": 17
+        },
+        "modelCard": {
+          "source": "relay-v1",
+          "group": "baseline",
+          "score": 0.3522,
+          "metric": "macro_f1",
+          "scoreScope": "4-class AAMI (N/SVEB/VEB/F), DS1 train / DS2 test, 5 seeds mean",
+          "scoreSource": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+          "scoreCaveat": "精选子集；分数来自特征标尺评测，ONNX 权重是 V1 raw-window checkpoint，不是同一实验重测。",
+          "parameters": 389381,
+          "trainingData": "MIT-BIH Arrhythmia Database (PhysioNet); DS1 train / DS2 test",
+          "inputSummary": "360 Hz, 2 leads, 234-sample window (R-90/+144), z-score per lead, 64-beat sequences, dt = RR / (275/360)",
+          "outputClasses": [
+            "N",
+            "SVEB",
+            "VEB",
+            "F",
+            "Q"
+          ],
+          "export": {
+            "opset": 17,
+            "torch": "2.5.1+cu121",
+            "exportedAt": "2026-11-01T12:46:33+00:00",
+            "argmaxAgreement": 1.0,
+            "maxAbsLogitDiff": 9.5367431640625e-07
+          },
+          "limitations": [
+            "Research/education use; not a medical device",
+            "MIT-BIH 360 Hz two-lead domain; other sampling rates must be resampled",
+            "Minority classes (SVEB/F) have low F1; never read as a diagnosis",
+            "Scores come from the feature-benchmark subset, not a re-evaluation of these ONNX weights"
+          ],
+          "nonDiagnostic": true,
+          "license": "GPL-3.0-only"
+        }
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "latest-analysis",
+          "title": "最新 Relay 分析",
+          "description": "最近一次心搏分类摘要（非诊断）",
+          "size": "md",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "stats"
+          },
+          "view": {
+            "type": "text",
+            "valuePath": "latest.summaryText"
+          },
+          "link": "/modules/org.eclipsehealth.relay-ecg/pages/models"
+        }
+      ],
+      "pages": [
+        {
+          "id": "models",
+          "title": "模型对比",
+          "icon": "activity",
+          "layout": [
+            {
+              "component": "text",
+              "text": "7 个 V1 模型（精选子集）：4 个 Relay-LSTM 自研，3 个更低基线。分数为 DS1/DS2 AAMI 4 类 macro F1；非医疗器械，不用于诊断。"
+            },
+            {
+              "component": "table",
+              "title": "模型列表",
+              "source": {
+                "type": "module-rpc",
+                "method": "list_models"
+              },
+              "rowPath": "models",
+              "columns": [
+                {
+                  "key": "id",
+                  "label": "模型"
+                },
+                {
+                  "key": "class",
+                  "label": "类别",
+                  "format": "text"
+                },
+                {
+                  "key": "score",
+                  "label": "4 类 macro F1",
+                  "format": "number"
+                },
+                {
+                  "key": "parameters",
+                  "label": "参数量",
+                  "format": "number"
+                },
+                {
+                  "key": "available",
+                  "label": "已安装",
+                  "format": "text"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": {
+    "memoryMb": 1024,
+    "cpu": 1,
+    "startupTimeoutMs": 15000
+  },
+  "updateChannel": "stable"
+}

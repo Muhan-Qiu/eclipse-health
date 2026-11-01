@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1",
   "source": "official",
-  "generatedAt": "2026-11-01T04:49:38Z",
+  "generatedAt": "2026-11-01T13:08:45Z",
   "keyId": "dev-2026",
   "modules": [
     {
@@ -762,7 +762,58 @@
       "file": "modules/io.github.vangorra.withings-0.1.0.ehmod",
       "size": 15585,
       "sha256": "0afdf5495e9de35ee500574d65554b660eb1d86dea300195b793db5e1115d890"
+    },
+    {
+      "id": "org.eclipsehealth.relay-ecg",
+      "name": "Relay ECG · V1 精选模型包",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "7 个 V1/MIT-BIH 心搏分类模型（4 个 Relay-LSTM + 3 个更低基线），本地 ONNX 推理，支持 WFDB/float32 输入与 modelId 选择。非医疗器械，不用于诊断。",
+      "author": "eclipse health",
+      "license": "GPL-3.0-only",
+      "repository": "",
+      "permissions": [
+        "records:read"
+      ],
+      "dependencies": [
+        "numpy",
+        "onnxruntime",
+        "wfdb"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/org.eclipsehealth.relay-ecg-0.1.0.ehmod",
+      "size": 27162656,
+      "sha256": "d697ba7918581f3ed7e6f62b01e4818f4575dcd5f1287ffd5d6c91eb5088f718"
+    },
+    {
+      "id": "org.eclipsehealth.relay-sleep",
+      "name": "Relay Sleep · 睡眠分期",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "基于 Sleep-EDF 的 5 类睡眠分期（W/N1/N2/N3/R）：3 个自研 Relay/BiLSTM 模型（272 维冻结特征）与 2 个更低基线（Chambon2018/AttnSleep，原始 EEG）。非医疗器械，不用于诊断。",
+      "author": "eclipse health",
+      "license": "GPL-3.0-only",
+      "repository": "",
+      "permissions": [
+        "records:read"
+      ],
+      "dependencies": [
+        "numpy>=1.26,<3",
+        "onnxruntime>=1.17,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/org.eclipsehealth.relay-sleep-0.1.0.ehmod",
+      "size": 43861949,
+      "sha256": "f3746df6a32104d0a4da74d7232e605fb826d00b671e289673af2244e7fddf2b"
     }
   ],
-  "signature": "GN72W31tB6UgwZyPDqYxpxpMeDY8TywD41RqiEDGp6erURdf0o/M+zRxUML9bdKvx145qnV2H3plpuCpRFIQBQ=="
+  "signature": "LMAIYLyYBzd1Ilhe6u/1fdO1R8VreUEurTB42KJ8YMPrt7qn2RVLFDSFHUO1Sapj8LsP0kwPrWo12fryQn3DAA=="
 }

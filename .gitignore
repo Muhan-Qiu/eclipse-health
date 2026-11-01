@@ -34,6 +34,12 @@ backend/.data/
 # User-provided files: keep out of version control
 uploads/
 
+# Large relay-ecg ONNX weights (exported locally, packed into .ehmod at build time)
+modules/official/relay-ecg/models/*.onnx
+
+# Relay sleep ONNX weights (large; staged from uploads/ when packing)
+modules/official/relay-sleep/models/*.onnx
+
 # Marketplace signing key (dev or production private key)
 .secrets/
 

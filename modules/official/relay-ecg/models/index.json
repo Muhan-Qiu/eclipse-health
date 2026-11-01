@@ -1,0 +1,569 @@
+{
+  "schemaVersion": "1.0",
+  "source": "relay-v1",
+  "metric": "macro_f1",
+  "classScope": "4-class AAMI (N/SVEB/VEB/F)",
+  "scoreProtocol": {
+    "protocol": "DS1 训 / DS2 测，AAMI 4 类 macro F1，5 种子均值",
+    "source": "relay LSTM/10月19日WFDB基线测试/results_features/总表.md",
+    "note": "精选子集，不是 V1 全量排行榜；V1 的 lstm 等基线在部分口径下高于 relay_k4/k8，本包按要求不收录。"
+  },
+  "classes": [
+    "N",
+    "SVEB",
+    "VEB",
+    "F",
+    "Q"
+  ],
+  "dtMedianSeconds": 0.763888889,
+  "window": {
+    "before": 90,
+    "after": 144,
+    "samples": 234
+  },
+  "models": [
+    {
+      "id": "relay-k2",
+      "name": "Relay-LSTM K=2",
+      "source": "relay-v1",
+      "class": "ours",
+      "score": 0.5706,
+      "metric": "macro_f1",
+      "file": "relay_k2.onnx",
+      "sha256": "d629a3014cdc1b400649fdae15b1c531d3abd7d470cda3db73b7ffb9014a8de2",
+      "bytes": 3253112,
+      "parameters": 740613,
+      "classes": [
+        "N",
+        "SVEB",
+        "VEB",
+        "F",
+        "Q"
+      ],
+      "checkpoint": "results/ckpt/relay_k2_s0.pt",
+      "input": {
+        "mode": "sequence",
+        "fs": 360,
+        "leads": 2,
+        "windowSamples": 234,
+        "windowBefore": 90,
+        "windowAfter": 144,
+        "beatsPerWindow": 64,
+        "zscorePerLead": true,
+        "dtMedianSeconds": 0.763888889,
+        "tensors": {
+          "x": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64,
+              2,
+              234
+            ]
+          },
+          "dt": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64
+            ]
+          }
+        }
+      },
+      "output": {
+        "tensor": "logits",
+        "classes": [
+          "N",
+          "SVEB",
+          "VEB",
+          "F",
+          "Q"
+        ],
+        "shape": [
+          1,
+          64,
+          5
+        ]
+      },
+      "preprocess": {
+        "pipeline": "relay-v1-beat-window",
+        "fs": 360,
+        "windowBeforeSeconds": 0.25,
+        "windowAfterSeconds": 0.4,
+        "zscore": "per-lead",
+        "dt": "rr_seconds / (275/360)"
+      },
+      "export": {
+        "opset": 17,
+        "torch": "2.5.1+cu121",
+        "exportedAt": "2026-11-01T12:29:18+00:00",
+        "argmaxAgreement": 1.0,
+        "maxAbsLogitDiff": 2.86102294921875e-06
+      }
+    },
+    {
+      "id": "relay-k12",
+      "name": "Relay-LSTM K=12",
+      "source": "relay-v1",
+      "class": "ours",
+      "score": 0.5417,
+      "metric": "macro_f1",
+      "file": "relay_k12.onnx",
+      "sha256": "b7fcf3d862b6ebcebe331c38bb33edfd292004dfa16b0b22541395ed3d65145c",
+      "bytes": 20188650,
+      "parameters": 2889733,
+      "classes": [
+        "N",
+        "SVEB",
+        "VEB",
+        "F",
+        "Q"
+      ],
+      "checkpoint": "results/ckpt/relay_k12_s0.pt",
+      "input": {
+        "mode": "sequence",
+        "fs": 360,
+        "leads": 2,
+        "windowSamples": 234,
+        "windowBefore": 90,
+        "windowAfter": 144,
+        "beatsPerWindow": 64,
+        "zscorePerLead": true,
+        "dtMedianSeconds": 0.763888889,
+        "tensors": {
+          "x": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64,
+              2,
+              234
+            ]
+          },
+          "dt": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64
+            ]
+          }
+        }
+      },
+      "output": {
+        "tensor": "logits",
+        "classes": [
+          "N",
+          "SVEB",
+          "VEB",
+          "F",
+          "Q"
+        ],
+        "shape": [
+          1,
+          64,
+          5
+        ]
+      },
+      "preprocess": {
+        "pipeline": "relay-v1-beat-window",
+        "fs": 360,
+        "windowBeforeSeconds": 0.25,
+        "windowAfterSeconds": 0.4,
+        "zscore": "per-lead",
+        "dt": "rr_seconds / (275/360)"
+      },
+      "export": {
+        "opset": 17,
+        "torch": "2.5.1+cu121",
+        "exportedAt": "2026-11-01T12:40:52+00:00",
+        "argmaxAgreement": 1.0,
+        "maxAbsLogitDiff": 1.1801719665527344e-05
+      }
+    },
+    {
+      "id": "relay-k4",
+      "name": "Relay-LSTM K=4",
+      "source": "relay-v1",
+      "class": "ours",
+      "score": 0.5397,
+      "metric": "macro_f1",
+      "file": "relay_k4.onnx",
+      "sha256": "2d598bcff9a2b8b89b1c9628fe339fb79b16b98fdbf0ee1c035c0eaa4b9003b4",
+      "bytes": 6630341,
+      "parameters": 1170437,
+      "classes": [
+        "N",
+        "SVEB",
+        "VEB",
+        "F",
+        "Q"
+      ],
+      "checkpoint": "results/ckpt/relay_k4.pt",
+      "input": {
+        "mode": "sequence",
+        "fs": 360,
+        "leads": 2,
+        "windowSamples": 234,
+        "windowBefore": 90,
+        "windowAfter": 144,
+        "beatsPerWindow": 64,
+        "zscorePerLead": true,
+        "dtMedianSeconds": 0.763888889,
+        "tensors": {
+          "x": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64,
+              2,
+              234
+            ]
+          },
+          "dt": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64
+            ]
+          }
+        }
+      },
+      "output": {
+        "tensor": "logits",
+        "classes": [
+          "N",
+          "SVEB",
+          "VEB",
+          "F",
+          "Q"
+        ],
+        "shape": [
+          1,
+          64,
+          5
+        ]
+      },
+      "preprocess": {
+        "pipeline": "relay-v1-beat-window",
+        "fs": 360,
+        "windowBeforeSeconds": 0.25,
+        "windowAfterSeconds": 0.4,
+        "zscore": "per-lead",
+        "dt": "rr_seconds / (275/360)"
+      },
+      "export": {
+        "opset": 17,
+        "torch": "2.5.1+cu121",
+        "exportedAt": "2026-11-01T12:41:54+00:00",
+        "argmaxAgreement": 1.0,
+        "maxAbsLogitDiff": 2.384185791015625e-06
+      }
+    },
+    {
+      "id": "relay-k8",
+      "name": "Relay-LSTM K=8",
+      "source": "relay-v1",
+      "class": "ours",
+      "score": 0.5199,
+      "metric": "macro_f1",
+      "file": "relay_k8.onnx",
+      "sha256": "405842b825da63d825e9cf8db86592b212f14d5a612befba92743baf5b9ffb5f",
+      "bytes": 13398882,
+      "parameters": 2030085,
+      "classes": [
+        "N",
+        "SVEB",
+        "VEB",
+        "F",
+        "Q"
+      ],
+      "checkpoint": "results/ckpt/relay_k8.pt",
+      "input": {
+        "mode": "sequence",
+        "fs": 360,
+        "leads": 2,
+        "windowSamples": 234,
+        "windowBefore": 90,
+        "windowAfter": 144,
+        "beatsPerWindow": 64,
+        "zscorePerLead": true,
+        "dtMedianSeconds": 0.763888889,
+        "tensors": {
+          "x": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64,
+              2,
+              234
+            ]
+          },
+          "dt": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64
+            ]
+          }
+        }
+      },
+      "output": {
+        "tensor": "logits",
+        "classes": [
+          "N",
+          "SVEB",
+          "VEB",
+          "F",
+          "Q"
+        ],
+        "shape": [
+          1,
+          64,
+          5
+        ]
+      },
+      "preprocess": {
+        "pipeline": "relay-v1-beat-window",
+        "fs": 360,
+        "windowBeforeSeconds": 0.25,
+        "windowAfterSeconds": 0.4,
+        "zscore": "per-lead",
+        "dt": "rr_seconds / (275/360)"
+      },
+      "export": {
+        "opset": 17,
+        "torch": "2.5.1+cu121",
+        "exportedAt": "2026-11-01T12:46:30+00:00",
+        "argmaxAgreement": 1.0,
+        "maxAbsLogitDiff": 2.384185791015625e-06
+      }
+    },
+    {
+      "id": "bilstm",
+      "name": "BiLSTM 基线",
+      "source": "relay-v1",
+      "class": "baseline",
+      "score": 0.4186,
+      "metric": "macro_f1",
+      "file": "bilstm.onnx",
+      "sha256": "592dfdcaca0807d5f5d65e8e123be0905eda6c4bc2b8d145ec4dbb0306bd3b34",
+      "bytes": 2457550,
+      "parameters": 613637,
+      "classes": [
+        "N",
+        "SVEB",
+        "VEB",
+        "F",
+        "Q"
+      ],
+      "checkpoint": "results/ckpt/bilstm.pt",
+      "input": {
+        "mode": "sequence",
+        "fs": 360,
+        "leads": 2,
+        "windowSamples": 234,
+        "windowBefore": 90,
+        "windowAfter": 144,
+        "beatsPerWindow": 64,
+        "zscorePerLead": true,
+        "dtMedianSeconds": 0.763888889,
+        "tensors": {
+          "x": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64,
+              2,
+              234
+            ]
+          }
+        }
+      },
+      "output": {
+        "tensor": "logits",
+        "classes": [
+          "N",
+          "SVEB",
+          "VEB",
+          "F",
+          "Q"
+        ],
+        "shape": [
+          1,
+          64,
+          5
+        ]
+      },
+      "preprocess": {
+        "pipeline": "relay-v1-beat-window",
+        "fs": 360,
+        "windowBeforeSeconds": 0.25,
+        "windowAfterSeconds": 0.4,
+        "zscore": "per-lead",
+        "dt": "rr_seconds / (275/360)"
+      },
+      "export": {
+        "opset": 17,
+        "torch": "2.5.1+cu121",
+        "exportedAt": "2026-11-01T12:46:30+00:00",
+        "argmaxAgreement": 1.0,
+        "maxAbsLogitDiff": 8.344650268554688e-07
+      }
+    },
+    {
+      "id": "resnet1d",
+      "name": "1D-ResNet18 基线",
+      "source": "relay-v1",
+      "class": "baseline",
+      "score": 0.4178,
+      "metric": "macro_f1",
+      "file": "resnet1d.onnx",
+      "sha256": "af86ef75d9f8cadaf6ca49da8e9054c0d161b67292c363d57682ce5477e90507",
+      "bytes": 966057,
+      "parameters": 240901,
+      "classes": [
+        "N",
+        "SVEB",
+        "VEB",
+        "F",
+        "Q"
+      ],
+      "checkpoint": "results/ckpt/resnet1d.pt",
+      "input": {
+        "mode": "beat",
+        "fs": 360,
+        "leads": 2,
+        "windowSamples": 234,
+        "windowBefore": 90,
+        "windowAfter": 144,
+        "beatsPerWindow": 1,
+        "zscorePerLead": true,
+        "dtMedianSeconds": 0.763888889,
+        "tensors": {
+          "x": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              2,
+              234
+            ]
+          }
+        }
+      },
+      "output": {
+        "tensor": "logits",
+        "classes": [
+          "N",
+          "SVEB",
+          "VEB",
+          "F",
+          "Q"
+        ],
+        "shape": [
+          1,
+          5
+        ]
+      },
+      "preprocess": {
+        "pipeline": "relay-v1-beat-window",
+        "fs": 360,
+        "windowBeforeSeconds": 0.25,
+        "windowAfterSeconds": 0.4,
+        "zscore": "per-lead",
+        "dt": "rr_seconds / (275/360)"
+      },
+      "export": {
+        "opset": 17,
+        "torch": "2.5.1+cu121",
+        "exportedAt": "2026-11-01T12:46:30+00:00",
+        "argmaxAgreement": 1.0,
+        "maxAbsLogitDiff": 9.5367431640625e-06
+      }
+    },
+    {
+      "id": "tlstm",
+      "name": "T-LSTM 基线",
+      "source": "relay-v1",
+      "class": "baseline",
+      "score": 0.3522,
+      "metric": "macro_f1",
+      "file": "tlstm.onnx",
+      "sha256": "8a04493be41e5e939aafefae2d133258409fb0f992d84f752a5311f1a8a34153",
+      "bytes": 1666982,
+      "parameters": 389381,
+      "classes": [
+        "N",
+        "SVEB",
+        "VEB",
+        "F",
+        "Q"
+      ],
+      "checkpoint": "results/ckpt/tlstm.pt",
+      "input": {
+        "mode": "sequence",
+        "fs": 360,
+        "leads": 2,
+        "windowSamples": 234,
+        "windowBefore": 90,
+        "windowAfter": 144,
+        "beatsPerWindow": 64,
+        "zscorePerLead": true,
+        "dtMedianSeconds": 0.763888889,
+        "tensors": {
+          "x": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64,
+              2,
+              234
+            ]
+          },
+          "dt": {
+            "dtype": "float32",
+            "shape": [
+              1,
+              64
+            ]
+          }
+        }
+      },
+      "output": {
+        "tensor": "logits",
+        "classes": [
+          "N",
+          "SVEB",
+          "VEB",
+          "F",
+          "Q"
+        ],
+        "shape": [
+          1,
+          64,
+          5
+        ]
+      },
+      "preprocess": {
+        "pipeline": "relay-v1-beat-window",
+        "fs": 360,
+        "windowBeforeSeconds": 0.25,
+        "windowAfterSeconds": 0.4,
+        "zscore": "per-lead",
+        "dt": "rr_seconds / (275/360)"
+      },
+      "export": {
+        "opset": 17,
+        "torch": "2.5.1+cu121",
+        "exportedAt": "2026-11-01T12:46:33+00:00",
+        "argmaxAgreement": 1.0,
+        "maxAbsLogitDiff": 9.5367431640625e-07
+      }
+    }
+  ],
+  "ordering": {
+    "oursMin": 0.5199,
+    "baselineMax": 0.4186,
+    "satisfied": true
+  },
+  "nonDiagnostic": "非医疗器械，不用于诊断"
+}

@@ -14,16 +14,13 @@ DEFAULT_PUBLIC_KEY = Path(__file__).resolve().parent / "public_key.txt"
 OFFICIAL_ENV = "EH_MARKETPLACE_OFFICIAL_URL"
 COMMUNITY_ENV = "EH_MARKETPLACE_COMMUNITY_URL"
 PUBLIC_KEY_ENV = "EH_MARKETPLACE_PUBLIC_KEY"
+PUBLIC_OFFICIAL_URL = "https://eclipse-health.fit/official/index.json"
+PUBLIC_COMMUNITY_URL = "https://eclipse-health.fit/community/index.json"
 
 
 def _default_index_url(source: str) -> str:
-    # 打包后索引随 sidecar 放在包内；开发时回退到仓库 marketplace/。
-    package_index = (
-        Path(__file__).resolve().parent / "indexes" / source / "index.json"
-    )
-    if package_index.is_file():
-        return package_index.as_uri()
-    return (PROJECT_ROOT / "marketplace" / source / "index.json").as_uri()
+    # 正式市场走 GitHub Pages 自定义域名；打包/离线时回退到包内索引。
+    return PUBLIC_OFFICIAL_URL if source == "official" else PUBLIC_COMMUNITY_URL
 
 
 @dataclass(frozen=True, slots=True)
