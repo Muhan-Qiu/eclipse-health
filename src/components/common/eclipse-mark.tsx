@@ -2,10 +2,10 @@ import { cn } from "cn";
 
 /** 4 圈同心圆环；半径 / 线宽在同一 128 视口内，缩放时保持比例。 */
 const RINGS = [
-  { r: 46, width: 3.6, opacity: 0.95 },
-  { r: 33, width: 3, opacity: 0.74 },
-  { r: 21, width: 2.4, opacity: 0.54 },
-  { r: 10, width: 1.9, opacity: 0.36 },
+  { r: 46, width: 4.6, opacity: 1 },
+  { r: 33, width: 3.8, opacity: 0.9 },
+  { r: 21, width: 3.2, opacity: 0.8 },
+  { r: 10, width: 2.6, opacity: 0.7 },
 ] as const;
 
 /**
@@ -44,7 +44,7 @@ export function EclipseMark({
           className="eh-brand-ripple__core"
           cx="64"
           cy="64"
-          r="4"
+          r="5.5"
           fill="var(--eh-brand-ripple)"
         />
       </g>

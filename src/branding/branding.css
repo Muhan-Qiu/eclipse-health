@@ -6,8 +6,8 @@
 
 .eh-brand-logo,
 .eh-brand-mark {
-  /* 深绿涟漪：浅色主题偏墨绿，暗色主题自动提高明度保证可读。 */
-  --eh-brand-ripple: color-mix(in srgb, var(--eh-signal) 68%, var(--eh-text));
+  /* 深绿涟漪：直接用信号色，浅色主题墨绿、暗色主题亮青；不再和文字色混合成灰。 */
+  --eh-brand-ripple: var(--eh-signal);
   --eh-brand-on-light: #14181c;
   --eh-brand-on-dark: #eef7f2;
   display: block;
@@ -37,39 +37,39 @@
 
 .eh-brand-ripple--loop .eh-brand-ripple__ring {
   will-change: transform, opacity;
-  animation: eh-brand-ripple-contract 10s linear infinite;
+  animation: eh-brand-ripple-contract 6s linear infinite;
 }
 
 .eh-brand-ripple--loop .eh-brand-ripple__ring:nth-child(1) {
   animation-delay: 0s;
 }
 .eh-brand-ripple--loop .eh-brand-ripple__ring:nth-child(2) {
-  animation-delay: -2.5s;
+  animation-delay: -1.5s;
 }
 .eh-brand-ripple--loop .eh-brand-ripple__ring:nth-child(3) {
-  animation-delay: -5s;
+  animation-delay: -3s;
 }
 .eh-brand-ripple--loop .eh-brand-ripple__ring:nth-child(4) {
-  animation-delay: -7.5s;
+  animation-delay: -4.5s;
 }
 
 .eh-brand-ripple--loop .eh-brand-ripple__core {
-  animation: eh-brand-ripple-core 10s linear infinite;
+  animation: eh-brand-ripple-core 6s linear infinite;
 }
 
 @keyframes eh-brand-ripple-contract {
   0% {
-    transform: scale(1.24);
+    transform: scale(1.35);
     opacity: 0;
   }
-  14% {
+  16% {
     opacity: 1;
   }
-  68% {
-    opacity: 0.5;
+  70% {
+    opacity: 0.55;
   }
   100% {
-    transform: scale(0.64);
+    transform: scale(0.5);
     opacity: 0;
   }
 }
