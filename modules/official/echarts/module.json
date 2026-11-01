@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.apache.echarts",
+  "name": "ECharts · 通用图表",
+  "description": "适配自 https://github.com/apache/echarts 的声明式图表 widget：用核心受控组件表达折线、柱状与分布，不打包上游 JS。适合指标趋势与分类统计。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "dashboard-widget",
+  "author": {
+    "name": "Apache ECharts + eclipse health adapters",
+    "url": "https://github.com/apache/echarts"
+  },
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/apache/echarts",
+  "repository": "https://github.com/apache/echarts",
+  "permissions": ["records:read"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "ui": {
+      "widgets": [
+        {
+          "id": "series-overview",
+          "title": "指标趋势",
+          "description": "折线数据的 sparkline 概览。",
+          "size": "lg",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "chart.line",
+            "params": { "label": "心率", "unit": "bpm" }
+          },
+          "view": {
+            "type": "sparkline",
+            "valuePath": "latest.value",
+            "unit": "bpm",
+            "label": "最近值"
+          },
+          "link": "/modules/io.github.apache.echarts/pages/charts"
+        },
+        {
+          "id": "distribution",
+          "title": "数值分布",
+          "description": "直方图分布（list 视图，H2 的 bar 类型落地后可升级）。",
+          "size": "md",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "chart.distribution",
+            "params": { "bins": 8 }
+          },
+          "view": { "type": "list", "valuePath": "items" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "charts",
+          "title": "图表",
+          "icon": "bar-chart",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。图表只渲染调用方经 RPC 传入的数据。"
+            },
+            {
+              "component": "table",
+              "title": "直方图区间",
+              "source": {
+                "type": "module-rpc",
+                "method": "chart.distribution",
+                "params": { "bins": 8 }
+              },
+              "rowPath": "items",
+              "columns": [
+                { "key": "label", "label": "区间" },
+                { "key": "count", "label": "计数", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}

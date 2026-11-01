@@ -1,0 +1,21 @@
+eclipse health module: io.github.openfoodfacts.openfoodfacts
+
+Adaptation copyright (c) 2026 eclipse health adapters.
+Adaptation license: GPL-3.0-only (see LICENSE).
+Modification: "adapted as eclipse health module" - a thin stdio JSON-RPC
+wrapper; no upstream source code is copied into this repository.
+
+Upstream project: openfoodfacts-python
+Upstream repository: https://github.com/openfoodfacts/openfoodfacts-python
+Upstream SPDX: MIT
+Upstream copyright: original copyright lines not retrieved at build time;
+  see the upstream LICENSE at
+  https://github.com/openfoodfacts/openfoodfacts-python/blob/main/LICENSE
+  (marked pending: populate LICENSES/openfoodfacts-upstream.txt before distribution).
+
+Data license: Open Food Facts database contents are made available under the
+Open Database License (ODbL) v1.0. Attribution is displayed in every lookup
+result. https://opendatacommons.org/licenses/odbl/1-0/
+
+Non-diagnostic notice: analysis output is not a medical device and must not be
+used for diagnosis.

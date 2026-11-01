@@ -1,0 +1,15 @@
+eclipse health module: io.github.alexandrebarachant.muselsl
+Adapter: eclipse health adapters (thin stdio JSON-RPC wrapper, no upstream code bundled)
+
+Upstream project: muselsl (muse-lsl)
+Upstream repository: https://github.com/alexandrebarachant/muse-lsl
+Upstream SPDX: BSD-3-Clause
+Upstream copyright: Copyright (c) 2018 Alexandre Barachant (see upstream LICENSE)
+Upstream license text: https://github.com/alexandrebarachant/muse-lsl/blob/master/LICENSE
+Status: upstream LICENSE could not be fetched at build time (offline); verify at the URL above.
+
+Modification: adapted as an eclipse health module. This package starts the
+upstream CLI in a subprocess and parses its public CSV output; it does not copy,
+modify, or redistribute upstream source code. Eclipse health core and this
+adapter communicate over stdio JSON-RPC only. The upstream project does not
+endorse this module.

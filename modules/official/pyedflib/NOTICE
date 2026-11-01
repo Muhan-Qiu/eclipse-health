@@ -1,0 +1,18 @@
+eclipse health module: io.github.holgern.pyedflib
+Adapter version: 0.1.0
+
+Upstream project: pyedflib
+Repository: https://github.com/holgern/pyedflib
+Upstream SPDX: BSD-3-Clause
+Upstream copyright: Copyright (c) 2016 Holger Nahrstaedt and contributors.
+License text: https://github.com/holgern/pyedflib/blob/main/LICENSE
+
+Modification: adapted as eclipse health module — wraps EdfWriter/EdfReader to
+export EDF+ and inspect EDF/BDF records, plus a CSV exporter. No upstream
+source, wheels or sample data are bundled. Upstream license text is not bundled
+here; see the URL above.
+
+This adapter layer is licensed GPL-3.0-only (see LICENSE). Upstream runs inside
+the module's own venv/process and is isolated from the core by stdio JSON-RPC.
+
+Upstream project does not endorse this adapter. Not a medical device.

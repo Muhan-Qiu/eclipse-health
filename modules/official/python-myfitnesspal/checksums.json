@@ -1,0 +1,13 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "LICENSE": "1b601d1273b442de80b7eb06f95323c0393c1fee35083b45eb89000ad91da952",
+    "LICENSES/python-myfitnesspal-upstream.txt": "abc89bce0b9bc684c046eb22634500a66d0a044283ce76daf295d4d8677f19e6",
+    "NOTICE": "7870a6c01a210a555845212da990499514ac1069469966a991c124b57ed64484",
+    "README.md": "f41465d5876d6175de2657a4e1503d6a2d2cd52c6cc5f5dc28c47ac2c8bec579",
+    "module.json": "a7d6353d0f1cb0d143d1dbc79f950ed4b1495b50dca80f8af7d1be644a91398a",
+    "src/__pycache__/adapter.cpython-312.pyc": "24f2c6f10987d648b963b8b8d3a41c354a3c66856a084a245f126593707fb43f",
+    "src/adapter.py": "b1acbfba08e73862d58060897b5f0b68e51cf4d2f720b91240192c000a43e5c8",
+    "src/main.py": "2aa7b648c3d91ae406527f0922e7c76958c7796aee8470b9fc95e5c388f7257f"
+  }
+}

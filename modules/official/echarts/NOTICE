@@ -1,0 +1,22 @@
+ECharts declarative chart widget · eclipse health module adapter
+===============================================================
+
+Upstream project  : Apache ECharts
+Upstream repository: https://github.com/apache/echarts
+Upstream SPDX     : Apache-2.0
+Upstream LICENSE  : https://github.com/apache/echarts/blob/master/LICENSE
+Original copyright: Copyright 2017-2024 The Apache Software Foundation.
+  (Upstream copyright line could not be re-fetched offline; see LICENSE URL
+  and the upstream NOTICE file.)
+
+Modification notice: adapted as eclipse health module. This package does NOT
+copy, vendor, relink or execute upstream JavaScript. It produces an independent
+declarative chart spec rendered by core-controlled widgets. Only capability
+ideas are referenced.
+
+Adapter license: GPL-3.0-only.
+
+Apache-2.0 NOTICE retention: because no upstream source or NOTICE file is
+redistributed here, upstream NOTICE is not bundled. If upstream code is ever
+vendored into this package, its NOTICE must be included and modified files
+must be marked.

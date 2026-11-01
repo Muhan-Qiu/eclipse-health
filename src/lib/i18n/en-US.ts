@@ -188,6 +188,32 @@ const enUS: typeof zhCN = {
         planned: "Planned",
       },
     },
+    layout: {
+      edit: "Edit layout",
+      aria: "Editable dashboard",
+      editHint:
+        "Drag to reorder, change the width or hide cards; the layout is kept after saving.",
+      save: "Save",
+      cancel: "Cancel",
+      reset: "Reset to default",
+      export: "Export JSON",
+      import: "Import JSON",
+      hide: "Hide card",
+      show: "Show card",
+      hidden: "Hidden",
+      moveUp: "Move up",
+      moveDown: "Move down",
+      width: "Width",
+      widthOption: "{{columns}} columns",
+      dragHandle: "Drag to reorder",
+      errors: {
+        invalid_json: "This is not a valid JSON file.",
+        invalid_shape: "This layout has an invalid format.",
+        empty: "The layout contains no cards.",
+        too_many: "The layout has too many cards.",
+        duplicate_id: "The layout contains duplicate cards.",
+      },
+    },
   },
   onboarding: {
     llm: {

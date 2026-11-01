@@ -1,0 +1,13 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "LICENSES/neurokit2-upstream.txt": "89a0c90cb8331319e1baea34b004fd6121247e89d132c3fcd01c86353aac8733",
+    "NOTICE": "4c3e367b52914e480930b31552b9f1fc018f25097fbd8196637cf7d3922ad973",
+    "README.md": "93baf76675eb0964dfb85fe7e28fb5e767d077ca6eb01e2df6339e7e92c9cb72",
+    "module.json": "fc82221a0f8f499269d3fec039e70b179c71e6731d395bec814e0013b461fe31",
+    "src/__pycache__/adapter.cpython-312.pyc": "c2debec12a83488b6a3dfc3750df59cb9b929e1b187ca363f545d58ef6cda298",
+    "src/adapter.py": "4ee1a8a7bcfd8d70b0ae2dcd46719d79a52b3a4e9634f9d07a7a648e64fe437f",
+    "src/main.py": "c5153740d9ebcfe2d73a91b38fc273c75c1a4adcf04bd3585c727739c4c48bff"
+  }
+}

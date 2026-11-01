@@ -1,0 +1,14 @@
+eclipse health module: io.github.coddingtonbear.myfitnesspal
+Adapter: eclipse health adapters (thin stdio JSON-RPC wrapper, no upstream code bundled)
+
+Upstream project: python-myfitnesspal
+Upstream repository: https://github.com/coddingtonbear/python-myfitnesspal
+Upstream SPDX: MIT
+Upstream copyright: Copyright (c) 2014 Adam Coddington
+Upstream license text: LICENSES/python-myfitnesspal-upstream.txt (fetched 2026-11-01)
+
+Modification: adapted as an eclipse health module. This package only calls the
+upstream library's public API through a subprocess-isolated worker; it does not
+copy, modify, or redistribute upstream source code. Eclipse health core and this
+adapter communicate over stdio JSON-RPC only. The upstream project does not
+endorse this module.

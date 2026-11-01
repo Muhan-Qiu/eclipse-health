@@ -1,0 +1,15 @@
+uPlot trend widget · eclipse health module adapter
+==================================================
+
+Upstream project  : uPlot
+Upstream repository: https://github.com/leeoniya/uPlot
+Upstream SPDX     : MIT
+Upstream LICENSE  : https://github.com/leeoniya/uPlot/blob/master/LICENSE
+Original copyright: Copyright (c) 2021 Leon Sorokin
+
+Modification notice: adapted as eclipse health module. This package does NOT
+copy, vendor, relink or execute upstream JavaScript. It is an independent,
+core-native declarative widget (`sparkline` + `table`) inspired by uPlot's
+lightweight time-series rendering. Only the capability idea is referenced.
+
+Adapter license: GPL-3.0-only.

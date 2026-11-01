@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.coddingtonbear.myfitnesspal",
+  "name": "MyFitnessPal Diary Import",
+  "description": "Adapted from https://github.com/coddingtonbear/python-myfitnesspal. Imports the user's own MyFitnessPal food diary as nutrition records. Unofficial, fragile scraper; non-medical, not for diagnosis.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "data-source",
+  "author": { "name": "Adam Coddington & eclipse health adapters", "url": "https://github.com/coddingtonbear/python-myfitnesspal" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/coddingtonbear/python-myfitnesspal",
+  "permissions": ["network", "records:write"],
+  "allowedHosts": ["www.myfitnesspal.com"],
+  "dependencies": ["myfitnesspal>=2.5,<3", "lxml>=5,<6", "cloudscraper>=1.2,<2"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "sources": [
+      {
+        "id": "myfitnesspal-diary",
+        "name": "MyFitnessPal diary",
+        "description": "User-supplied MyFitnessPal credentials, used locally to read the user's own food diary."
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "nutrition.entry",
+        "name": "Nutrition entry",
+        "schema": {
+          "type": "object",
+          "required": ["capturedAt", "name", "meal", "source"],
+          "properties": {
+            "capturedAt": { "type": "string" },
+            "name": { "type": "string" },
+            "meal": { "type": "string" },
+            "calories": { "type": "number", "minimum": 0 },
+            "proteinG": { "type": "number", "minimum": 0 },
+            "carbsG": { "type": "number", "minimum": 0 },
+            "fatG": { "type": "number", "minimum": 0 },
+            "source": { "type": "string" }
+          }
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "mfp-calories",
+          "title": "MyFitnessPal 热量",
+          "description": "最近一天的日记总热量（需已同步）",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 7 } },
+          "view": { "type": "stat", "valuePath": "latest.calories", "unit": "kcal" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "mfp-diary",
+          "title": "饮食日记",
+          "icon": "utensils",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。抓取的是用户本人 MyFitnessPal 日记，第三方服务条款与页面结构变化可能导致失败。"
+            },
+            {
+              "component": "table",
+              "title": "最近条目",
+              "source": { "type": "module-rpc", "method": "diary.list" },
+              "rowPath": "items",
+              "columns": [
+                { "key": "capturedAt", "label": "日期", "format": "date" },
+                { "key": "meal", "label": "餐次" },
+                { "key": "name", "label": "食物" },
+                { "key": "calories", "label": "热量", "unit": "kcal", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 10000 },
+  "updateChannel": "stable"
+}

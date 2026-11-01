@@ -1,0 +1,19 @@
+eclipse health module: io.github.dogsheep.healthkit-to-sqlite
+Adapter version: 0.1.0
+
+Upstream project: healthkit-to-sqlite
+Repository: https://github.com/dogsheep/healthkit-to-sqlite
+Upstream SPDX: Apache-2.0
+Upstream copyright: Copyright (c) Simon Willison.
+License text: https://github.com/dogsheep/healthkit-to-sqlite/blob/main/LICENSE
+
+Modification: adapted as eclipse health module — the Apple Health XML parsing
+approach was reimplemented with Python stdlib (zipfile + ElementTree) so the
+upstream sqlite-utils dependency and database write path are not used. No
+upstream source or user health data is bundled. Upstream NOTICE (if any) is
+preserved by reference: see the repository URL above. Upstream license text is
+not bundled here.
+
+This adapter layer is licensed GPL-3.0-only (see LICENSE). Upstream project does
+not endorse this adapter. The module processes the user's own export locally;
+not a medical device, not for diagnosis.

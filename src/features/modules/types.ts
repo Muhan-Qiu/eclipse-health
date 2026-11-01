@@ -147,7 +147,15 @@ export interface ModuleContributionMeta {
 
 export type WidgetSize = "sm" | "md" | "lg";
 
-export type WidgetViewType = "stat" | "sparkline" | "list" | "progress" | "text";
+export type WidgetViewType =
+  | "stat"
+  | "sparkline"
+  | "list"
+  | "progress"
+  | "text"
+  | "bar"
+  | "line"
+  | "heatmap";
 
 export interface ModuleWidgetDataSource {
   /** 契约 v2 固定 module-rpc：核心只会调用声明它的模块自身。 */
@@ -161,6 +169,10 @@ export interface ModuleWidgetView {
   type: string;
   /** 受限路径，如 `latest.weight`、`series[0].value`；不执行表达式。 */
   valuePath: string;
+  /** bar/line 的数值数组路径（与 valuePath 二选一）。 */
+  seriesPath?: string;
+  /** bar/line 的标签数组路径。 */
+  labelPath?: string;
   unit?: string;
   label?: string;
   min?: number;

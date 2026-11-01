@@ -1,0 +1,15 @@
+eclipse health module: io.github.brainflow-dev.brainflow
+Adapter: eclipse health adapters (thin stdio JSON-RPC wrapper, no upstream code bundled)
+
+Upstream project: BrainFlow
+Upstream repository: https://github.com/brainflow-dev/brainflow
+Upstream SPDX: MIT
+Upstream copyright: Copyright (c) 2019-2026 Andrey Parfenov and BrainFlow contributors (see upstream LICENSE)
+Upstream license text: https://github.com/brainflow-dev/brainflow/blob/master/LICENSE
+Status: upstream LICENSE could not be fetched at build time (offline); verify at the URL above.
+
+Modification: adapted as an eclipse health module. This package only calls the
+upstream library's public API through a subprocess-isolated worker; it does not
+copy, modify, or redistribute upstream source code. Eclipse health core and this
+adapter communicate over stdio JSON-RPC only. The upstream project does not
+endorse this module.

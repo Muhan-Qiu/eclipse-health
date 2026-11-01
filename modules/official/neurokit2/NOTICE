@@ -1,0 +1,18 @@
+NeuroKit2 · eclipse health 适配层
+
+Upstream project : NeuroKit2
+Upstream URL     : https://github.com/neuropsychology/NeuroKit
+Upstream SPDX    : MIT
+Upstream copyright: Copyright (c) 2020, Dominique Makowski
+Upstream license : LICENSES/neurokit2-upstream.txt (copied from neurokit2 0.2.13)
+
+This module is a thin adapter around the upstream library:
+- the upstream source code is NOT vendored or copied;
+- the adapter calls `neurokit2.ecg_process` and `neurokit2.hrv_time` at runtime;
+- the adapter layer itself is licensed GPL-3.0-only (see LICENSE);
+- modifications: adapted as eclipse health module (stdio JSON-RPC wrapper,
+  RR parsing, result mapping, Windows path handling, non-diagnostic notices).
+
+No endorsement by the upstream authors is implied.
+
+All analysis output is non-diagnostic: 非医疗器械，不用于诊断。

@@ -1,0 +1,16 @@
+eclipse health module: io.github.openbci-archive.openbci
+Adapter: eclipse health adapters (thin stdio JSON-RPC wrapper, no upstream code bundled)
+
+Upstream project: OpenBCI_Python
+Upstream repository: https://github.com/openbci-archive/OpenBCI_Python
+Upstream SPDX: MIT
+Upstream copyright: Copyright (c) 2014-2022 OpenBCI (see upstream LICENSE)
+Upstream license text: https://github.com/openbci-archive/OpenBCI_Python/blob/master/LICENSE
+Status: upstream LICENSE could not be fetched at build time (offline); verify at the URL above.
+Upstream status note: repository archived after 2022; no maintenance is implied.
+
+Modification: adapted as an eclipse health module. This package only calls the
+upstream library's public API through a subprocess-isolated worker; it does not
+copy, modify, or redistribute upstream source code. Eclipse health core and this
+adapter communicate over stdio JSON-RPC only. The upstream project does not
+endorse this module.

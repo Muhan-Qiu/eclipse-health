@@ -1,0 +1,20 @@
+eclipse health module: io.github.gagebenne.pydexcom
+
+Adaptation copyright (c) 2026 eclipse health adapters.
+Adaptation license: GPL-3.0-only (see LICENSE).
+Modification: "adapted as eclipse health module" - a thin stdio JSON-RPC
+wrapper; no upstream source code is copied into this repository.
+
+Upstream project: pydexcom
+Upstream repository: https://github.com/gagebenne/pydexcom
+Upstream SPDX: MIT
+Upstream copyright: original copyright lines not retrieved at build time;
+  see the upstream LICENSE at
+  https://github.com/gagebenne/pydexcom/blob/main/LICENSE
+  (marked pending: populate LICENSES/pydexcom-upstream.txt before distribution).
+
+Data access notice: Dexcom Share is an unofficial API; users may access only
+their own data. Credentials are never persisted or logged.
+
+Non-diagnostic notice: analysis output is not a medical device and must not be
+used for diagnosis.

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.jrnl-org.jrnl",
+  "name": "jrnl · 日记与心情",
+  "description": "适配自 https://github.com/jrnl-org/jrnl 的加密 CLI 日记：通过子进程调用 jrnl --export json，导入条目并提供搜索工具。数据只在本机处理。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "health-domain",
+  "author": { "name": "jrnl-org + eclipse health adapters", "url": "https://github.com/jrnl-org/jrnl" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/jrnl-org/jrnl",
+  "permissions": ["records:read", "llm"],
+  "dependencies": ["jrnl>=4.0,<5"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "recordTypes": [
+      {
+        "id": "journal.entry",
+        "name": "Journal entry",
+        "schema": {
+          "type": "object",
+          "required": ["date", "title", "body"],
+          "properties": {
+            "date": { "type": "string" },
+            "title": { "type": "string", "maxLength": 200 },
+            "body": { "type": "string", "maxLength": 20000 },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "starred": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "indexes": ["date"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "journal-count",
+          "title": "日记条数",
+          "description": "jrnl 中可导出的条目总数",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "journal.summary" },
+          "view": { "type": "stat", "valuePath": "total" },
+          "link": "/modules/io.github.jrnl-org.jrnl/pages/journal"
+        }
+      ],
+      "pages": [
+        {
+          "id": "journal",
+          "title": "日记",
+          "icon": "book-open",
+          "layout": [
+            { "component": "text", "text": "日记只在本机读取；非医疗器械，不用于诊断。" },
+            {
+              "component": "list",
+              "title": "最近的日记",
+              "source": { "type": "module-rpc", "method": "journal.list", "params": { "limit": 20 } },
+              "itemPath": "entries",
+              "primaryPath": "title",
+              "secondaryPath": "date"
+            },
+            {
+              "component": "detail",
+              "title": "条目详情",
+              "source": { "type": "module-rpc", "method": "journal.get" },
+              "fields": [
+                { "key": "date", "label": "日期" },
+                { "key": "title", "label": "标题" },
+                { "key": "body", "label": "正文" },
+                { "key": "tags", "label": "标签", "format": "text" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "tools": [
+      {
+        "id": "journal.search",
+        "name": "Search journal",
+        "description": "Search local jrnl entries by keyword and optional tags. Returns matching entries only; journal content never leaves the machine. Not a medical device.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "tags": { "type": "array", "items": { "type": "string" }, "maxItems": 16 },
+            "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        },
+        "outputSchema": { "type": "object" },
+        "longRunning": false,
+        "permissions": ["records:read"]
+      }
+    ]
+  },
+  "resources": { "memoryMb": 128, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "stable"
+}

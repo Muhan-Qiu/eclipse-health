@@ -635,19 +635,61 @@
     "widgetView": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Controlled view components only; arbitrary React/CSS/iframe is forbidden.",
-      "required": ["type", "valuePath"],
+      "description": "Controlled view components only; arbitrary React/CSS/iframe is forbidden. bar/line accept valuePath (number array) or seriesPath + labelPath; heatmap reads valuePath as [{date,value}] or a 2D number array.",
+      "required": ["type"],
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["stat", "sparkline", "list", "progress", "text"]
+          "enum": [
+            "stat",
+            "sparkline",
+            "list",
+            "progress",
+            "text",
+            "bar",
+            "line",
+            "heatmap"
+          ]
         },
         "valuePath": { "$ref": "#/$defs/valuePath" },
+        "seriesPath": {
+          "$ref": "#/$defs/valuePath",
+          "description": "bar/line numeric series; alternative to valuePath."
+        },
+        "labelPath": {
+          "$ref": "#/$defs/valuePath",
+          "description": "Optional bar/line labels aligned with the series."
+        },
         "unit": { "type": "string", "maxLength": 32 },
         "label": { "type": "string", "maxLength": 120 },
         "min": { "type": "number" },
         "max": { "type": "number" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["stat", "sparkline", "list", "progress", "text", "heatmap"]
+              }
+            },
+            "required": ["type"]
+          },
+          "then": { "required": ["valuePath"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "enum": ["bar", "line"] } },
+            "required": ["type"]
+          },
+          "then": {
+            "anyOf": [
+              { "required": ["valuePath"] },
+              { "required": ["seriesPath"] }
+            ]
+          }
+        }
+      ]
     },
     "page": {
       "type": "object",

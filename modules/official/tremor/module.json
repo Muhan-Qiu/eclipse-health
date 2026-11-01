@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.tremorlabs.tremor",
+  "name": "Tremor · KPI 仪表盘",
+  "description": "适配自 https://github.com/tremorlabs/tremor 的 KPI 卡片 widget：把指标值、变化量、进度映射到核心受控 stat/list 组件，不打包上游 React。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "dashboard-widget",
+  "author": {
+    "name": "Tremor Labs + eclipse health adapters",
+    "url": "https://github.com/tremorlabs/tremor"
+  },
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/tremorlabs/tremor",
+  "repository": "https://github.com/tremorlabs/tremor",
+  "permissions": ["records:read"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "ui": {
+      "widgets": [
+        {
+          "id": "headline-kpi",
+          "title": "今日指标",
+          "description": "首个 KPI 的主数值。",
+          "size": "sm",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "kpis",
+            "params": {}
+          },
+          "view": {
+            "type": "stat",
+            "valuePath": "headline.value",
+            "unit": "",
+            "label": "最近值"
+          },
+          "link": "/modules/io.github.tremorlabs.tremor/pages/kpis"
+        },
+        {
+          "id": "kpi-board",
+          "title": "KPI 列表",
+          "description": "全部 KPI 卡片。",
+          "size": "md",
+          "dataSource": {
+            "type": "module-rpc",
+            "method": "kpis",
+            "params": {}
+          },
+          "view": { "type": "list", "valuePath": "cards" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "kpis",
+          "title": "KPI",
+          "icon": "gauge",
+          "layout": [
+            {
+              "component": "text",
+              "text": "非医疗器械，不用于诊断。变化量只表示数值差异，不代表健康结论。"
+            },
+            {
+              "component": "table",
+              "title": "KPI 卡片",
+              "source": { "type": "module-rpc", "method": "kpis", "params": {} },
+              "rowPath": "cards",
+              "columns": [
+                { "key": "label", "label": "指标" },
+                { "key": "value", "label": "数值", "format": "number" },
+                { "key": "unit", "label": "单位" },
+                { "key": "deltaPercent", "label": "变化 %", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 64, "cpu": 0.25, "startupTimeoutMs": 5000 },
+  "updateChannel": "stable"
+}

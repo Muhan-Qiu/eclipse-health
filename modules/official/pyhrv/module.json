@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.pgomes92.pyhrv",
+  "name": "pyhrv · HRV 工具箱",
+  "description": "适配自 https://github.com/PGomes92/pyhrv 的 HRV 时域/频域/非线性指标模块，调用 pyhrv.time_domain。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "Pedro Gomes + eclipse health adapters", "url": "https://github.com/PGomes92/pyhrv" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/PGomes92/pyhrv",
+  "permissions": ["records:read", "llm"],
+  "dependencies": ["pyhrv>=0.4,<1", "biosppy>=0.6,<1", "nolds>=1.1,<2", "spectrum>=0.8,<1", "numpy>=1.26,<3", "scipy>=1.11,<2"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "pyhrv",
+        "name": "pyhrv",
+        "task": "rr-hrv-analysis",
+        "format": "remote",
+        "input": { "modes": ["rr"], "unit": "ms" },
+        "output": { "metrics": ["meanRr", "sdnn", "rmssd", "pnn50"] },
+        "modelCard": {
+          "library": "pyhrv",
+          "upstream": "https://github.com/PGomes92/pyhrv",
+          "upstreamLicense": "BSD-3-Clause",
+          "remoteness": "algorithm library executed locally; no data leaves the machine",
+          "limitations": ["Dependency chain is heavy", "Not validated for clinical use"],
+          "nonDiagnostic": true
+        }
+      }
+    ],
+    "tools": [
+      {
+        "id": "hrv.metrics",
+        "name": "Compute HRV metrics",
+        "description": "Compute pyhrv time-domain HRV metrics from RR intervals in milliseconds. Non-diagnostic.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "rr": { "type": "array", "items": { "type": "number" }, "minItems": 2 } },
+          "required": ["rr"]
+        },
+        "outputSchema": { "type": "object" },
+        "permissions": ["records:read"]
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "analysis.hrv.pyhrv",
+        "name": "HRV analysis (pyhrv)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "rmssd": { "type": "number" },
+            "sdnn": { "type": "number" },
+            "pnn50": { "type": "number" },
+            "nonDiagnostic": { "type": "string" }
+          },
+          "required": ["nonDiagnostic"]
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "rmssd",
+          "title": "HRV · RMSSD",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "stat", "valuePath": "latest.rmssd", "unit": "ms", "label": "RMSSD" },
+          "link": "/modules/io.github.pgomes92.pyhrv/pages/metrics"
+        },
+        {
+          "id": "rr-trend",
+          "title": "RR 间期趋势",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "sparkline", "valuePath": "series", "unit": "ms" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "metrics",
+          "title": "HRV 指标",
+          "icon": "activity",
+          "layout": [
+            { "component": "text", "text": "pyhrv 时域指标。非医疗器械，不用于诊断。" },
+            {
+              "component": "table",
+              "title": "指标",
+              "source": { "type": "module-rpc", "method": "stats" },
+              "rowPath": "metrics",
+              "columns": [
+                { "key": "name", "label": "指标", "format": "text" },
+                { "key": "value", "label": "数值", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 768, "cpu": 1, "startupTimeoutMs": 20000 },
+  "updateChannel": "stable"
+}

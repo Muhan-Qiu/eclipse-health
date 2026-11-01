@@ -1,0 +1,15 @@
+eclipse health module: io.github.vangorra.withings
+Adapter: eclipse health adapters (thin stdio JSON-RPC wrapper, no upstream code bundled)
+
+Upstream project: python_withings_api
+Upstream repository: https://github.com/vangorra/python_withings_api
+Upstream SPDX: MIT
+Upstream copyright: Copyright (c) 2018-2019 vangorra (see upstream LICENSE)
+Upstream license text: https://github.com/vangorra/python_withings_api/blob/master/LICENSE
+Status: upstream LICENSE could not be fetched at build time (offline); verify at the URL above.
+
+Modification: adapted as an eclipse health module. This adapter speaks the public
+Withings REST API documented by the upstream project; it does not copy, modify,
+or redistribute upstream source code. Eclipse health core and this adapter
+communicate over stdio JSON-RPC only. The upstream project does not endorse this
+module. Withings and the Withings API are subject to their own terms of service.

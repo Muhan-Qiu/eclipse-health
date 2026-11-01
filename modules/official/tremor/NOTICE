@@ -1,0 +1,21 @@
+Tremor KPI widget · eclipse health module adapter
+=================================================
+
+Upstream project  : Tremor
+Upstream repository: https://github.com/tremorlabs/tremor
+Upstream SPDX     : Apache-2.0
+Upstream LICENSE  : https://github.com/tremorlabs/tremor/blob/main/LICENSE
+Original copyright: Copyright Tremor Labs, Inc.
+  (Upstream copyright line could not be re-fetched offline; see LICENSE URL.)
+
+Modification notice: adapted as eclipse health module. This package does NOT
+copy, vendor, relink or build upstream React components. It is an independent
+declarative KPI adapter rendered by core-controlled widgets; only capability
+ideas are referenced.
+
+Adapter license: GPL-3.0-only.
+
+Apache-2.0 NOTICE retention: because no upstream source or NOTICE file is
+redistributed here, upstream NOTICE is not bundled. If upstream code is ever
+vendored into this package, its NOTICE must be included and modified files
+must be marked.

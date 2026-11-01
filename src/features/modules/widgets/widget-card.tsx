@@ -1,3 +1,5 @@
+import "@/features/modules/i18n";
+
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -30,9 +32,11 @@ function safeLink(link: string | undefined): string | null {
 interface WidgetCardProps {
   widget: ModuleWidget;
   className?: string;
+  /** 编辑布局时不重播内容淡入，避免拖拽期间闪烁。 */
+  animate?: boolean;
 }
 
-export function WidgetCard({ widget, className }: WidgetCardProps) {
+export function WidgetCard({ widget, className, animate = true }: WidgetCardProps) {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
   const navigate = useNavigate();
@@ -118,7 +122,7 @@ export function WidgetCard({ widget, className }: WidgetCardProps) {
                 ? `error:${query.errorUpdatedAt}`
                 : `data:${query.dataUpdatedAt}`
           }
-          className="eh-fade-in"
+          className={animate ? "eh-fade-in" : undefined}
         >
           {method.length === 0 ? (
             <p className="eh-caption text-destructive">

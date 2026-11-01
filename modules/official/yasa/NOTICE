@@ -1,0 +1,24 @@
+YASA · eclipse health 适配层
+
+Upstream project : YASA (Yet Another Spindle Algorithm)
+Upstream URL     : https://github.com/raphaelvallat/yasa
+Upstream SPDX    : BSD-3-Clause
+Upstream copyright: Copyright (c) Raphael Vallat (see upstream LICENSE)
+Upstream license : NOT FETCHED — 上游许可见 https://github.com/raphaelvallat/yasa/blob/master/LICENSE
+                   (本机 raw.githubusercontent.com 不可达；安装模块 venv 时可将该文件放入 LICENSES/yasa-upstream.txt)
+
+Model weights: YASA ships its trained classifier inside the upstream package.
+This adapter does NOT redistribute the weights; they arrive with the upstream
+package installed in the module venv. Redistribution terms follow upstream.
+
+This module is a thin adapter around the upstream library:
+- the upstream source code is NOT vendored or copied;
+- the adapter calls `yasa.SleepStaging` at runtime; stage labels are normalized
+  and sleep efficiency is computed locally;
+- the adapter layer itself is licensed GPL-3.0-only (see LICENSE);
+- modifications: adapted as eclipse health module (stdio JSON-RPC wrapper,
+  hypnogram validation, efficiency metrics, non-diagnostic notices).
+
+No endorsement by the upstream authors is implied.
+
+All analysis output is non-diagnostic: 非医疗器械，不用于诊断。

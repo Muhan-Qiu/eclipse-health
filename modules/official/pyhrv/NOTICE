@@ -1,0 +1,19 @@
+pyhrv · eclipse health 适配层
+
+Upstream project : pyhrv
+Upstream URL     : https://github.com/PGomes92/pyhrv
+Upstream SPDX    : BSD-3-Clause
+Upstream copyright: Copyright (c) Pedro Gomes (see upstream LICENSE)
+Upstream license : NOT FETCHED — 上游许可见 https://github.com/PGomes92/pyhrv/blob/master/LICENSE
+                   (本机 raw.githubusercontent.com 不可达；安装模块 venv 时可将该文件放入 LICENSES/pyhrv-upstream.txt)
+
+This module is a thin adapter around the upstream library:
+- the upstream source code is NOT vendored or copied;
+- the adapter calls `pyhrv.time_domain.time_domain` at runtime;
+- the adapter layer itself is licensed GPL-3.0-only (see LICENSE);
+- modifications: adapted as eclipse health module (stdio JSON-RPC wrapper,
+  RR validation, result mapping, non-diagnostic notices).
+
+No endorsement by the upstream authors is implied.
+
+All analysis output is non-diagnostic: 非医疗器械，不用于诊断。

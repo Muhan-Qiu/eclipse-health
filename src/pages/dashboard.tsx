@@ -6,6 +6,7 @@ import {
   BookOpen,
   FilePlus2,
   FlaskConical,
+  LayoutGrid as LayoutGridIcon,
   LoaderCircle,
   RefreshCw,
   type LucideIcon,
@@ -37,7 +38,26 @@ import { WaveformViewer } from "@/components/records/waveform-viewer";
 import { RecordRow } from "@/components/records/record-row";
 import { useImport } from "@/components/import/import-provider";
 import { measurementsByCode } from "@/components/records/measurement-list";
-import { WidgetGrid } from "@/features/modules/widgets/widget-grid";
+import { WidgetCard } from "@/features/modules/widgets/widget-card";
+import { useModuleWidgets } from "@/features/modules/widgets/use-widgets";
+import {
+  LayoutGrid,
+  LayoutToolbar,
+} from "@/features/layout/layout-editor";
+import {
+  defaultLayout,
+  exportLayoutJson,
+  importLayoutJson,
+  isCoreCardId,
+  LayoutError,
+  loadLayout,
+  mergeLayout,
+  saveLayout,
+  widgetLayoutId,
+  widgetSizeWidth,
+  type CoreCardId,
+  type LayoutItem,
+} from "@/features/layout/layout";
 import { HealthScoreGrid } from "@/features/scores/health-score-grid";
 import { SuggestionCard } from "@/features/scores/suggestion-card";
 import { HealthSummaryCard } from "@/features/scores/health-summary-card";
@@ -49,6 +69,8 @@ import {
   useRecentAnalyses,
   useRecords,
 } from "@/lib/api/queries";
+import { useMock } from "@/lib/api/client";
+import { cn } from "cn";
 import type { AnalysisResult, RecordSummary } from "@/lib/api/types";
 import { formatFullDate, formatNumber, greetingKey } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
@@ -73,6 +95,15 @@ const FORMAT_GROUPS = [
   },
   { key: "hospital", items: [{ id: "scp", status: "planned" }] },
 ] as const;
+
+const CORE_TITLE_KEYS: Record<CoreCardId, string> = {
+  scores: "dashboard.scores.title",
+  suggestions: "dashboard.suggestions.title",
+  "health-summary": "dashboard.healthSummary.title",
+  recent: "dashboard.recent.title",
+  metrics: "dashboard.metrics.title",
+  waveform: "dashboard.waveform.title",
+};
 
 interface Candidate {
   record: RecordSummary;
@@ -238,7 +269,7 @@ function MetricsCard({
   }, [candidates]);
 
   return (
-    <Card className="eh-lift desk:col-span-3 xl:col-span-5">
+    <Card className="eh-lift">
       <CardHeader>
         <CardTitle className="eh-h3">{t("dashboard.metrics.title")}</CardTitle>
         <CardDescription>
@@ -393,6 +424,224 @@ export function DashboardPage() {
     );
   }, [candidates, latestRecord]);
 
+  const widgetsQuery = useModuleWidgets();
+  const [savedLayout, setSavedLayout] = useState<LayoutItem[]>(() => loadLayout());
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<LayoutItem[]>([]);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
+
+  const widgetInputs = useMemo(
+    () =>
+      widgetsQuery.widgets.map((widget) => ({
+        id: widgetLayoutId(widget.moduleId, widget.id),
+        title: widget.title,
+        width: widgetSizeWidth(widget.size),
+      })),
+    [widgetsQuery.widgets],
+  );
+
+  const widgetById = useMemo(() => {
+    const map = new Map<string, (typeof widgetsQuery.widgets)[number]>();
+    for (const widget of widgetsQuery.widgets) {
+      map.set(widgetLayoutId(widget.moduleId, widget.id), widget);
+    }
+    return map;
+  }, [widgetsQuery.widgets]);
+
+  // 模块列表未就绪时保留已保存的模块卡片顺序，就绪后再清理已卸载的卡片。
+  const layout = useMemo(
+    () =>
+      widgetsQuery.isSuccess
+        ? mergeLayout(savedLayout, widgetInputs)
+        : savedLayout,
+    [savedLayout, widgetInputs, widgetsQuery.isSuccess],
+  );
+
+  const startEditing = () => {
+    setDraft(layout);
+    setLayoutError(null);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setDraft([]);
+    setLayoutError(null);
+  };
+
+  const saveDraft = () => {
+    saveLayout(draft);
+    setSavedLayout(draft);
+    setEditing(false);
+    setLayoutError(null);
+  };
+
+  const resetDraft = () => {
+    const next = mergeLayout(defaultLayout(), widgetInputs);
+    saveLayout(next);
+    setSavedLayout(next);
+    setDraft(next);
+    setLayoutError(null);
+  };
+
+  const exportDraft = () => {
+    const blob = new Blob([exportLayoutJson(draft)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "eh-dashboard-layout.json";
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  const importDraft = (file: File) => {
+    void file
+      .text()
+      .then((text) => {
+        try {
+          const parsed = importLayoutJson(text);
+          const next = widgetsQuery.isSuccess
+            ? mergeLayout(parsed, widgetInputs)
+            : parsed;
+          setDraft(next);
+          setLayoutError(null);
+        } catch (error) {
+          const code = error instanceof LayoutError ? error.code : "invalid_shape";
+          setLayoutError(t(`dashboard.layout.errors.${code}`));
+        }
+      })
+      .catch(() => {
+        setLayoutError(t("dashboard.layout.errors.invalid_json"));
+      });
+  };
+
+  const titleFor = (item: LayoutItem) => {
+    if (item.kind === "core-card" && isCoreCardId(item.id)) {
+      return t(CORE_TITLE_KEYS[item.id]);
+    }
+    return widgetById.get(item.id)?.title ?? item.title;
+  };
+
+  const renderRecentCard = () => (
+    <Card className="eh-lift">
+      <CardHeader>
+        <CardTitle className="eh-h3">{t("dashboard.recent.title")}</CardTitle>
+        <CardDescription>{t("dashboard.recent.description")}</CardDescription>
+        <CardAction>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/records">
+              {t("common.all")}
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="px-0">
+        <RecentRecords />
+      </CardContent>
+    </Card>
+  );
+
+  const renderWaveformCard = () => (
+    <Card className="eh-lift">
+      <CardHeader>
+        <CardTitle className="eh-h3">{t("dashboard.waveform.title")}</CardTitle>
+        <CardDescription>
+          {latestRecord
+            ? t("dashboard.waveform.latest", {
+                device: latestRecord.device.model || t("records.localFile"),
+              })
+            : t("dashboard.waveform.emptyDesc")}
+        </CardDescription>
+        <CardAction>
+          <div className="flex items-center gap-2">
+            {latestRecord?.isDemo ? <DemoBadge /> : null}
+            {latestRecord ? (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={`/records/${latestRecord.id}`}>
+                  {t("dashboard.waveform.open")}
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        {latestRecord ? (
+          <WaveformViewer
+            recordId={latestRecord.id}
+            leads={latestRecord.leads}
+            analysis={latestCompleted}
+            height={160}
+            compact
+            className="eh-reveal"
+          />
+        ) : (
+          <EmptyState
+            icon={FilePlus2}
+            title={t("dashboard.waveform.emptyTitle")}
+            description={t("dashboard.waveform.emptyDesc")}
+            className="border-0 bg-transparent py-4"
+          >
+            <Button size="sm" onClick={openPicker}>
+              {t("dashboard.recent.emptyAction")}
+            </Button>
+          </EmptyState>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderLayoutItem = (item: LayoutItem): ReactNode => {
+    if (item.kind === "module-widget") {
+      const widget = widgetById.get(item.id);
+      return widget ? (
+        <WidgetCard widget={widget} animate={!editing} />
+      ) : null;
+    }
+    if (!isCoreCardId(item.id)) return null;
+    switch (item.id) {
+      case "scores":
+        return (
+          <HealthScoreGrid
+            scores={scoresQuery.data}
+            loading={scoresQuery.isLoading}
+            error={scoresQuery.isError}
+          />
+        );
+      case "suggestions":
+        return (
+          <SuggestionCard
+            suggestions={suggestionsQuery.data}
+            loading={suggestionsQuery.isLoading}
+            error={suggestionsQuery.isError}
+          />
+        );
+      case "health-summary":
+        return <HealthSummaryCard />;
+      case "recent":
+        return renderRecentCard();
+      case "metrics":
+        return (
+          <MetricsCard
+            candidates={candidates}
+            loading={
+              recentQuery.isLoading ||
+              analysesQueries.some((query) => query.isLoading)
+            }
+            hasRecords={recent.length > 0}
+            latestRecord={latestRecord}
+            openPicker={openPicker}
+          />
+        );
+      case "waveform":
+        return renderWaveformCard();
+    }
+  };
+
   return (
     <>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -417,27 +666,69 @@ export function DashboardPage() {
           <p className="eh-caption text-muted-foreground">
             {formatFullDate(now, locale)}
           </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={startEditing}
+            disabled={editing}
+            aria-pressed={editing}
+          >
+            <LayoutGridIcon data-icon="inline-start" />
+            {t("dashboard.layout.edit")}
+          </Button>
         </div>
       </header>
 
-      {/* 健康评分/建议放在首屏最前，ECG 引导与波形整体下移。 */}
-      <section
-        className="eh-stagger grid gap-4 desk:grid-cols-3"
-        aria-label={t("dashboard.scores.title")}
-      >
-        <HealthScoreGrid
-          className="desk:col-span-2"
-          scores={scoresQuery.data}
-          loading={scoresQuery.isLoading}
-          error={scoresQuery.isError}
+      {/* 评分/建议/指标/波形与模块卡片统一进 12 列布局；编辑模式可排序、调宽与隐藏。 */}
+      <section aria-label={t("dashboard.layout.aria")} className="mt-6">
+        {editing ? (
+          <LayoutToolbar
+            onSave={saveDraft}
+            onCancel={cancelEditing}
+            onReset={resetDraft}
+            onExport={exportDraft}
+            onImport={importDraft}
+            error={layoutError}
+          />
+        ) : null}
+        <LayoutGrid
+          items={editing ? draft : layout}
+          editing={editing}
+          onChange={setDraft}
+          renderItem={renderLayoutItem}
+          titleFor={titleFor}
+          className={cn(!editing ? "eh-stagger" : "mt-4")}
         />
-        <SuggestionCard
-          className="desk:col-span-1"
-          suggestions={suggestionsQuery.data}
-          loading={suggestionsQuery.isLoading}
-          error={suggestionsQuery.isError}
-        />
-        <HealthSummaryCard className="desk:col-span-3" />
+        {widgetsQuery.isError && !useMock ? (
+          <Card className="mt-4">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 px-4">
+              <div className="flex min-w-0 items-start gap-2">
+                <RefreshCw
+                  className="mt-0.5 size-4 shrink-0 text-destructive"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    {t("moduleUi.widgets.loadError")}
+                  </p>
+                  <p className="eh-caption text-muted-foreground">
+                    {t("moduleUi.widgets.loadErrorDesc")}
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={widgetsQuery.refetch}
+              >
+                <RefreshCw data-icon="inline-start" />
+                {t("common.retry")}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
       </section>
 
       <section
@@ -497,91 +788,6 @@ export function DashboardPage() {
           </Button>
         </GuideCard>
       </section>
-
-      <div className="eh-widget-stagger">
-        <WidgetGrid />
-      </div>
-
-      <div className="eh-grid mt-6 eh-stagger">
-        {/* 记录不满 3 条时按内容高度收口，避免被右列拉高后留下大块空白。 */}
-        <Card className="eh-lift self-start desk:col-span-5 xl:col-span-7">
-          <CardHeader>
-            <CardTitle className="eh-h3">{t("dashboard.recent.title")}</CardTitle>
-            <CardDescription>{t("dashboard.recent.description")}</CardDescription>
-            <CardAction>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/records">
-                  {t("common.all")}
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="px-0">
-            <RecentRecords />
-          </CardContent>
-        </Card>
-
-        <MetricsCard
-          candidates={candidates}
-          loading={
-            recentQuery.isLoading ||
-            analysesQueries.some((query) => query.isLoading)
-          }
-          hasRecords={recent.length > 0}
-          latestRecord={latestRecord}
-          openPicker={openPicker}
-        />
-
-        <Card className="eh-lift desk:col-span-8 xl:col-span-12">
-          <CardHeader>
-            <CardTitle className="eh-h3">{t("dashboard.waveform.title")}</CardTitle>
-            <CardDescription>
-              {latestRecord
-                ? t("dashboard.waveform.latest", {
-                    device: latestRecord.device.model || t("records.localFile"),
-                  })
-                : t("dashboard.waveform.emptyDesc")}
-            </CardDescription>
-            <CardAction>
-              <div className="flex items-center gap-2">
-                {latestRecord?.isDemo ? <DemoBadge /> : null}
-                {latestRecord ? (
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/records/${latestRecord.id}`}>
-                      {t("dashboard.waveform.open")}
-                      <ArrowRight data-icon="inline-end" />
-                    </Link>
-                  </Button>
-                ) : null}
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {latestRecord ? (
-              <WaveformViewer
-                recordId={latestRecord.id}
-                leads={latestRecord.leads}
-                analysis={latestCompleted}
-                height={160}
-                compact
-                className="eh-reveal"
-              />
-            ) : (
-              <EmptyState
-                icon={FilePlus2}
-                title={t("dashboard.waveform.emptyTitle")}
-                description={t("dashboard.waveform.emptyDesc")}
-                className="border-0 bg-transparent py-4"
-              >
-                <Button size="sm" onClick={openPicker}>
-                  {t("dashboard.recent.emptyAction")}
-                </Button>
-              </EmptyState>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
       <Dialog open={formatsOpen} onOpenChange={setFormatsOpen}>
         <DialogContent className="sm:max-w-md">

@@ -1,0 +1,12 @@
+eclipse health module adapter · io.github.brainflow-dev.brainflow
+SPDX-License-Identifier: GPL-3.0-only
+
+This adapter layer (the files under this directory) is free software: you can
+redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, version 3.
+
+Full license text: https://www.gnu.org/licenses/gpl-3.0.txt
+
+The upstream project is NOT bundled here. The BrainFlow binary wheel is
+installed from the Python package index into this module's own virtual
+environment and retains its own license (MIT, see NOTICE).

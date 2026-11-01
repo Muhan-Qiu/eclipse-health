@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.paulvangentcom.heartpy",
+  "name": "HeartPy · PPG/ECG",
+  "description": "适配自 https://github.com/paulvangentcom/heartrate_analysis_python 的 PPG/ECG 心率与 HRV 分析模块，调用 hp.process 并保留信号质量标志。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "Paul van Gent + eclipse health adapters", "url": "https://github.com/paulvangentcom/heartrate_analysis_python" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/paulvangentcom/heartrate_analysis_python",
+  "permissions": ["records:read", "llm"],
+  "dependencies": ["heartpy>=1.2,<2"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "heartpy-ppg-ecg",
+        "name": "HeartPy PPG/ECG",
+        "task": "ppg-ecg-heart-rate",
+        "format": "remote",
+        "input": { "modes": ["rr", "signalRef"], "fs": "required for signalRef" },
+        "output": { "metrics": ["bpm", "rmssd", "sdnn", "pnn50", "quality"] },
+        "modelCard": {
+          "library": "heartpy",
+          "upstream": "https://github.com/paulvangentcom/heartrate_analysis_python",
+          "upstreamLicense": "MIT",
+          "remoteness": "algorithm library executed locally; no data leaves the machine",
+          "limitations": ["Low-quality segments still produce numbers; always read the quality flag", "Not validated for clinical use"],
+          "nonDiagnostic": true
+        }
+      }
+    ],
+    "tools": [
+      {
+        "id": "ppg.quality",
+        "name": "Assess PPG quality",
+        "description": "Assess signal quality from HeartPy's binary quality score or from a validated RR interval series. Non-diagnostic.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "rr": { "type": "array", "items": { "type": "number" }, "minItems": 2 },
+            "accepted": { "type": "boolean" }
+          }
+        },
+        "outputSchema": { "type": "object" },
+        "permissions": ["records:read"]
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "analysis.heartpy",
+        "name": "HeartPy analysis",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "rmssd": { "type": "number" },
+            "sdnn": { "type": "number" },
+            "bpm": { "type": "number" },
+            "quality": { "type": "string" },
+            "nonDiagnostic": { "type": "string" }
+          },
+          "required": ["nonDiagnostic"]
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "rmssd",
+          "title": "RMSSD",
+          "description": "最近一次分析的 RMSSD（非诊断）",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "stat", "valuePath": "latest.rmssd", "unit": "ms", "label": "RMSSD" },
+          "link": "/modules/io.github.paulvangentcom.heartpy/pages/segments"
+        },
+        {
+          "id": "sdnn",
+          "title": "SDNN",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "stat", "valuePath": "latest.sdnn", "unit": "ms", "label": "SDNN" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "segments",
+          "title": "段级结果",
+          "icon": "activity",
+          "layout": [
+            { "component": "text", "text": "HeartPy 段级指标。低质量段仍可能给出数值，请结合质量标志。非医疗器械，不用于诊断。" },
+            {
+              "component": "table",
+              "title": "最近结果",
+              "source": { "type": "module-rpc", "method": "stats" },
+              "rowPath": "series",
+              "columns": [
+                { "key": "rmssd", "label": "RMSSD", "unit": "ms", "format": "number" },
+                { "key": "sdnn", "label": "SDNN", "unit": "ms", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 512, "cpu": 1, "startupTimeoutMs": 15000 },
+  "updateChannel": "stable"
+}

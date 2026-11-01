@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0",
+  "id": "io.github.scientisst.biosppy",
+  "name": "BioSPPy · ECG",
+  "description": "适配自 https://github.com/scientisst/BioSPPy 的 ECG 信号处理模块（仅 ECG/HRV 子集），调用 biosppy.signals.ecg。非医疗器械，不用于诊断。",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 <2.0" },
+  "type": "analysis-model",
+  "author": { "name": "BioSPPy authors + eclipse health adapters", "url": "https://github.com/scientisst/BioSPPy" },
+  "license": "GPL-3.0-only",
+  "repository": "https://github.com/scientisst/BioSPPy",
+  "permissions": ["records:read", "llm"],
+  "dependencies": ["biosppy>=0.6,<1", "numpy>=1.26,<3", "scipy>=1.11,<2", "h5py>=3.10,<4", "scikit-learn>=1.4,<2"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "models": [
+      {
+        "id": "biosppy-ecg",
+        "name": "BioSPPy ECG",
+        "task": "ecg-rpeak-detection",
+        "format": "remote",
+        "input": { "modes": ["rr", "signalRef"], "fs": "required for signalRef", "leads": "single" },
+        "output": { "metrics": ["nPeaks", "meanRr", "meanHr", "rmssd"] },
+        "modelCard": {
+          "library": "biosppy",
+          "upstream": "https://github.com/scientisst/BioSPPy",
+          "upstreamLicense": "BSD-3-Clause",
+          "scope": "ECG/HRV subset only; EDA/EMG/respiration are not exposed",
+          "limitations": ["R-peak detection degrades on noisy single-lead signals", "Not validated for clinical use"],
+          "nonDiagnostic": true
+        }
+      }
+    ],
+    "tools": [
+      {
+        "id": "ecg.quality",
+        "name": "Assess ECG quality",
+        "description": "Assess R-peak/HRV quality from detected peaks or RR intervals. Non-diagnostic.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "rr": { "type": "array", "items": { "type": "number" }, "minItems": 2 } }
+        },
+        "outputSchema": { "type": "object" },
+        "permissions": ["records:read"]
+      }
+    ],
+    "recordTypes": [
+      {
+        "id": "analysis.ecg.biosppy",
+        "name": "ECG analysis (BioSPPy)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "nPeaks": { "type": "integer" },
+            "meanHr": { "type": "number" },
+            "rmssd": { "type": "number" },
+            "nonDiagnostic": { "type": "string" }
+          },
+          "required": ["nonDiagnostic"]
+        },
+        "indexes": ["capturedAt"]
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "heart-rate",
+          "title": "平均心率",
+          "description": "最近一次分析的 mean HR（非诊断）",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "stat", "valuePath": "latest.meanHr", "unit": "bpm", "label": "心率" },
+          "link": "/modules/io.github.scientisst.biosppy/pages/ecg"
+        },
+        {
+          "id": "hr-trend",
+          "title": "心率趋势",
+          "size": "md",
+          "dataSource": { "type": "module-rpc", "method": "stats", "params": { "days": 30 } },
+          "view": { "type": "sparkline", "valuePath": "series", "unit": "bpm" }
+        }
+      ],
+      "pages": [
+        {
+          "id": "ecg",
+          "title": "ECG 段级结果",
+          "icon": "activity",
+          "layout": [
+            { "component": "text", "text": "BioSPPy ECG 子集结果。非医疗器械，不用于诊断。" },
+            {
+              "component": "table",
+              "title": "段级指标",
+              "source": { "type": "module-rpc", "method": "stats" },
+              "rowPath": "segments",
+              "columns": [
+                { "key": "meanHr", "label": "心率", "unit": "bpm", "format": "number" },
+                { "key": "rmssd", "label": "RMSSD", "unit": "ms", "format": "number" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 768, "cpu": 1, "startupTimeoutMs": 20000 },
+  "updateChannel": "stable"
+}

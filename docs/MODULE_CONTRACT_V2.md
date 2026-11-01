@@ -61,13 +61,39 @@ v1 把 `contributes` 当作「保留的任意 JSON」，核心只存不解释。
 
 | 字段 | 必填 | 规则 |
 |---|---|---|
-| `type` | 是 | `stat` / `sparkline` / `list` / `progress` / `text` |
-| `valuePath` | 是 | 受限路径，从 RPC 结果取值，如 `latest.weight`、`series[0].value` |
+| `type` | 是 | `stat` / `sparkline` / `list` / `progress` / `text` / `bar` / `line` / `heatmap` |
+| `valuePath` | 条件 | 受限路径，从 RPC 结果取值，如 `latest.weight`、`series[0].value`；`bar` / `line` 可用 `seriesPath` 替代 |
+| `seriesPath` | 否 | 受限路径，指向数字数组；`bar` / `line` 与 `valuePath` 二选一 |
+| `labelPath` | 否 | 受限路径，指向与序列等长的标签数组；`bar` / `line` 用于横轴文字 |
 | `unit` | 否 | ≤32，UCUM 推荐（`kg`、`bpm`、`ms`） |
 | `label` | 否 | ≤120，覆盖数值前的说明文字 |
-| `min` / `max` | 否 | 数值，仅 `progress` 使用 |
+| `min` / `max` | 否 | 数值，仅 `progress` 使用；`min`/`max` 也是 `bar`/`line` 的可选显示范围提示 |
 
-`valuePath` 只允许字母、数字、下划线、`.` 与 `[n]`；等价于受限 JSONPath，**不执行表达式**。
+`valuePath` / `seriesPath` / `labelPath` 只允许字母、数字、下划线、`.` 与 `[n]`；等价于受限 JSONPath，**不执行表达式**。
+
+图表类型的数据形状：
+
+| `type` | 读取 | 渲染 |
+|---|---|---|
+| `bar` | `seriesPath`（或 `valuePath`）→ `number[]` | 零基线柱状图；`labelPath` 有值时显示横轴标签 |
+| `line` | 同上 | 折线（SVG），无动画或复用现有 600ms 绘制 |
+| `heatmap` | `valuePath` → `[{ date, value }]`、`number[]` 或二维 `number[][]` | 按数值强度着色的格子；最多渲染 84 格 |
+
+空数组、全 `null` 或路径取不到值时统一显示「暂无数据」，不抛异常；颜色只使用 `--eh-signal` / `--eh-chart-*` 令牌，亮暗主题都可读。未知 `type` 由前端降级为「不支持的卡片类型」，不会导致整页失败。
+
+```json
+{ "type": "bar", "seriesPath": "weekly", "labelPath": "weekLabels", "unit": "kg" }
+```
+
+```json
+{ "type": "line", "valuePath": "series", "unit": "bpm" }
+```
+
+```json
+{ "type": "heatmap", "valuePath": "days" }
+```
+
+其中 `days` 可以是 `[{ "date": "2026-10-01", "value": 3 }, …]`，也可以是二维数组（每行一组，缺失格用 `null`）。
 
 ### 2.3 `link`
 
@@ -211,6 +237,7 @@ GET /api/v1/modules/contributions?type=widgets|pages|tools|recordTypes
 - v1 时期 `ui.widgets` 是任意 JSON；v2 起改为受控结构。仓库内没有依赖旧形状的模块。
 - 工具新增 `parameters` 别名与 `permissions` 字段，均为可选。
 - `ui.widgets[]` 新增可选 `link`；页面列/字段新增可选 `format`。两者都是增量字段，旧 manifest 不受影响。
+- `view.type` 新增 `bar` / `line` / `heatmap`，并新增可选 `seriesPath` / `labelPath`；`valuePath` 从「总是必填」变为「按类型必填」（`bar`/`line` 可用 `seriesPath` 替代）。旧的五种视图仍要求 `valuePath`，现有 manifest 继续通过校验。
 
 ## 9. 完整示例 A · dashboard-widget
 
