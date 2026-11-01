@@ -8,9 +8,9 @@ from typing import Any
 
 import httpx
 import pytest
+from ohs_helpers import requires_dpapi
 from sqlmodel import Session, select
 
-from conftest import requires_dpapi
 from eclipse_health_backend.db.models import RecordTable
 from eclipse_health_backend.domain.errors import InvalidInputError
 from eclipse_health_backend.ohs import store, sync

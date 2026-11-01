@@ -6,8 +6,8 @@ import json
 
 import httpx
 from fastapi.testclient import TestClient
+from ohs_helpers import requires_dpapi
 
-from conftest import requires_dpapi
 from eclipse_health_backend.ohs import api
 from eclipse_health_backend.ohs.client import OhsClient
 from eclipse_health_backend.ohs.sync import SyncResult

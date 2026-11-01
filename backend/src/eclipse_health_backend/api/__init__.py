@@ -102,4 +102,23 @@ _mount_reports_router(api_router)
 _mount_assistant_router(api_router)
 _mount_metrics_router(api_router)
 
+
+def _mount_optional_router(module_name: str, prefix: str = "") -> None:
+    """Stage F 路由：模块缺失/未完成时不拖垮核心。"""
+    try:
+        module = __import__(f"..{module_name}.api", fromlist=["router"])
+        router = module.router
+    except Exception:  # noqa: BLE001
+        logger.info("%s router not available; skipping", module_name)
+        return
+    api_router.include_router(router, prefix=prefix)
+    logger.info("%s router mounted", module_name)
+
+
+_mount_optional_router("scoring")
+_mount_optional_router("exercises")
+_mount_optional_router("memory")
+_mount_optional_router("coach")
+_mount_optional_router("ohs")
+
 __all__ = ["api_router"]

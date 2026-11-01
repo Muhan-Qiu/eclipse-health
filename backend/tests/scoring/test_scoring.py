@@ -5,8 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
-
-from conftest import (
+from scoring_helpers import (
     add_ecg_analysis,
     add_health_record,
     measurement,

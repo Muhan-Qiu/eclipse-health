@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 
 import pytest
+from ohs_helpers import requires_dpapi
 
-from conftest import requires_dpapi
 from eclipse_health_backend.domain.errors import InvalidInputError
 from eclipse_health_backend.ohs import store
 

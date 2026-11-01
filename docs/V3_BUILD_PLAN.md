@@ -695,4 +695,16 @@
 - 记忆只存本机，`enabled=false` 不注入；健康档案页编辑。
 - OHS 是可选外部服务：普通用户无需 Docker；内置 Apple/小米导入继续可用。
 - G2–G5 不直接改 `api/__init__.py`，由指挥官统一挂载。
-- 完成后全量测试、重打安装包。 
+- 完成后全量测试、重打安装包。
+
+### Stage F 验收结果（2026-10-31）
+
+- 五份报告：`reports/G1`–`G5`（G4 报告由指挥官续跑验收补记）；WIP checkpoint `cf1e963`，收口提交见后续。
+- 全量：`pytest backend/tests` **710 passed / 11 skipped**；ruff 通过；`npm run build` 通过。
+- G1：首页「概览」、健康数据/评分/建议顶部、首启 LLM Key 引导。
+- G2：规则评分 `/scores` + `/suggestions`，缺项不显示、总分只平均可用项。
+- G3：档案静息心率/睡眠、运动记录、个性化记忆（档案页编辑、可关闭注入）。
+- G4：Coach 模式、5 个预设、Open-Meteo 天气、记忆/评分注入。
+- G5：可选 OHS 连接（URL/token、DPAPI、测试、日汇总同步）。
+- 指挥官统一挂载 `scoring/exercises/memory/coach/ohs` 路由；修复测试 helper 重名与重复文件名。
+- 未验证：真实 OHS 实例、真实天气网络、真实 LLM 下的教练回答；均为可选/外部条件。 
