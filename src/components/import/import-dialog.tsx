@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Activity,
   AlertTriangle,
   Check,
   CheckCircle2,
+  ChevronDown,
+  FilePlus2,
   FileUp,
-  HeartPulse,
+  FolderOpen,
   Info,
   Loader2,
   RotateCcw,
+  Sparkles,
+  Square,
+  StopCircle,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -39,45 +43,33 @@ import type {
   ImportPreview,
   ImportWarning,
 } from "@/lib/api/types";
-import { formatNumber } from "@/lib/format";
+import { formatDateTime, formatNumber } from "@/lib/format";
 import { intlLocale } from "@/lib/i18n";
 import { useTagLabel } from "@/lib/tags";
 import { formatSeconds } from "@/lib/waveform";
+import {
+  VENDOR_GUIDES,
+  VENDOR_GUIDES_VERSION_NOTE,
+} from "@/lib/vendor-import-guides";
 import {
   COUNT_ORDER,
   type HealthImportCommitResult,
   type ImportRecordCounts,
   type ImportSourceKind,
 } from "./health-import-api";
+import type { AgentProposal } from "./import-agent-api";
+import type { AgentView } from "./import-provider";
 
 const KNOWN_TAGS = ["morning", "resting", "postExercise", "evening"] as const;
 const LEAD_SUGGESTIONS = ["MLII", "I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"];
 
-const SOURCES: ReadonlyArray<{
-  id: ImportSourceKind;
-  icon: typeof HeartPulse;
-  titleKey: string;
-  stepsKey: string;
-}> = [
-  {
-    id: "apple-health",
-    icon: HeartPulse,
-    titleKey: "imports.sources.apple.title",
-    stepsKey: "imports.sources.apple.steps",
-  },
-  {
-    id: "xiaomi",
-    icon: Activity,
-    titleKey: "imports.sources.xiaomi.title",
-    stepsKey: "imports.sources.xiaomi.steps",
-  },
-  {
-    id: "auto",
-    icon: FileUp,
-    titleKey: "imports.sources.generic.title",
-    stepsKey: "imports.sources.generic.steps",
-  },
-];
+export interface AgentEventItem {
+  id: string;
+  kind: "status" | "tool" | "result" | "error";
+  name: string;
+  detail?: string;
+  ok?: boolean;
+}
 
 function toLocalInput(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -144,6 +136,59 @@ function PreviewSignal({ samples }: { samples: number[] }) {
   );
 }
 
+function AgentValue({
+  proposal,
+  locale,
+  t,
+}: {
+  proposal: AgentProposal;
+  locale: string;
+  t: (key: string) => string;
+}) {
+  const value = proposal.value;
+  if (proposal.kind === "blood-pressure" && value && typeof value === "object") {
+    const pair = value as { systolic?: number; diastolic?: number };
+    return (
+      <span className="eh-num">
+        {formatNumber(pair.systolic ?? 0, locale)}/{formatNumber(pair.diastolic ?? 0, locale)}
+      </span>
+    );
+  }
+  if (proposal.kind === "workout" && value && typeof value === "object") {
+    const item = value as {
+      activity?: string;
+      durationSec?: number;
+      distanceM?: number;
+      energyKcal?: number;
+      avgHeartRate?: number;
+    };
+    return (
+      <span className="eh-num">
+        {item.activity || t("imports.agent.activity")}
+        {item.durationSec ? ` · ${formatSeconds(item.durationSec)}` : ""}
+        {item.distanceM ? ` · ${formatNumber(item.distanceM / 1000, locale, { maximumFractionDigits: 2 })} km` : ""}
+        {item.energyKcal ? ` · ${formatNumber(item.energyKcal, locale)} kcal` : ""}
+        {item.avgHeartRate ? ` · ${formatNumber(item.avgHeartRate, locale)} bpm` : ""}
+      </span>
+    );
+  }
+  if (proposal.kind === "hrv" && value && typeof value === "object") {
+    const item = value as { metric?: string; value?: number };
+    return (
+      <span className="eh-num">
+        {item.metric || "hrv"} {formatNumber(item.value ?? 0, locale)}
+      </span>
+    );
+  }
+  if (typeof value === "number") {
+    return <span className="eh-num">{formatNumber(value, locale, { maximumFractionDigits: 2 })}</span>;
+  }
+  if (typeof value === "string") {
+    return <span>{t(`healthData.sleepStages.${value}`) ?? value}</span>;
+  }
+  return <span>—</span>;
+}
+
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -156,31 +201,58 @@ interface ImportDialogProps {
   recordCounts: ImportRecordCounts;
   totalRecords: number;
   result: HealthImportCommitResult | null;
+  hasSelection: boolean;
+  selectedFiles: string[];
+  agent: AgentView | null;
+  agentBusy: boolean;
+  agentCommitting: boolean;
   onPickSource: (source: ImportSourceKind) => void;
+  onChooseFiles: () => void;
+  onChooseFolder: () => void;
+  onOpenDialog: () => void;
+  onStartAgent: () => void;
+  onRunAgent: () => void;
+  onStopAgent: () => void;
+  onToggleAgentKind: (kind: string) => void;
+  onSetAgentKinds: (kinds: string[]) => void;
+  onCommitAgent: (memberId: string) => void;
   onDone: () => void;
   onCommit: (body: ImportCommitBody) => void;
   onPickAnother: () => void;
 }
 
-export function ImportDialog({
-  open,
-  onOpenChange,
-  preview,
-  error,
-  busy,
-  committing,
-  commitError,
-  source,
-  recordCounts,
-  totalRecords,
-  result,
-  onPickSource,
-  onDone,
-  onCommit,
-  onPickAnother,
-}: ImportDialogProps) {
+export function ImportDialog(props: ImportDialogProps) {
+  const {
+    open,
+    onOpenChange,
+    preview,
+    error,
+    busy,
+    committing,
+    commitError,
+    recordCounts,
+    totalRecords,
+    result,
+    hasSelection,
+    selectedFiles,
+    agent,
+    agentBusy,
+    agentCommitting,
+    onChooseFiles,
+    onChooseFolder,
+    onStartAgent,
+    onRunAgent,
+    onStopAgent,
+    onToggleAgentKind,
+    onSetAgentKinds,
+    onCommitAgent,
+    onDone,
+    onCommit,
+    onPickAnother,
+  } = props;
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
   const tagLabel = useTagLabel();
   const membersQuery = useMembers();
   const memberId = membersQuery.data?.[0]?.id ?? "";
@@ -193,6 +265,11 @@ export function ImportDialog({
   const [tagInput, setTagInput] = useState("");
   const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [showGuides, setShowGuides] = useState(
+    () =>
+      import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get("import") === "guides",
+  );
 
   useEffect(() => {
     if (!preview) return;
@@ -260,69 +337,177 @@ export function ImportDialog({
   const requires = preview?.requires;
   const isHealthBundle = totalRecords > 0;
   const commitDisabled = committing || busy || !preview || !memberId;
-  const showSourcePicker = !busy && !error && !preview && !result;
+  const showPicker =
+    !agent && !busy && !error && !preview && !result;
   const createdKinds = COUNT_ORDER.filter(
     (key) => (result?.recordCounts[key] ?? 0) > 0,
   );
+
+  const groups = useMemo(() => {
+    const map = new Map<string, AgentProposal[]>();
+    for (const item of agent?.proposals ?? []) {
+      const list = map.get(item.kind) ?? [];
+      list.push(item);
+      map.set(item.kind, list);
+    }
+    return Array.from(map.entries()).sort(([left], [right]) =>
+      left.localeCompare(right),
+    );
+  }, [agent?.proposals]);
+  const allKinds = groups.map(([kind]) => kind);
+  const allSelected =
+    allKinds.length > 0 &&
+    allKinds.every((kind) => agent?.selectedKinds.includes(kind));
+  const visibleRows = (agent?.proposals ?? []).slice(0, 200);
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next && committing) return;
+        if (!next && (committing || agent?.status === "running")) return;
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{t("imports.title")}</DialogTitle>
           <DialogDescription>{t("imports.description")}</DialogDescription>
         </DialogHeader>
 
-        {showSourcePicker ? (
-          <section aria-labelledby="import-source-title" className="space-y-3">
-            <div>
-              <h3 id="import-source-title" className="eh-h3">
-                {t("imports.sources.title")}
+        {/* ---------------- 选择文件（唯一主入口） ---------------- */}
+        {showPicker ? (
+          <section aria-labelledby="import-picker-title" className="space-y-4">
+            <div className="rounded-xl border border-border bg-subtle/40 px-4 py-5 text-center">
+              <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-accent-soft text-primary">
+                <FileUp className="size-5" aria-hidden="true" />
+              </div>
+              <h3 id="import-picker-title" className="eh-h3 mt-3">
+                {t("imports.picker.title")}
               </h3>
-              <p className="eh-caption mt-0.5 text-muted-foreground">
-                {t("imports.sources.description")}
+              <p className="eh-small mx-auto mt-1 max-w-lg text-muted-foreground">
+                {t("imports.picker.desc")}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Button onClick={onChooseFiles}>
+                  <FilePlus2 data-icon="inline-start" />
+                  {t("imports.picker.chooseFiles")}
+                </Button>
+                <Button variant="outline" onClick={onChooseFolder}>
+                  <FolderOpen data-icon="inline-start" />
+                  {t("imports.picker.chooseFolder")}
+                </Button>
+              </div>
+              <p className="eh-caption mt-3 text-muted-foreground">
+                {t("imports.picker.formats")}
+              </p>
+              <p className="eh-caption mt-1 text-muted-foreground">
+                {t("imports.picker.drag")}
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {SOURCES.map((item) => {
-                const Icon = item.icon;
-                const selected = source === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => onPickSource(item.id)}
-                    className={
-                      selected
-                        ? "flex h-full flex-col gap-1.5 rounded-xl border border-primary bg-accent-soft px-3 py-3 text-left"
-                        : "flex h-full flex-col gap-1.5 rounded-xl border border-border px-3 py-3 text-left hover:bg-accent"
-                    }
-                  >
-                    <span className="flex items-center gap-1.5 text-sm font-medium">
-                      <Icon className="size-4 text-primary" aria-hidden="true" />
-                      {t(item.titleKey)}
-                    </span>
-                    <span className="eh-caption text-muted-foreground">
-                      {t(item.stepsKey)}
-                    </span>
-                  </button>
-                );
-              })}
+
+            <div className="rounded-xl border border-border px-4 py-3">
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="eh-small font-medium">{t("imports.picker.aiTitle")}</p>
+                  <p className="eh-caption mt-0.5 text-muted-foreground">
+                    {t("imports.picker.aiDesc")}
+                  </p>
+                </div>
+              </div>
+              {hasSelection ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2 pl-7">
+                  <span className="eh-caption text-muted-foreground">
+                    {t("imports.picker.selected", {
+                      count: formatNumber(selectedFiles.length, locale),
+                    })}
+                  </span>
+                  <Button size="sm" variant="outline" onClick={onStartAgent} disabled={agentBusy}>
+                    {agentBusy ? (
+                      <Loader2 className="animate-spin" data-icon="inline-start" />
+                    ) : (
+                      <Sparkles data-icon="inline-start" />
+                    )}
+                    {t("imports.agent.startParse")}
+                  </Button>
+                </div>
+              ) : null}
             </div>
+
+            <section aria-label={t("imports.guides.title")}>
+              <button
+                type="button"
+                aria-expanded={showGuides}
+                onClick={() => setShowGuides((value) => !value)}
+                className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-left text-sm hover:bg-accent"
+              >
+                <span className="font-medium">{t("imports.guides.title")}</span>
+                <ChevronDown
+                  className={showGuides ? "size-4 rotate-180 transition-transform" : "size-4 transition-transform"}
+                  aria-hidden="true"
+                />
+              </button>
+              {showGuides ? (
+                <div className="mt-2 space-y-2">
+                  <p className="eh-caption text-muted-foreground">
+                    {t("imports.guides.desc")}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {VENDOR_GUIDES.map((guide) => (
+                      <details
+                        key={guide.id}
+                        className="group rounded-lg border border-border px-3 py-2 open:bg-subtle/40"
+                      >
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium">
+                          {isZh ? guide.name.zh : guide.name.en}
+                          <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+                        </summary>
+                        <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                          {(isZh ? guide.steps.zh : guide.steps.en).map((step) => (
+                            <li key={step}>{step}</li>
+                          ))}
+                        </ol>
+                        <dl className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
+                          <div className="flex gap-1.5">
+                            <dt className="shrink-0 text-muted-foreground">{t("imports.guides.format")}</dt>
+                            <dd>{guide.formats}</dd>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <dt className="shrink-0 text-muted-foreground">{t("imports.guides.includes")}</dt>
+                            <dd>{isZh ? guide.includes.zh : guide.includes.en}</dd>
+                          </div>
+                        </dl>
+                        {guide.versionNote ? (
+                          <p className="mt-1.5 text-xs text-muted-foreground">
+                            {isZh ? guide.versionNote.zh : guide.versionNote.en}
+                          </p>
+                        ) : null}
+                        <a
+                          href={guide.helpUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-block text-xs text-primary underline underline-offset-2"
+                        >
+                          {t("imports.guides.help")}
+                        </a>
+                      </details>
+                    ))}
+                  </div>
+                  <p className="eh-caption text-muted-foreground">
+                    {isZh ? VENDOR_GUIDES_VERSION_NOTE.zh : VENDOR_GUIDES_VERSION_NOTE.en}
+                  </p>
+                </div>
+              ) : null}
+            </section>
+
             <p className="eh-caption text-muted-foreground">
-              {t("imports.sources.privacy")}
+              {t("imports.picker.privacy")}
             </p>
           </section>
         ) : null}
 
-        {result ? (
+        {/* ---------------- 标准导入结果 ---------------- */}
+        {result && !agent ? (
           <section className="space-y-3">
             <Alert>
               <CheckCircle2 />
@@ -368,7 +553,7 @@ export function ImportDialog({
           </section>
         ) : null}
 
-        {busy ? (
+        {busy && !agent ? (
           <div className="flex items-center gap-3 rounded-lg border border-border bg-subtle/50 px-4 py-6">
             <Loader2 className="size-5 animate-spin text-accent" aria-hidden="true" />
             <div>
@@ -380,7 +565,7 @@ export function ImportDialog({
           </div>
         ) : null}
 
-        {!busy && error ? (
+        {!busy && error && !agent ? (
           <div className="space-y-3">
             <Alert variant="destructive">
               <AlertTriangle />
@@ -396,16 +581,31 @@ export function ImportDialog({
                 </code>
               </AlertDescription>
             </Alert>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={onPickAnother}>
                 <FileUp data-icon="inline-start" />
                 {t("imports.chooseAnother")}
               </Button>
+              {hasSelection ? (
+                <Button size="sm" onClick={onStartAgent} disabled={agentBusy}>
+                  {agentBusy ? (
+                    <Loader2 className="animate-spin" data-icon="inline-start" />
+                  ) : (
+                    <Sparkles data-icon="inline-start" />
+                  )}
+                  {t("imports.agent.askAi")}
+                </Button>
+              ) : null}
             </div>
+            {hasSelection ? (
+              <p className="eh-caption text-muted-foreground">
+                {t("imports.agent.askAiHint")}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
-        {!busy && preview ? (
+        {!busy && preview && !agent ? (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">{preview.format.toUpperCase()}</Badge>
@@ -516,182 +716,182 @@ export function ImportDialog({
 
             {!isHealthBundle ? (
               <section aria-labelledby="import-params-title" className="space-y-3">
-              <div>
-                <h3 id="import-params-title" className="eh-h3">
-                  {t("imports.paramsTitle")}
-                </h3>
-                <p className="eh-caption mt-0.5 text-muted-foreground">
-                  {t("imports.paramsDesc")}
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="import-fs">
-                    {t("imports.fields.samplingRate")}
-                    {requires?.samplingRate ? (
-                      <span className="text-danger" aria-hidden="true">*</span>
-                    ) : null}
-                  </Label>
-                  <Input
-                    id="import-fs"
-                    type="number"
-                    inputMode="decimal"
-                    min={1}
-                    max={1_000_000}
-                    step="any"
-                    value={samplingRate}
-                    onChange={(event) => setSamplingRate(event.target.value)}
-                    aria-required={requires?.samplingRate ?? false}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="import-lead">
-                    {t("imports.fields.lead")}
-                    <span className="text-danger" aria-hidden="true">*</span>
-                  </Label>
-                  <Input
-                    id="import-lead"
-                    list="import-lead-options"
-                    value={lead}
-                    maxLength={16}
-                    onChange={(event) => setLead(event.target.value)}
-                    aria-required
-                  />
-                  <datalist id="import-lead-options">
-                    {LEAD_SUGGESTIONS.map((item) => (
-                      <option key={item} value={item} />
-                    ))}
-                  </datalist>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="import-unit">{t("imports.fields.unit")}</Label>
-                  <Select value={unit} onValueChange={setUnit}>
-                    <SelectTrigger id="import-unit" className="w-full" aria-label={t("imports.fields.unit")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mV">mV</SelectItem>
-                      <SelectItem value="uV">uV</SelectItem>
-                      <SelectItem value="V">V</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>{t("imports.fields.polarity")}</Label>
-                  <div
-                    className="flex h-8 items-center gap-1 rounded-lg border border-input p-0.5"
-                    role="group"
-                    aria-label={t("imports.fields.polarity")}
-                  >
-                    {(["normal", "inverted"] as const).map((option) => (
-                      <Button
-                        key={option}
-                        type="button"
-                        size="xs"
-                        variant={polarity === option ? "secondary" : "ghost"}
-                        aria-pressed={polarity === option}
-                        className="flex-1"
-                        onClick={() => setPolarity(option)}
-                      >
-                        {polarity === option ? (
-                          <Check className="size-3" aria-hidden="true" />
-                        ) : null}
-                        {t(`imports.polarity.${option}`)}
-                      </Button>
-                    ))}
-                  </div>
-                  <p className="eh-caption text-muted-foreground">
-                    {t("imports.fields.polarityHint")}
+                <div>
+                  <h3 id="import-params-title" className="eh-h3">
+                    {t("imports.paramsTitle")}
+                  </h3>
+                  <p className="eh-caption mt-0.5 text-muted-foreground">
+                    {t("imports.paramsDesc")}
                   </p>
                 </div>
 
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="import-fs">
+                      {t("imports.fields.samplingRate")}
+                      {requires?.samplingRate ? (
+                        <span className="text-danger" aria-hidden="true">*</span>
+                      ) : null}
+                    </Label>
+                    <Input
+                      id="import-fs"
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      max={1_000_000}
+                      step="any"
+                      value={samplingRate}
+                      onChange={(event) => setSamplingRate(event.target.value)}
+                      aria-required={requires?.samplingRate ?? false}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="import-lead">
+                      {t("imports.fields.lead")}
+                      <span className="text-danger" aria-hidden="true">*</span>
+                    </Label>
+                    <Input
+                      id="import-lead"
+                      list="import-lead-options"
+                      value={lead}
+                      maxLength={16}
+                      onChange={(event) => setLead(event.target.value)}
+                      aria-required
+                    />
+                    <datalist id="import-lead-options">
+                      {LEAD_SUGGESTIONS.map((item) => (
+                        <option key={item} value={item} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="import-unit">{t("imports.fields.unit")}</Label>
+                    <Select value={unit} onValueChange={setUnit}>
+                      <SelectTrigger id="import-unit" className="w-full" aria-label={t("imports.fields.unit")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mV">mV</SelectItem>
+                        <SelectItem value="uV">uV</SelectItem>
+                        <SelectItem value="V">V</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>{t("imports.fields.polarity")}</Label>
+                    <div
+                      className="flex h-8 items-center gap-1 rounded-lg border border-input p-0.5"
+                      role="group"
+                      aria-label={t("imports.fields.polarity")}
+                    >
+                      {(["normal", "inverted"] as const).map((option) => (
+                        <Button
+                          key={option}
+                          type="button"
+                          size="xs"
+                          variant={polarity === option ? "secondary" : "ghost"}
+                          aria-pressed={polarity === option}
+                          className="flex-1"
+                          onClick={() => setPolarity(option)}
+                        >
+                          {polarity === option ? (
+                            <Check className="size-3" aria-hidden="true" />
+                          ) : null}
+                          {t(`imports.polarity.${option}`)}
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="eh-caption text-muted-foreground">
+                      {t("imports.fields.polarityHint")}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="import-captured">{t("imports.fields.capturedAt")}</Label>
+                    <Input
+                      id="import-captured"
+                      type="datetime-local"
+                      value={capturedAt}
+                      onChange={(event) => setCapturedAt(event.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="import-tags">{t("imports.fields.tags")}</Label>
+                    <div className="flex gap-1.5">
+                      <Input
+                        id="import-tags"
+                        value={tagInput}
+                        maxLength={32}
+                        placeholder={t("imports.fields.tagsPlaceholder")}
+                        onChange={(event) => setTagInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === ",") {
+                            event.preventDefault();
+                            addTag(tagInput);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addTag(tagInput)}
+                      >
+                        {t("imports.fields.addTag")}
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {KNOWN_TAGS.map((tag) => {
+                        const selected = tags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() =>
+                              setTags((current) =>
+                                current.includes(tag)
+                                  ? current.filter((item) => item !== tag)
+                                  : [...current, tag],
+                              )
+                            }
+                            className={
+                              selected
+                                ? "rounded-full border border-primary bg-accent-soft px-2.5 py-0.5 text-xs"
+                                : "rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
+                            }
+                          >
+                            {tagLabel(tag)}
+                          </button>
+                        );
+                      })}
+                      {tags
+                        .filter((tag) => !KNOWN_TAGS.includes(tag as (typeof KNOWN_TAGS)[number]))
+                        .map((tag) => (
+                          <Badge key={tag} variant="outline">
+                            {tag}
+                          </Badge>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
-                  <Label htmlFor="import-captured">{t("imports.fields.capturedAt")}</Label>
-                  <Input
-                    id="import-captured"
-                    type="datetime-local"
-                    value={capturedAt}
-                    onChange={(event) => setCapturedAt(event.target.value)}
+                  <Label htmlFor="import-notes">{t("imports.fields.notes")}</Label>
+                  <Textarea
+                    id="import-notes"
+                    value={notes}
+                    maxLength={4000}
+                    rows={2}
+                    placeholder={t("imports.fields.notesPlaceholder")}
+                    onChange={(event) => setNotes(event.target.value)}
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="import-tags">{t("imports.fields.tags")}</Label>
-                  <div className="flex gap-1.5">
-                    <Input
-                      id="import-tags"
-                      value={tagInput}
-                      maxLength={32}
-                      placeholder={t("imports.fields.tagsPlaceholder")}
-                      onChange={(event) => setTagInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === ",") {
-                          event.preventDefault();
-                          addTag(tagInput);
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addTag(tagInput)}
-                    >
-                      {t("imports.fields.addTag")}
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {KNOWN_TAGS.map((tag) => {
-                      const selected = tags.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() =>
-                            setTags((current) =>
-                              current.includes(tag)
-                                ? current.filter((item) => item !== tag)
-                                : [...current, tag],
-                            )
-                          }
-                          className={
-                            selected
-                              ? "rounded-full border border-primary bg-accent-soft px-2.5 py-0.5 text-xs"
-                              : "rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
-                          }
-                        >
-                          {tagLabel(tag)}
-                        </button>
-                      );
-                    })}
-                    {tags
-                      .filter((tag) => !KNOWN_TAGS.includes(tag as (typeof KNOWN_TAGS)[number]))
-                      .map((tag) => (
-                        <Badge key={tag} variant="outline">
-                          {tag}
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="import-notes">{t("imports.fields.notes")}</Label>
-                <Textarea
-                  id="import-notes"
-                  value={notes}
-                  maxLength={4000}
-                  rows={2}
-                  placeholder={t("imports.fields.notesPlaceholder")}
-                  onChange={(event) => setNotes(event.target.value)}
-                />
-              </div>
-            </section>
+              </section>
             ) : null}
 
             {membersQuery.isError ? (
@@ -722,8 +922,334 @@ export function ImportDialog({
           </div>
         ) : null}
 
-        <DialogFooter>
-          {result ? (
+        {/* ---------------- Agent 导入 ---------------- */}
+        {agent ? (
+          <section className="space-y-3" aria-labelledby="agent-import-title">
+            <div className="flex flex-wrap items-center gap-2">
+              <Sparkles className="size-4 text-primary" aria-hidden="true" />
+              <h3 id="agent-import-title" className="eh-h3">
+                {t("imports.agent.title")}
+              </h3>
+              <Badge variant="secondary" className="ml-auto">
+                {t(`imports.agent.status.${agent.status}`)}
+              </Badge>
+            </div>
+
+            {agent.status === "created" ? (
+              <>
+                <div className="rounded-lg border border-border px-3 py-2.5">
+                  <p className="eh-small font-medium">
+                    {t("imports.agent.filesTitle", { count: agent.session.files.length })}
+                  </p>
+                  <ul className="mt-1.5 space-y-1">
+                    {agent.session.files.slice(0, 20).map((file) => (
+                      <li
+                        key={`${file.name}-${file.size}`}
+                        className="flex items-center justify-between gap-2 text-xs"
+                      >
+                        <span className="truncate">{file.name}</span>
+                        <span className="eh-num shrink-0 text-muted-foreground">
+                          {Math.max(1, Math.round(file.size / 1024))} KB
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Alert>
+                  <Info />
+                  <AlertTitle>{t("imports.agent.privacyTitle")}</AlertTitle>
+                  <AlertDescription>{t("imports.agent.privacyDesc")}</AlertDescription>
+                </Alert>
+                <p className="eh-caption text-muted-foreground">
+                  {t("imports.agent.runHint")}
+                </p>
+              </>
+            ) : null}
+
+            {agent.status === "running" ? (
+              <>
+                <div
+                  className="flex items-center gap-3 rounded-lg border border-border bg-subtle/50 px-4 py-4"
+                  aria-live="polite"
+                  aria-busy="true"
+                >
+                  <Loader2 className="size-5 animate-spin text-accent" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="eh-small font-medium">{t("imports.agent.running")}</p>
+                    <p className="eh-caption text-muted-foreground">
+                      {t("imports.agent.toolCalls", { count: agent.toolCalls })}
+                    </p>
+                  </div>
+                </div>
+                {agent.thought ? (
+                  <p className="max-h-20 overflow-y-auto rounded-lg bg-subtle/60 px-3 py-2 text-xs text-muted-foreground">
+                    {agent.thought}
+                  </p>
+                ) : null}
+                <ol
+                  className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border px-3 py-2 text-xs"
+                  aria-label={t("imports.agent.events")}
+                >
+                  {agent.events.map((event) => (
+                    <li key={event.id} className="flex items-start gap-2">
+                      <span
+                        className={
+                          event.kind === "error"
+                            ? "mt-1 size-1.5 shrink-0 rounded-full bg-danger"
+                            : event.kind === "result" && event.ok === false
+                              ? "mt-1 size-1.5 shrink-0 rounded-full bg-warning"
+                              : "mt-1 size-1.5 shrink-0 rounded-full bg-accent"
+                        }
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0">
+                        <span className="eh-num">{event.name}</span>
+                        {event.detail ? (
+                          <span className="text-muted-foreground"> · {event.detail}</span>
+                        ) : null}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            ) : null}
+
+            {agent.error ? (
+              <Alert variant="destructive">
+                <AlertTriangle />
+                <AlertTitle>{t("imports.agent.failedTitle")}</AlertTitle>
+                <AlertDescription>
+                  {t(`imports.agent.errors.${agent.error.code}`, {
+                    defaultValue: agent.error.message,
+                  })}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {agent.status === "ready" || agent.status === "committed" ? (
+              <>
+                {agent.summary ? (
+                  <div className="rounded-lg border border-border bg-subtle/40 px-3 py-2">
+                    <p className="eh-small font-medium">{t("imports.agent.summary")}</p>
+                    <p className="eh-caption mt-0.5 text-muted-foreground">
+                      {agent.summary}
+                    </p>
+                    <p className="eh-caption mt-1 text-muted-foreground">
+                      {t("imports.agent.proposalCount", {
+                        count: formatNumber(agent.session.proposalCount || agent.proposals.length, locale),
+                      })}
+                    </p>
+                  </div>
+                ) : null}
+
+                {agent.status === "committed" && agent.commit ? (
+                  <Alert>
+                    <CheckCircle2 />
+                    <AlertTitle>{t("imports.agent.doneTitle")}</AlertTitle>
+                    <AlertDescription>
+                      {t("imports.agent.doneDesc")}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {agent.status === "committed" && agent.commit ? (
+                  <dl className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        ["created", agent.commit.created],
+                        ["skipped", agent.commit.skipped],
+                        ["failed", agent.commit.failed],
+                      ] as const
+                    ).map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="rounded-lg border border-border px-2.5 py-2 text-center"
+                      >
+                        <dt className="eh-caption text-muted-foreground">
+                          {t(`imports.agent.${key}`)}
+                        </dt>
+                        <dd className="eh-num text-lg">{formatNumber(value, locale)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+
+                {groups.length ? (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="eh-small font-medium">
+                        {t("imports.agent.selectTitle")}
+                      </span>
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        onClick={() => onSetAgentKinds(allSelected ? [] : allKinds)}
+                        disabled={agent.status === "committed"}
+                      >
+                        {allSelected ? t("imports.agent.clearAll") : t("imports.agent.selectAll")}
+                      </Button>
+                    </div>
+                    <ul className="flex flex-wrap gap-1.5">
+                      {groups.map(([kind, items]) => {
+                        const selected = agent.selectedKinds.includes(kind);
+                        return (
+                          <li key={kind}>
+                            <button
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => onToggleAgentKind(kind)}
+                              disabled={agent.status === "committed"}
+                              className={
+                                selected
+                                  ? "inline-flex items-center gap-1.5 rounded-full border border-primary bg-accent-soft px-2.5 py-1 text-xs"
+                                  : "inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground"
+                              }
+                            >
+                              {selected ? (
+                                <Check className="size-3" aria-hidden="true" />
+                              ) : (
+                                <Square className="size-3" aria-hidden="true" />
+                              )}
+                              {t(`imports.agent.kinds.${kind}`, { defaultValue: kind })} ·{" "}
+                              {formatNumber(items.length, locale)}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    <div className="overflow-x-auto rounded-lg border border-border">
+                      <table className="w-full min-w-[640px] text-left text-xs">
+                        <thead className="bg-subtle/60 text-muted-foreground">
+                          <tr>
+                            <th scope="col" className="px-2.5 py-2 font-medium">{t("imports.agent.columns.time")}</th>
+                            <th scope="col" className="px-2.5 py-2 font-medium">{t("imports.agent.columns.kind")}</th>
+                            <th scope="col" className="px-2.5 py-2 font-medium">{t("imports.agent.columns.value")}</th>
+                            <th scope="col" className="px-2.5 py-2 font-medium">{t("imports.agent.columns.unit")}</th>
+                            <th scope="col" className="px-2.5 py-2 font-medium">{t("imports.agent.columns.source")}</th>
+                            <th scope="col" className="px-2.5 py-2 font-medium">{t("imports.agent.columns.confidence")}</th>
+                            <th scope="col" className="px-2.5 py-2 font-medium">{t("imports.agent.columns.evidence")}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {visibleRows.map((item) => (
+                            <tr key={item.id} className={agent.selectedKinds.includes(item.kind) ? "" : "opacity-50"}>
+                              <td className="eh-num whitespace-nowrap px-2.5 py-1.5">
+                                {formatDateTime(item.startAt, locale)}
+                              </td>
+                              <td className="whitespace-nowrap px-2.5 py-1.5">
+                                {t(`healthData.kinds.${item.kind}`, { defaultValue: item.kind })}
+                              </td>
+                              <td className="px-2.5 py-1.5">
+                                <AgentValue proposal={item} locale={locale} t={t} />
+                              </td>
+                              <td className="eh-num whitespace-nowrap px-2.5 py-1.5">{item.unit}</td>
+                              <td className="max-w-[10rem] truncate px-2.5 py-1.5">
+                                {item.source.app || item.source.device || item.source.manufacturer || "—"}
+                              </td>
+                              <td className="eh-num whitespace-nowrap px-2.5 py-1.5">
+                                {Math.round(item.confidence * 100)}%
+                              </td>
+                              <td className="max-w-[14rem] truncate px-2.5 py-1.5 text-muted-foreground">
+                                {item.evidence.file}
+                                {item.evidence.locator ? ` · ${item.evidence.locator}` : ""}
+                                {item.evidence.page ? ` · p.${item.evidence.page}` : ""}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {agent.proposals.length > visibleRows.length ? (
+                      <p className="eh-caption text-muted-foreground">
+                        {t("imports.agent.tableTruncated", {
+                          shown: visibleRows.length,
+                          total: agent.proposals.length,
+                        })}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <Alert>
+                    <Info />
+                    <AlertTitle>{t("imports.agent.noProposalsTitle")}</AlertTitle>
+                    <AlertDescription>{t("imports.agent.noProposalsDesc")}</AlertDescription>
+                  </Alert>
+                )}
+
+                {membersQuery.isError ? (
+                  <Alert variant="destructive">
+                    <AlertTriangle />
+                    <AlertTitle>{t("imports.noMemberTitle")}</AlertTitle>
+                    <AlertDescription>{t("imports.noMember")}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </>
+            ) : null}
+          </section>
+        ) : null}
+
+        <DialogFooter className="flex-wrap gap-2">
+          {agent ? (
+            <>
+              {agent.status === "created" ? (
+                <>
+                  <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button onClick={onRunAgent} disabled={agentBusy}>
+                    {agentBusy ? (
+                      <Loader2 className="animate-spin" data-icon="inline-start" />
+                    ) : (
+                      <Sparkles data-icon="inline-start" />
+                    )}
+                    {t("imports.agent.startParse")}
+                  </Button>
+                </>
+              ) : null}
+              {agent.status === "running" ? (
+                <Button variant="outline" onClick={onStopAgent}>
+                  <StopCircle data-icon="inline-start" />
+                  {t("imports.agent.stop")}
+                </Button>
+              ) : null}
+              {agent.status === "error" ? (
+                <>
+                  <Button variant="outline" onClick={onPickAnother}>
+                    <RotateCcw data-icon="inline-start" />
+                    {t("imports.chooseAnother")}
+                  </Button>
+                  <Button onClick={onRunAgent}>{t("imports.agent.retry")}</Button>
+                </>
+              ) : null}
+              {agent.status === "ready" ? (
+                <>
+                  <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    onClick={() => onCommitAgent(memberId)}
+                    disabled={
+                      agentCommitting ||
+                      !memberId ||
+                      agent.selectedKinds.length === 0
+                    }
+                  >
+                    {agentCommitting ? (
+                      <Loader2 className="animate-spin" data-icon="inline-start" />
+                    ) : (
+                      <Check data-icon="inline-start" />
+                    )}
+                    {agentCommitting ? t("imports.agent.committing") : t("imports.agent.commit")}
+                  </Button>
+                </>
+              ) : null}
+              {agent.status === "committed" ? (
+                <Button onClick={onDone}>{t("imports.health.viewRecords")}</Button>
+              ) : null}
+            </>
+          ) : result ? (
             <Button onClick={onDone}>{t("imports.health.viewRecords")}</Button>
           ) : (
             <>
