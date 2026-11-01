@@ -34,6 +34,9 @@ backend/.data/
 # User-provided files: keep out of version control
 uploads/
 
+# Marketplace signing key (dev or production private key)
+.secrets/
+
 # Local build output
 src-tauri/target/
 backend/build/

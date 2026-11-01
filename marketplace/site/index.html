@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>eclipse health · 本地优先的开源健康数据中心</title>
+  <meta name="description" content="eclipse health 是本地优先的开源健康数据中心：心电分析、趋势记录、报告导出都在本机完成，设备、算法与界面通过模块扩展。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2326251f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%235f7358' stroke-width='2'/%3E%3Ccircle cx='22' cy='10' r='5' fill='%23f6f3ec'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="home">
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health 首页">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="modules.html" data-nav="modules">模块市场</a>
+        <a href="developers.html" data-nav="developers">开发者</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="切换亮色或暗色主题" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="dot" aria-hidden="true"></span>本地优先 · 开源 · 模块化</p>
+          <h1>你的健康数据，<br><span class="accent-text">应该由你掌握。</span></h1>
+          <p class="lede">
+            eclipse health 是一款桌面端健康数据中心：心电分析、趋势记录、报告导出全部在本机完成。
+            设备适配、分析算法与界面都以模块扩展，官方与第三方使用同一套契约。
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/eclipse-health/eclipse-health/releases/latest" rel="noopener">
+              下载 Windows 版
+            </a>
+            <a class="btn btn-ghost" href="modules.html">浏览模块市场</a>
+          </div>
+          <p class="fine-print">
+            下载链接为占位地址，首个 Release 发布后替换。Windows 11 · 免费开源 · 无需注册账号。
+          </p>
+        </div>
+
+        <aside class="release-card" aria-labelledby="release-title">
+          <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>latest release</p>
+          <h2 id="release-title">eclipse health 桌面端</h2>
+          <span class="version">v1.0.0 · 待发布</span>
+          <ul class="release-meta">
+            <li><span>平台</span><span>Windows 11 x64</span></li>
+            <li><span>安装包</span><span>eclipse-health_1.0.0_x64-setup.exe</span></li>
+            <li><span>运行时</span><span>内置 Python，无需另装</span></li>
+            <li><span>校验</span><span>SHA-256 随 Release 公布</span></li>
+            <li><span>许可证</span><span>GPL-3.0-only</span></li>
+          </ul>
+          <a class="btn btn-ghost" href="https://github.com/eclipse-health/eclipse-health/releases" rel="noopener">
+            查看 Release 与校验值
+          </a>
+          <p class="fine-print">安装包与 <code>.ehmod</code> 模块包安装前都会校验 SHA-256；签名模块额外校验作者公钥。</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="sources-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="sources-title">三种来源，一个安装入口</h2>
+          <p>官方、社区与本地文件共用同一套索引与安装校验。风险等级与权限始终在安装前展示。</p>
+        </div>
+        <div class="grid grid-3">
+          <article class="card pillar">
+            <span class="pillar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z"></path>
+                <path d="m9 12 2 2 4-4"></path>
+              </svg>
+            </span>
+            <h3>官方索引</h3>
+            <p>项目维护并签名。包含第一方模块与通过自动扫描的社区模块；官方只代表索引来源，不替代扫描结果。</p>
+            <a class="pillar-link" href="modules.html">进入官方模块 →</a>
+          </article>
+          <article class="card pillar">
+            <span class="pillar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="8" r="3.2"></circle>
+                <path d="M3.5 19c.7-2.9 2.9-4.6 5.5-4.6s4.8 1.7 5.5 4.6"></path>
+                <path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 14.6c1.8.5 3 2 3.5 4.4"></path>
+              </svg>
+            </span>
+            <h3>社区索引</h3>
+            <p>社区维护、独立签名。允许专有/付费模块并显著标注；上架依赖自动扫描，不做日常人工审核。</p>
+            <a class="pillar-link" href="modules.html?source=community">进入社区模块 →</a>
+          </article>
+          <article class="card pillar">
+            <span class="pillar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v12"></path>
+                <path d="m7 10 5 5 5-5"></path>
+                <path d="M4 19h16"></path>
+              </svg>
+            </span>
+            <h3>本地 .ehmod</h3>
+            <p>离线或内网环境直接选择模块包安装。安装前校验路径安全、校验和与 manifest；无需联网。</p>
+            <a class="pillar-link" href="developers.html#package">了解包格式 →</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="features-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="features-title">模块不是插件彩蛋，而是第一公民</h2>
+          <p>核心保持最小：数据、权限、生命周期与审计。其余能力都可以替换。</p>
+        </div>
+        <div class="grid grid-4">
+          <article class="card feature">
+            <h3>独立进程</h3>
+            <p>模块通过 stdio JSON-RPC 与核心通信，不 import 核心代码；崩溃隔离，可随时停用。</p>
+          </article>
+          <article class="card feature">
+            <h3>权限最小化</h3>
+            <p>读记录、写记录、网络、后台运行等权限逐项授权；升级新增权限必须重新确认。</p>
+          </article>
+          <article class="card feature">
+            <h3>声明式 UI</h3>
+            <p>组件与页面只使用受控组件和设计令牌；任意 React/CSS 仅限沙箱与主题作用域。</p>
+          </article>
+          <article class="card feature">
+            <h3>可卸载、可替换</h3>
+            <p>官方功能也以模块交付，预装但可卸载；用户可锁定版本、切换 stable/beta 通道。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="safety-title">
+      <div class="container">
+        <div class="callout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"></path>
+            <path d="M12 8v5M12 16.5v.5"></path>
+          </svg>
+          <div>
+            <h3 id="safety-title">安全边界写在明面上</h3>
+            <p>
+              发布时执行结构、完整性、依赖、静态代码、密钥、权限 diff、网络白名单与模型格式扫描；
+              红色拒绝安装，黄色/橙色允许安装但显著标注。客户端不发送遥测，不上报已安装模块列表，健康数据默认不出本机。
+              所有分析结果均为非医疗器械输出，不用于诊断或治疗。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="cta-band">
+          <div>
+            <h2>做一个模块，交给任何人安装</h2>
+            <p>契约、manifest 示例、权限说明与 PR 流程都已备好。</p>
+          </div>
+          <div class="cta-row" style="margin-top:0">
+            <a class="btn btn-primary" href="developers.html">开始开发</a>
+            <a class="btn btn-ghost" href="modules.html">先看看市场</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · 被忽视的健康。核心以 GPL-3.0-only 开源。</p>
+        <p>本软件与所有模块输出均不构成医疗建议，不是医疗器械，不用于诊断、治疗或替代专业医疗判断。</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">首页</a>
+          <a href="modules.html">模块市场</a>
+          <a href="developers.html">开发者</a>
+          <a href="https://github.com/eclipse-health/eclipse-health" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

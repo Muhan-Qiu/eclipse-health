@@ -1,12 +1,20 @@
 import "./i18n";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, Upload } from "lucide-react";
+import { AlertCircle, ArrowUpCircle, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/common/page-header";
 import {
   MODULE_AUDIT_KEY,
@@ -14,9 +22,7 @@ import {
   MODULE_QUERY_KEY,
   disableModule,
   enableModule,
-  installModulePackage,
   listModules,
-  previewModulePackage,
   startModule,
   stopModule,
   uninstallModule,
@@ -24,10 +30,15 @@ import {
 import { AuditPanel } from "./audit-panel";
 import { moduleErrorMessage } from "./errors";
 import { InstallDialog } from "./install-dialog";
+import {
+  MARKETPLACE_UPDATES_KEY,
+  getMarketplaceUpdates,
+} from "./marketplace/api";
+import type { MarketplaceTab } from "./marketplace/types";
 import { ModuleDetail } from "./module-detail";
 import { ModuleList, type ModuleAction } from "./module-list";
 import { UninstallDialog } from "./uninstall-dialog";
-import type { ModulePreview, ModuleSummary } from "./types";
+import type { ModuleSummary } from "./types";
 
 const TOAST_KEYS: Record<ModuleAction, string> = {
   start: "moduleUi.toast.started",
@@ -52,14 +63,9 @@ function runAction(moduleId: string, action: ModuleAction): Promise<ModuleSummar
 export function ModulesWorkspace() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<ModulePreview | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [installBusy, setInstallBusy] = useState(false);
-
+  const [installOpen, setInstallOpen] = useState(false);
+  const [installTab, setInstallTab] = useState<MarketplaceTab>("official");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [uninstallTarget, setUninstallTarget] = useState<ModuleSummary | null>(null);
 
@@ -73,74 +79,28 @@ export function ModulesWorkspace() {
   });
   const modules = modulesQuery.data ?? [];
 
+  // 市场未配置/后端版本较旧时静默隐藏更新提示，不影响模块页主体。
+  const updatesQuery = useQuery({
+    queryKey: MARKETPLACE_UPDATES_KEY,
+    queryFn: getMarketplaceUpdates,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  const updates = updatesQuery.isError ? [] : (updatesQuery.data ?? []);
+
   function refreshAll() {
     // ["modules"] 覆盖 manifest/audit/contributions/page-contributions 等子键；
     // 单独再失效 contributions，避免未来子键改名后首页卡片与模块页漏刷。
     void queryClient.invalidateQueries({ queryKey: MODULE_QUERY_KEY });
     void queryClient.invalidateQueries({ queryKey: MODULE_CONTRIBUTIONS_KEY });
     void queryClient.invalidateQueries({ queryKey: MODULE_AUDIT_KEY });
+    void queryClient.invalidateQueries({ queryKey: MARKETPLACE_UPDATES_KEY });
     setAuditRefreshToken((value) => value + 1);
   }
 
-  async function loadPreview(file: File) {
-    setPreviewLoading(true);
-    setPreviewError(null);
-    setPreview(null);
-    try {
-      setPreview(await previewModulePackage(file));
-    } catch (error) {
-      setPreviewError(moduleErrorMessage(error, t));
-    } finally {
-      setPreviewLoading(false);
-    }
-  }
-
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".ehmod")) {
-      toast.error(t("moduleUi.errors.invalidPackage"));
-      return;
-    }
-    setPendingFile(file);
-    void loadPreview(file);
-  }
-
-  function closeInstall() {
-    if (installBusy) return;
-    setPendingFile(null);
-    setPreview(null);
-    setPreviewError(null);
-  }
-
-  async function handleInstall(permissions: string[], enable: boolean) {
-    if (!pendingFile) return;
-    setInstallBusy(true);
-    try {
-      const installed = await installModulePackage(pendingFile, {
-        permissions,
-        enable,
-      });
-      const upgrading = preview?.alreadyInstalled === true;
-      toast.success(
-        upgrading
-          ? t("moduleUi.installFlow.successUpgrade", {
-              name: installed.name,
-              version: installed.version,
-            })
-          : t("moduleUi.installFlow.success", { name: installed.name }),
-      );
-      setPendingFile(null);
-      setPreview(null);
-      refreshAll();
-    } catch (error) {
-      toast.error(t("moduleUi.toast.actionFailed"), {
-        description: moduleErrorMessage(error, t),
-      });
-    } finally {
-      setInstallBusy(false);
-    }
+  function openInstall(tab: MarketplaceTab) {
+    setInstallTab(tab);
+    setInstallOpen(true);
   }
 
   const actionMutation = useMutation({
@@ -197,23 +157,11 @@ export function ModulesWorkspace() {
         title={t("modules.title")}
         description={t("modules.description")}
         actions={
-          <Button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={installBusy}
-          >
-            <Upload aria-hidden="true" />
+          <Button type="button" onClick={() => openInstall("official")}>
+            <PackagePlus aria-hidden="true" />
             {t("moduleUi.install")}
           </Button>
         }
-      />
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".ehmod,application/zip"
-        className="sr-only"
-        onChange={handleFileChange}
       />
 
       {modulesQuery.isError ? (
@@ -232,6 +180,55 @@ export function ModulesWorkspace() {
             </Button>
           </AlertDescription>
         </Alert>
+      ) : null}
+
+      {updates.length > 0 ? (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="eh-h3 flex items-center gap-2">
+              <ArrowUpCircle className="size-4" aria-hidden="true" />
+              {t("moduleUi.marketplace.updates.title")}
+            </CardTitle>
+            <CardDescription>
+              {t("moduleUi.marketplace.updates.description", {
+                count: updates.length,
+              })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ul className="divide-y divide-border border-t border-border">
+              {updates.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-medium">{item.name}</span>
+                      <Badge className="font-normal">
+                        {t("moduleUi.marketplace.updateBadge")}
+                      </Badge>
+                      <span className="eh-caption text-muted-foreground">
+                        v{item.installedVersion} → v{item.availableVersion}
+                      </span>
+                    </div>
+                    <code className="eh-caption block truncate text-muted-foreground">
+                      {item.id}
+                    </code>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openInstall(item.source ?? "official")}
+                  >
+                    {t("moduleUi.marketplace.updates.button")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       ) : null}
 
       <ModuleList
@@ -256,16 +253,11 @@ export function ModulesWorkspace() {
       </div>
 
       <InstallDialog
-        open={pendingFile !== null}
-        preview={preview}
-        loading={previewLoading}
-        error={previewError}
-        busy={installBusy}
-        onClose={closeInstall}
-        onRetry={() => {
-          if (pendingFile) void loadPreview(pendingFile);
-        }}
-        onConfirm={(permissions, enable) => void handleInstall(permissions, enable)}
+        open={installOpen}
+        installed={modules}
+        initialTab={installTab}
+        onClose={() => setInstallOpen(false)}
+        onInstalled={refreshAll}
       />
 
       <ModuleDetail

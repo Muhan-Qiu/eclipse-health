@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>模块市场 · eclipse health</title>
+  <meta name="description" content="浏览 eclipse health 官方与社区模块：设备适配、分析算法、数据源、导出器与界面组件。安装前查看权限、许可证、依赖与扫描结果。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2326251f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%235f7358' stroke-width='2'/%3E%3Ccircle cx='22' cy='10' r='5' fill='%23f6f3ec'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="modules">
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health 首页">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="modules.html" data-nav="modules">模块市场</a>
+        <a href="developers.html" data-nav="developers">开发者</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="切换亮色或暗色主题" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-head">
+      <div class="container">
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>registry · static signed index</p>
+        <h1>模块市场</h1>
+        <p>
+          官方与社区索引来自静态签名 JSON。安装前请查看权限、依赖、许可证与扫描等级；
+          社区模块未经过人工审核，风险自担。
+        </p>
+
+        <div class="market-toolbar">
+          <div class="tabs" role="tablist" aria-label="索引来源">
+            <button class="tab" type="button" role="tab" id="tab-official" data-source="official" aria-selected="true" aria-controls="module-results">官方索引</button>
+            <button class="tab" type="button" role="tab" id="tab-community" data-source="community" aria-selected="false" aria-controls="module-results" tabindex="-1">社区索引</button>
+          </div>
+          <div class="search-row">
+            <label class="search-field">
+              <span class="visually-hidden">搜索模块</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m16.5 16.5 4 4"></path>
+              </svg>
+              <input type="search" id="module-search" placeholder="搜索名称、ID、作者或标签" autocomplete="off" spellcheck="false">
+            </label>
+            <span class="result-count" id="result-count" aria-live="polite"></span>
+          </div>
+          <div class="chip-row" id="category-chips" aria-label="按分类筛选"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-head" style="padding-top:1.2rem" aria-live="polite">
+      <div class="container">
+        <noscript>
+          <div class="state-box">
+            <h2>需要启用 JavaScript</h2>
+            <p>模块市场在浏览器内读取同源的静态索引 <code>../official/index.json</code> 与 <code>../community/index.json</code>。启用 JavaScript 后刷新即可；本站不加载任何第三方脚本。</p>
+          </div>
+        </noscript>
+        <div class="module-grid" id="module-results" role="tabpanel" aria-labelledby="tab-official"></div>
+        <p class="fine-print" id="index-meta"></p>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="module-dialog" id="module-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <div style="min-width:0">
+          <span class="module-id" id="dialog-id"></span>
+          <h2 id="dialog-title">模块详情</h2>
+          <div class="module-meta" id="dialog-badges"></div>
+        </div>
+        <button class="dialog-close" type="button" id="dialog-close" aria-label="关闭详情">×</button>
+      </div>
+      <div class="dialog-body" id="dialog-body"></div>
+      <div class="dialog-foot" id="dialog-foot"></div>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · 核心以 GPL-3.0-only 开源。</p>
+        <p>模块分析结果不构成医疗建议，不是医疗器械，不用于诊断、治疗或替代专业医疗判断。</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">首页</a>
+          <a href="modules.html">模块市场</a>
+          <a href="developers.html">开发者</a>
+          <a href="https://github.com/eclipse-health/eclipse-health" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -111,6 +111,80 @@ const zh = {
       successUpgrade: "已更新 {{name}} 至 {{version}}",
       newBadge: "新增",
     },
+    marketplace: {
+      title: "安装模块",
+      description:
+        "从官方市场或社区市场安装，也可以选择本地 .ehmod 文件；安装前会确认权限。",
+      tabs: {
+        official: "官方市场",
+        community: "社区市场",
+        local: "本地文件",
+      },
+      searchPlaceholder: "搜索模块名称、作者或描述",
+      category: "分类",
+      allCategories: "全部分类",
+      refresh: "刷新市场",
+      verified: "已验签",
+      unreviewed: "未审核",
+      unreviewedHint:
+        "社区索引中的模块未经审核，源码、权限与行为由作者自行负责；请只安装你信任的模块。",
+      permissionCount: "{{count}} 项权限",
+      installedBadge: "已安装",
+      updateBadge: "可更新",
+      viewDetails: "查看详情",
+      install: "安装",
+      update: "更新",
+      notConfiguredTitle: "市场地址未配置",
+      notConfiguredDesc:
+        "本地后端还没有配置{{source}}地址。可以改用本地文件安装，或让管理员配置市场源。",
+      loadError: "无法加载市场",
+      empty: "没有找到模块",
+      emptyDesc: "试试其他关键词或分类。",
+      details: {
+        permissions: "权限（{{count}}）",
+        noPermissions: "该模块未声明任何权限。",
+        dependencies: "依赖（{{count}}）",
+        noDependencies: "无额外依赖。",
+        dependencyHint: "首次安装可能需要联网下载依赖，请保持网络连接。",
+        installing: "正在下载、校验并安装…",
+        installFailed: "安装失败",
+        communityWarning:
+          "这是社区模块，未经审核。安装前请核对仓库、权限和依赖，风险自担。",
+        size: "包大小",
+        minCore: "最低核心版本",
+        categories: "分类",
+      },
+      errors: {
+        notConfigured: "市场地址未配置，请先配置官方/社区市场源。",
+        signatureInvalid: "市场索引验签失败，已阻止安装；请联系市场源维护者。",
+        downloadFailed: "模块下载失败，请检查网络或稍后重试。",
+        fetchFailed: "无法读取市场索引，请检查网络或市场地址。",
+        indexInvalid: "市场索引格式无效，请联系市场源维护者。",
+        downloadRejected: "市场返回了不允许的下载地址，已拒绝安装。",
+        checksum: "模块包大小或 sha256 与索引不一致，已拒绝安装。",
+        notFound: "索引中找不到该模块或版本。",
+        incompatibleCore: "该模块要求更高版本的核心，请升级后再安装。",
+        tooLarge: "模块包或索引超过大小上限。",
+        sourceInvalid: "市场来源无效，只能是官方或社区。",
+        unavailable:
+          "当前后端不支持应用内市场，请升级后重试，或改用本地文件安装。",
+      },
+      toast: {
+        installed: "已安装 {{name}}",
+        updated: "已更新 {{name}} 至 {{version}}",
+      },
+      updates: {
+        title: "模块更新",
+        description: "市场中有 {{count}} 个模块可更新；更新前会再次确认权限。",
+        button: "查看更新",
+      },
+      local: {
+        title: "从本地文件安装",
+        description:
+          "选择 .ehmod 文件，确认模块信息与权限后才会写入本机；安装前不会执行模块代码。",
+        choose: "选择 .ehmod",
+      },
+    },
     permissions: {
       title: "权限",
       grantedCount: "{{granted}} / {{requested}} 已授予",
@@ -370,6 +444,91 @@ const en = {
       success: "Installed {{name}}",
       successUpgrade: "Updated {{name}} to {{version}}",
       newBadge: "New",
+    },
+    marketplace: {
+      title: "Install module",
+      description:
+        "Install from the official or community marketplace, or pick a local .ehmod file. Permissions are confirmed before anything is written.",
+      tabs: {
+        official: "Official",
+        community: "Community",
+        local: "Local file",
+      },
+      searchPlaceholder: "Search name, author or description",
+      category: "Category",
+      allCategories: "All categories",
+      refresh: "Refresh marketplace",
+      verified: "Signed",
+      unreviewed: "Unreviewed",
+      unreviewedHint:
+        "Community index modules are not reviewed; their code, permissions and behaviour are the author's responsibility. Only install modules you trust.",
+      permissionCount: "{{count}} permissions",
+      installedBadge: "Installed",
+      updateBadge: "Update available",
+      viewDetails: "View details",
+      install: "Install",
+      update: "Update",
+      notConfiguredTitle: "Marketplace not configured",
+      notConfiguredDesc:
+        "The local backend has no {{source}} URL configured. Install from a local file instead, or ask your administrator to configure a marketplace source.",
+      loadError: "Cannot load the marketplace",
+      empty: "No modules found",
+      emptyDesc: "Try another keyword or category.",
+      details: {
+        permissions: "Permissions ({{count}})",
+        noPermissions: "This module requests no permissions.",
+        dependencies: "Dependencies ({{count}})",
+        noDependencies: "No extra dependencies.",
+        dependencyHint:
+          "The first install may download dependencies; keep a network connection available.",
+        installing: "Downloading, verifying and installing…",
+        installFailed: "Installation failed",
+        communityWarning:
+          "This is an unreviewed community module. Check the repository, permissions and dependencies before installing; you accept the risk.",
+        size: "Package size",
+        minCore: "Minimum core version",
+        categories: "Categories",
+      },
+      errors: {
+        notConfigured:
+          "The marketplace is not configured. Set up an official/community source first.",
+        signatureInvalid:
+          "Index signature verification failed; the install was blocked. Contact the marketplace maintainer.",
+        downloadFailed:
+          "Module download failed. Check your network and try again later.",
+        fetchFailed:
+          "Cannot read the marketplace index. Check your network and marketplace URL.",
+        indexInvalid:
+          "The marketplace index is malformed. Contact the marketplace maintainer.",
+        downloadRejected:
+          "The marketplace returned a disallowed download URL; the install was rejected.",
+        checksum:
+          "The package size or sha256 does not match the index; the install was rejected.",
+        notFound: "The index has no such module or version.",
+        incompatibleCore:
+          "This module requires a newer core version. Update the app first.",
+        tooLarge: "The module package or index exceeds the size limit.",
+        sourceInvalid:
+          "Invalid marketplace source; use official or community.",
+        unavailable:
+          "This backend does not support the in-app marketplace. Update it, or install from a local file.",
+      },
+      toast: {
+        installed: "Installed {{name}}",
+        updated: "Updated {{name}} to {{version}}",
+      },
+      updates: {
+        title: "Module updates",
+        description:
+          "{{count}} modules have updates. Permissions are confirmed again before updating.",
+        button: "View update",
+      },
+      local: {
+        title: "Install from a local file",
+        description:
+          "Pick a .ehmod file. Nothing is written until you confirm the module details and permissions; module code is not executed during preview.",
+        choose: "Choose .ehmod",
+      },
     },
     permissions: {
       title: "Permissions",

@@ -1,0 +1,6 @@
+# eclipse health marketplace public keys
+# keyId -> Ed25519 public key (PEM), used by the desktop app to verify indexes
+keyId=dev-2026
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAmSNSkQJtlj68g8Bk5o6CyHesDX738hE1spyYvssF9Co=
+-----END PUBLIC KEY-----

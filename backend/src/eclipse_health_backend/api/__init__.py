@@ -125,4 +125,18 @@ _mount_optional_router("memory")
 _mount_optional_router("coach")
 _mount_optional_router("ohs")
 
+
+def _mount_marketplace_router(router: APIRouter) -> None:
+    """H8：市场路由自带 ``/marketplace``；缺失时不拖垮核心。"""
+    try:
+        from ..marketplace.api import router as marketplace_router
+    except Exception:  # noqa: BLE001 - 市场后端未完成/依赖缺失时跳过
+        logger.info("marketplace router not available; skipping /api/v1/marketplace")
+        return
+    router.include_router(marketplace_router, prefix="/marketplace")
+    logger.info("marketplace router mounted at /api/v1/marketplace")
+
+
+_mount_marketplace_router(api_router)
+
 __all__ = ["api_router"]

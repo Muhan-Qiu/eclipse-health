@@ -1,0 +1,129 @@
+name: publish-marketplace
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "modules/official/**"
+      - "dist/modules/**"
+      - "marketplace/community/**"
+      - "marketplace/site/**"
+      - "scripts/build_marketplace_index.py"
+      - "scripts/sign_marketplace_index.py"
+      - ".github/scripts/build_marketplace_index.py"
+      - ".github/workflows/publish-marketplace.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publish-marketplace
+  cancel-in-progress: false
+
+jobs:
+  build-index:
+    name: Build and check indexes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install signing library
+        run: python -m pip install --disable-pip-version-check cryptography
+
+      - name: Pack official modules when dist is absent
+        run: |
+          set -euo pipefail
+          if [ -f dist/modules/index.json ]; then
+            echo "using existing dist/modules/index.json"
+          else
+            # Stdlib-only packer: the backend one imports the full module kernel.
+            python .github/scripts/pack_official_modules.py
+          fi
+
+      - name: Build indexes
+        env:
+          # CI never receives the production key. The H8 builder may create a
+          # throwaway dev key; maintainers re-sign offline before publishing.
+          EH_MARKETPLACE_KEY_ID: ${{ vars.MARKETPLACE_KEY_ID || 'dev-unsafe' }}
+        run: |
+          set -euo pipefail
+          if [ -f scripts/build_marketplace_index.py ]; then
+            python scripts/build_marketplace_index.py
+          else
+            echo "::warning::scripts/build_marketplace_index.py is missing; using fallback builder"
+            python .github/scripts/build_marketplace_index.py --unsigned
+          fi
+
+      - name: Check index JSON
+        run: |
+          set -euo pipefail
+          python -m json.tool marketplace/official/index.json > /dev/null
+          python -m json.tool marketplace/community/index.json > /dev/null
+          echo "indexes parse as JSON"
+
+      - name: Assemble static site
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site/site _site/official _site/community _site/modules
+          cp -R marketplace/site/. _site/site/
+          cp marketplace/official/index.json _site/official/index.json
+          cp marketplace/community/index.json _site/community/index.json
+          if [ -d dist/modules ]; then
+            find dist/modules -maxdepth 1 -name '*.ehmod' -exec cp {} _site/modules/ \;
+          fi
+          if [ -d marketplace/modules ]; then
+            cp -R marketplace/modules/. _site/modules/
+          fi
+          if [ -f marketplace/CNAME ]; then
+            cp marketplace/CNAME _site/CNAME
+          fi
+          printf '%s\n' '<!doctype html>' '<html lang="zh-CN"><head><meta charset="utf-8">' \
+            '<meta http-equiv="refresh" content="0; url=site/"><title>eclipse health</title></head>' \
+            '<body><p><a href="site/">进入 eclipse health 模块站</a></p></body></html>' \
+            > _site/index.html
+
+      - name: Warn about signing
+        run: |
+          echo "::notice::CI indexes are dev-signed or unsigned. Run scripts/sign_marketplace_index.py offline with the production key before serving them to release builds."
+
+      - name: Configure Pages
+        if: github.event_name == 'push' && vars.MARKETPLACE_PUBLISH == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && vars.MARKETPLACE_PUBLISH == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Upload index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-index
+          path: |
+            _site/official/index.json
+            _site/community/index.json
+          retention-days: 30
+
+  deploy:
+    name: Deploy GitHub Pages
+    needs: build-index
+    if: github.event_name == 'push' && vars.MARKETPLACE_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
