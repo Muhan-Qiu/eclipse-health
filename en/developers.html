@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Developer docs · eclipse health modules</title>
+  <meta name="description" content="eclipse health module development guide: contract v2, .ehmod package layout, module.json, permissions, dependencies, testing and the GitHub PR flow.">
+  <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/developers.html">
+  <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/developers.html">
+  <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/developers.html">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2326251f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%235f7358' stroke-width='2'/%3E%3Ccircle cx='22' cy='10' r='5' fill='%23f6f3ec'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="developers" data-depth="2">
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="modules.html" data-nav="modules">Modules</a>
+        <a href="developers.html" data-nav="developers">Developers</a>
+        <a class="lang-switch" href="../developers.html" hreflang="zh-CN" lang="zh-CN" aria-label="切换到中文">中文</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch light or dark theme" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <div class="docs-layout">
+        <aside class="docs-toc" aria-label="Documentation contents">
+          <h2>Contents</h2>
+          <ol>
+            <li><a href="#contract">Contract overview</a></li>
+            <li><a href="#package">.ehmod package layout</a></li>
+            <li><a href="#manifest">module.json example</a></li>
+            <li><a href="#permissions">Permissions</a></li>
+            <li><a href="#dependencies">Dependencies and network</a></li>
+            <li><a href="#testing">Test checklist</a></li>
+            <li><a href="#submit">Submitting a PR</a></li>
+            <li><a href="#license">Licences and attribution</a></li>
+            <li><a href="#safety">Security and non-diagnostic notice</a></li>
+          </ol>
+        </aside>
+
+        <div class="docs-main">
+          <div class="page-head" style="padding-top:0">
+            <p class="eyebrow"><span class="dot" aria-hidden="true"></span>module contract v2</p>
+            <h1>Build a module</h1>
+            <p class="lede">
+              A module is a separate Python process that talks to the core over stdio JSON-RPC. The core never imports
+              module code; data, permissions and UI all pass through restricted interfaces. This page is the shortest
+              path that works.
+            </p>
+            <p class="fine-print">
+              Sources of truth: <code>schemas/module.schema.json</code> and <code>docs/MODULE_CONTRACT_V2.md</code>.
+              If documentation and implementation disagree, the schema wins.
+            </p>
+          </div>
+
+          <section id="contract">
+            <h2>1 · Contract overview</h2>
+            <p>The contract has a transport layer and a contribution layer. Transport makes a module startable, callable and auditable; contributions tell the core what the module offers.</p>
+            <div class="grid grid-3" style="margin-bottom:1.2rem">
+              <article class="card feature">
+                <h3>Transport: JSON-RPC over stdio</h3>
+                <p>One JSON document per line. Request <code>{"jsonrpc":"2.0","id":1,"method":"...","params":{}}</code>; a single message is capped at 4 MB, and large results are written to a temp file with a path and sha256.</p>
+              </article>
+              <article class="card feature">
+                <h3>Lifecycle</h3>
+                <p>discover → verify → install → start → initialize → operate. The core injects <code>ECLIPSE_MODULE_ID</code>, <code>ECLIPSE_RPC_TOKEN</code> and <code>ECLIPSE_PERMISSIONS</code>.</p>
+              </article>
+              <article class="card feature">
+                <h3>Contributions are declarative</h3>
+                <p><code>contributes</code> is validated at install time. UI renders controlled components only; arbitrary React/JSX, inline scripts and iframes are forbidden.</p>
+              </article>
+            </div>
+            <p>
+              The module type determines which contributions are required: <span class="tag">device-adapter</span> needs <code>importFormats</code>;
+              <span class="tag">signal-engine</span> needs <code>pipelines</code>; <span class="tag">analysis-model</span> needs <code>models</code>;
+              <span class="tag">dashboard-widget</span> needs <code>ui.widgets</code>; <span class="tag">exporter</span> needs <code>exporters</code>;
+              <span class="tag">ai-tool</span> needs <code>tools</code>.
+            </p>
+          </section>
+
+          <section id="package">
+            <h2>2 · .ehmod package layout</h2>
+            <p>An <code>.ehmod</code> is a ZIP archive. Installing checks for path traversal, symlinks, file count and unpacked size.</p>
+            <div class="code-block">
+              <div class="code-block-head"><span>Directory layout</span></div>
+              <pre><code>my-module/
+├── module.json          # required: manifest
+├── src/
+│   └── main.py          # required: the file entry.python points at
+├── models/              # optional: ONNX / safetensors weights
+├── ui/                  # optional: declarative UI resources
+├── LICENSE              # required: full licence text
+├── NOTICE               # required when Apache-2.0 and similar licences demand it
+├── README.md            # recommended: usage, permissions, data sources
+└── checksums.json       # generated at pack time: per-file sha256</code></pre>
+            </div>
+            <ul class="check-list">
+              <li>Installed to <code>&lt;dataDir&gt;/modules/&lt;id&gt;/&lt;version&gt;/</code>; the directory is treated as read-only.</li>
+              <li>Single file ≤ 64 MB, unpacked ≤ 256 MB; symlinks, absolute paths, <code>..</code> and Windows reserved device names are rejected.</li>
+              <li>Release packages must include <code>checksums.json</code>; files are verified at install, and a missing file degrades to a warning.</li>
+              <li>Never pack <code>venv/</code>, <code>__pycache__/</code>, <code>.git/</code> or any secret.</li>
+            </ul>
+          </section>
+
+          <section id="manifest">
+            <h2>3 · module.json example</h2>
+            <p>This manifest validates against <code>schemas/module.schema.json</code>. Change the ID and entry point and it is ready to use.</p>
+            <div class="code-block">
+              <div class="code-block-head">
+                <span>module.json · schema 1.0</span>
+                <button class="copy-btn" type="button" data-copy-target="manifest-example">Copy</button>
+              </div>
+              <pre><code id="manifest-example" data-json="module-manifest">{
+  "schemaVersion": "1.0",
+  "id": "io.github.example.heart-rate",
+  "name": "Heart Rate Summary",
+  "description": "Summarize heart rate from user-selected CSV files. Not a medical device.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 &lt;2.0" },
+  "type": "ai-tool",
+  "author": { "name": "Example Author", "url": "https://github.com/example" },
+  "license": "MIT",
+  "homepage": "https://github.com/example/heart-rate",
+  "repository": "https://github.com/example/heart-rate",
+  "permissions": ["files:user-selected", "records:write"],
+  "dependencies": ["numpy>=2.0,<3"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "tools": [
+      {
+        "id": "hr.summary",
+        "name": "Heart rate summary",
+        "description": "Return mean and max heart rate from a CSV file.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "path": { "type": "string" } },
+          "required": ["path"]
+        }
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "hr-latest",
+          "title": "Latest heart rate",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "summary" },
+          "view": { "type": "stat", "valuePath": "mean", "unit": "bpm" }
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "stable"
+}</code></pre>
+            </div>
+            <p>Community module IDs must be <code>io.github.&lt;GitHub username or org&gt;.&lt;module-name&gt;</code>; the <code>org.eclipsehealth.*</code> prefix is reserved for project maintainers.</p>
+          </section>
+
+          <section id="permissions">
+            <h2>4 · Permissions</h2>
+            <p>Request only the minimum set you actually need. New permissions on upgrade must be re-approved by the user and are never inherited automatically.</p>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Scope</th><th>Risk</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><code>records:read</code></td><td>Low</td><td>Read records, measurements and analysis results</td></tr>
+                  <tr><td><code>records:write</code></td><td>Medium</td><td>Create or update records</td></tr>
+                  <tr><td><code>records:delete</code></td><td>High</td><td>Delete records; never granted by default</td></tr>
+                  <tr><td><code>files:user-selected</code></td><td>Low</td><td>Read files the user explicitly chooses</td></tr>
+                  <tr><td><code>files:export</code></td><td>Medium</td><td>Write to a directory the user confirms</td></tr>
+                  <tr><td><code>network</code></td><td>High</td><td>Access hosts listed in <code>allowedHosts</code></td></tr>
+                  <tr><td><code>llm</code></td><td>Medium</td><td>Call the LLM the user configured</td></tr>
+                  <tr><td><code>models:download</code></td><td>Medium</td><td>Download model weights</td></tr>
+                  <tr><td><code>ui:custom</code></td><td>High</td><td>Custom UI inside a sandbox</td></tr>
+                  <tr><td><code>system:notify</code></td><td>Low</td><td>Send system notifications</td></tr>
+                  <tr><td><code>system:background</code></td><td>Medium</td><td>Keep running when minimised</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Declaring <code>network</code> requires <code>allowedHosts</code>, and every host must be a concrete domain — the wildcard <code>*</code> is forbidden.</p>
+          </section>
+
+          <section id="dependencies">
+            <h2>5 · Dependencies and network</h2>
+            <ul>
+              <li>Each module gets its own venv; <code>dependencies</code> is a PEP 508 list installed into that environment.</li>
+              <li>Only package names, extras, version ranges and environment markers are accepted. <strong>Rejected</strong>: URLs (<code>@</code>), local paths, <code>file:</code> and <code>-e</code> forms.</li>
+              <li>Pin versions or set a sensible upper bound so upstream major releases cannot break you; the first install goes online and the user must know.</li>
+              <li><code>models</code> allows <code>onnx</code> / <code>safetensors</code> / <code>remote</code> only; pickle is forbidden. Remote weights must carry a sha256.</li>
+              <li>API keys and tokens go into the OS keychain, never into logs, the manifest or the package.</li>
+            </ul>
+            <div class="code-block">
+              <div class="code-block-head">
+                <span>Accepted and rejected dependency forms</span>
+              </div>
+              <pre><code># accepted
+"numpy>=2.0,<3"
+"heartpy==1.2.7"
+"pandas[performance]>=2.2 ; python_version >= '3.12'"
+
+# rejected (CI and the installer both block them)
+"https://example.com/pkg.whl"
+"git+https://github.com/owner/repo"
+"-e ../local-package"
+"../../somewhere"</code></pre>
+            </div>
+          </section>
+
+          <section id="testing">
+            <h2>6 · Test checklist</h2>
+            <p>Complete at least these checks before opening a PR; CI re-runs the structural and packaging validation.</p>
+            <ul class="check-list">
+              <li><code>module.json</code> validates against <code>schemas/module.schema.json</code>.</li>
+              <li>Empty stdin, unknown methods and invalid params all return structured JSON-RPC errors — no crash, no hang.</li>
+              <li>After startup, send <code>initialize</code> and confirm it returns <code>moduleId</code> and <code>apiVersion</code>.</li>
+              <li>Run the main path against a temp directory; never read real user health data and never log waveforms or filenames.</li>
+              <li>Offline, timeout and empty-data cases return clear error codes; large results use temp files.</li>
+              <li>After packing, unpack in a clean directory and run once to confirm no paths outside the package are required.</li>
+            </ul>
+            <div class="code-block">
+              <div class="code-block-head"><span>Local validation (example paths)</span></div>
+              <pre><code>python -m json.tool module.json
+python -m pip install jsonschema
+python .github/scripts/validate_module.py marketplace/submissions/my-module</code></pre>
+            </div>
+          </section>
+
+          <section id="submit">
+            <h2>7 · Submitting a PR</h2>
+            <ol class="steps">
+              <li>Fork the repository and add <code>module.json</code>, <code>src/</code>, <code>LICENSE</code> (plus <code>NOTICE</code> for Apache-2.0) and <code>README.md</code> under <code>marketplace/submissions/&lt;module-id&gt;/</code>.</li>
+              <li>Run the validator and packer locally; confirm the <code>.ehmod</code> unpacks and its checksums match.</li>
+              <li>Fill in the PR template (<code>.github/PULL_REQUEST_TEMPLATE/module.md</code>): author, licence, upstream, permissions, tests, screenshots and the non-diagnostic notice.</li>
+              <li>CI <code>validate-module</code> checks schema, path safety, the licence allowlist, NOTICE and package integrity; a failure blocks merge.</li>
+              <li>After merge, a maintainer uploads the <code>.ehmod</code> to GitHub Releases, then regenerates and signs the index offline.</li>
+            </ol>
+            <p>
+              <a class="btn btn-primary btn-small" href="https://github.com/Muhan-Qiu/ecg-agent/pulls" rel="noopener">Open GitHub Pull Requests</a>
+            </p>
+            <p class="fine-print">Submission checklist: <code>marketplace/CONTRIBUTING.md</code> in the repository.</p>
+          </section>
+
+          <section id="license">
+            <h2>8 · Licences and attribution</h2>
+            <p>The official index accepts OSI licences only; the community index allows proprietary or paid modules but they must be clearly labelled. The CI allowlist rejects AGPL and unlicensed submissions.</p>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Licence</th><th>Official index</th><th>Requirement</th></tr></thead>
+                <tbody>
+                  <tr><td>MIT / ISC / BSD-2-Clause / BSD-3-Clause</td><td>Allowed</td><td>Keep the copyright notice and full licence text</td></tr>
+                  <tr><td>Apache-2.0</td><td>Allowed</td><td>Keep LICENSE and NOTICE, mark modifications</td></tr>
+                  <tr><td>MPL-2.0</td><td>Allowed</td><td>Modified files must be published</td></tr>
+                  <tr><td>GPL-2.0 / GPL-3.0 / LGPL</td><td>Allowed</td><td>Isolated over stdio JSON-RPC; never statically linked into the core</td></tr>
+                  <tr><td>AGPL / SSPL / BUSL / no licence</td><td>Rejected</td><td>Conflicts with the distribution model or right to redistribute cannot be established</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <ul>
+              <li>Keep upstream LICENSE/NOTICE files and never strip copyright headers; state the upstream repository, original copyright holders and your changes in <code>README.md</code> and the description.</li>
+              <li>The author field names the adapter maintainer and must not imply upstream endorses your module.</li>
+              <li>Prefer wrappers (subprocess or library calls). If you must patch, keep the original licence and publish the modified source.</li>
+              <li>Record model weights and code licences separately: source URL, SPDX identifier, sha256 and scope.</li>
+            </ul>
+          </section>
+
+          <section id="safety">
+            <h2>9 · Security and non-diagnostic notice</h2>
+            <div class="callout" style="margin-bottom:1.2rem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"></path>
+                <path d="M12 8v5M12 16.5v.5"></path>
+              </svg>
+              <div>
+                <h3>Put this in every module description</h3>
+                <p>"This module is not a medical device. Its output is not for diagnosis or treatment." Any description claiming diagnosis, cure or replacement of a doctor is flagged as high risk and may be rejected.</p>
+              </div>
+            </div>
+            <ul>
+              <li>Never pack API keys, private keys or tokens; CI scans for common secret patterns.</li>
+              <li>No downloading and executing arbitrary code, no obfuscation, no <code>pickle</code> deserialisation and no suspicious network requests.</li>
+              <li>Health data stays local by default; going online requires <code>network</code> and is explained permission by permission on the install page.</li>
+              <li>Logs must not contain waveforms, user notes or original filenames — IDs and hashes only.</li>
+              <li>Community modules are not manually reviewed: the install page shows "unreviewed, use at your own risk".</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · The core is open source under GPL-3.0-only.</p>
+        <p>Module output is not medical advice, not a medical device, and not for diagnosis, treatment, or as a substitute for professional medical judgement.</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="modules.html">Modules</a>
+          <a href="developers.html">Developers</a>
+          <a href="../developers.html" hreflang="zh-CN" lang="zh-CN">中文</a>
+          <a href="https://github.com/Muhan-Qiu/ecg-agent" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../app.js" defer></script>
+</body>
+</html>

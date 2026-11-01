@@ -6,6 +6,9 @@
   <meta name="color-scheme" content="light dark">
   <title>eclipse health · 本地优先的开源健康数据中心</title>
   <meta name="description" content="eclipse health 是本地优先的开源健康数据中心：心电分析、趋势记录、报告导出都在本机完成，设备、算法与界面通过模块扩展。">
+  <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/">
+  <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/">
+  <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2326251f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%235f7358' stroke-width='2'/%3E%3Ccircle cx='22' cy='10' r='5' fill='%23f6f3ec'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
   <script>
@@ -21,7 +24,7 @@
     })();
   </script>
 </head>
-<body data-page="home">
+<body data-page="home" data-depth="1">
   <a class="skip-link" href="#main">跳到主要内容</a>
 
   <header class="site-header">
@@ -35,6 +38,7 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="modules.html" data-nav="modules">模块市场</a>
         <a href="developers.html" data-nav="developers">开发者</a>
+        <a class="lang-switch" href="en/index.html" hreflang="en" lang="en" aria-label="Switch to English">EN</a>
         <button class="theme-toggle" type="button" id="theme-toggle" aria-label="切换亮色或暗色主题" aria-pressed="false">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
@@ -59,23 +63,23 @@
             设备适配、分析算法与界面都以模块扩展，官方与第三方使用同一套契约。
           </p>
           <div class="cta-row">
-            <a class="btn btn-primary" href="https://github.com/Muhan-Qiu/ecg-agent/releases/latest" rel="noopener">
-              下载 Windows 版
+            <a class="btn btn-primary" href="https://github.com/Muhan-Qiu/ecg-agent/releases" rel="noopener">
+              前往 GitHub Releases
             </a>
             <a class="btn btn-ghost" href="modules.html">浏览模块市场</a>
           </div>
           <p class="fine-print">
-            下载链接为占位地址，首个 Release 发布后替换。Windows 11 · 免费开源 · 无需注册账号。
+            0.1.0 安装包即将上传到 Releases；上传后此入口直接可用。Windows 10/11 · 免费开源 · 无需注册账号。
           </p>
         </div>
 
         <aside class="release-card" aria-labelledby="release-title">
           <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>latest release</p>
           <h2 id="release-title">eclipse health 桌面端</h2>
-          <span class="version">v1.0.0 · 待发布</span>
+          <span class="version">v0.1.0 · 安装包待上传</span>
           <ul class="release-meta">
-            <li><span>平台</span><span>Windows 11 x64</span></li>
-            <li><span>安装包</span><span>eclipse-health_1.0.0_x64-setup.exe</span></li>
+            <li><span>平台</span><span>Windows 10/11 x64</span></li>
+            <li><span>安装包</span><span>eclipse health_0.1.0_x64-setup.exe</span></li>
             <li><span>运行时</span><span>内置 Python，无需另装</span></li>
             <li><span>校验</span><span>SHA-256 随 Release 公布</span></li>
             <li><span>许可证</span><span>GPL-3.0-only</span></li>
@@ -85,6 +89,99 @@
           </a>
           <p class="fine-print">安装包与 <code>.ehmod</code> 模块包安装前都会校验 SHA-256；签名模块额外校验作者公钥。</p>
         </aside>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="capabilities-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="capabilities-title">一次导入，从波形看到报告</h2>
+          <p>从 ECG 和健康数据导入，到分析、记录、趋势与报告，全部在本机完成。</p>
+        </div>
+        <div class="grid grid-3">
+          <article class="card feature">
+            <h3>心电导入</h3>
+            <p>支持 WFDB、CSV、EDF、SCP-ECG，以及 Apple 健康、Samsung、华为手表导出的 ECG（厂商格式标为实验性）。拖拽导入，导入前可预览与校正参数。</p>
+          </article>
+          <article class="card feature">
+            <h3>心搏分析</h3>
+            <p>内置 Cardia 2.0 引擎输出信号质量、R 峰、逐搏 N / SVEB / VEB / F 分类与心率、间期测量；可切换引擎重新分析。</p>
+          </article>
+          <article class="card feature">
+            <h3>记录与趋势</h3>
+            <p>记录库按时间、设备与标签筛选，波形可缩放平移；趋势页看指标变化，两条记录可以并排对比。</p>
+          </article>
+          <article class="card feature">
+            <h3>报告与分享</h3>
+            <p>生成 PDF / PNG 报告，支持脱敏与「非诊断」水印，报告保存在本机，也可以导出分享。</p>
+          </article>
+          <article class="card feature">
+            <h3>AI 助手（可选）</h3>
+            <p>可接 OpenAI、Anthropic 或本地 Ollama；API Key 存在 Windows 凭据管理器，只发送摘要与测量，工具调用过程可见。</p>
+          </article>
+          <article class="card feature">
+            <h3>本地与开放</h3>
+            <p>数据存本机 SQLite，不做遥测；提供本机 REST、OpenAI 兼容端点与 MCP，供其他应用和 AI 调用。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="official-modules-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="official-modules-title">自研分析模块</h2>
+          <p>官方模块与第三方使用同一套契约。这里先讲清楚它们各自能做什么，再谈模型。</p>
+        </div>
+        <div class="spotlight-grid">
+          <article class="spotlight-card">
+            <div class="spotlight-head">
+              <h3>Cardia 2.0 · 内置心搏分类</h3>
+              <span class="badge badge-accent">随应用预装</span>
+            </div>
+            <p class="spotlight-tagline">打开应用就能用的 ECG 分析引擎。</p>
+            <p class="spotlight-summary">把单导联 ECG 分成 N / SVEB / VEB / F 四类心搏，同时给出信号质量、心率与间期测量。无需安装模块，随核心一起提供。</p>
+            <ul class="spotlight-features">
+              <li>逐搏心律失常分类</li>
+              <li>信号质量与心率 / 间期测量</li>
+              <li>可在应用内切换引擎重新分析</li>
+            </ul>
+            <a class="pillar-link" href="https://github.com/Muhan-Qiu/ecg-agent/releases" rel="noopener">下载应用 →</a>
+          </article>
+
+          <article class="spotlight-card">
+            <div class="spotlight-head">
+              <h3>ECG 心搏分析</h3>
+              <span class="badge badge-accent">官方自研 · 可选模块</span>
+            </div>
+            <p class="spotlight-tagline">把一段心电切成心搏，标出正常搏动与早搏。</p>
+            <p class="spotlight-summary">内置 7 个分类模型，可对同一段记录切换或并排比较；输出逐搏标签、各类占比与心率概览，适合科研复现和算法对照。</p>
+            <ul class="spotlight-features">
+              <li>逐搏 N / SVEB / VEB / F 标签</li>
+              <li>7 个模型切换对照</li>
+              <li>WFDB、float32 与内联采样点输入</li>
+            </ul>
+            <a class="pillar-link" href="modules.html?module=org.eclipsehealth.relay-ecg">查看模块详情 →</a>
+          </article>
+
+          <article class="spotlight-card">
+            <div class="spotlight-head">
+              <h3>睡眠分期分析</h3>
+              <span class="badge badge-accent">官方自研 · 可选模块</span>
+            </div>
+            <p class="spotlight-tagline">把整夜睡眠分到五个阶段，看清睡眠结构。</p>
+            <p class="spotlight-summary">逐窗判断 W / N1 / N2 / N3 / REM，汇总各阶段时长与占比、夜间觉醒与睡眠效率；支持特征或原始 30 秒窗口，5 个模型可对照。</p>
+            <ul class="spotlight-features">
+              <li>五类睡眠分期</li>
+              <li>睡眠结构摘要</li>
+              <li>5 个分期模型对照</li>
+            </ul>
+            <a class="pillar-link" href="modules.html?module=org.eclipsehealth.relay-sleep">查看模块详情 →</a>
+          </article>
+        </div>
+        <p class="builtin-note" style="margin-top:1rem">
+          <strong>Cardia 2.0</strong> 随应用预装，不需要安装模块；ECG 心搏分析与睡眠分期分析是可选的官方模块，在模块市场里一键安装。
+        </p>
       </div>
     </section>
 
@@ -207,6 +304,7 @@
           <a href="index.html">首页</a>
           <a href="modules.html">模块市场</a>
           <a href="developers.html">开发者</a>
+          <a href="en/index.html" hreflang="en" lang="en">English</a>
           <a href="https://github.com/Muhan-Qiu/ecg-agent" rel="noopener">GitHub</a>
         </div>
         <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>

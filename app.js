@@ -1,10 +1,228 @@
 /* eclipse health marketplace · static site behavior
-   No dependencies, no telemetry. Index data is treated as untrusted text. */
+   No dependencies, no telemetry. Index data and module copy are treated as untrusted text. */
 
 (function () {
   "use strict";
 
   var root = document.documentElement;
+  var LANG = (root.lang || "zh").toLowerCase().indexOf("en") === 0 ? "en" : "zh";
+  var DEPTH = Number(document.body.dataset.depth || "1") === 2 ? 2 : 1;
+
+  var STRINGS = {
+    zh: {
+      themeToLight: "切换到亮色主题",
+      themeToDark: "切换到暗色主题",
+      copied: "已复制",
+      copyFailed: "复制失败",
+      copy: "复制",
+      moduleCount: function (n) { return n + " 个模块"; },
+      indexMeta: function (date, signed, key) {
+        return "索引生成于 " + date + " · " + (signed ? "索引已签名" : "索引未签名（开发模式）") +
+          (key ? " · " + key : "") + " · 签名由应用安装器校验";
+      },
+      loadingTitle: "正在读取索引…",
+      loadingText: "首次加载会同时读取官方与社区索引。",
+      errorPublished: "索引尚未发布",
+      errorUnavailable: "索引暂时不可用",
+      retry: "重试",
+      clearFilters: "清除筛选",
+      emptyIndex: "索引里还没有模块",
+      emptyOfficial: "官方索引尚未发布模块。开发者可以从提交 PR 开始。",
+      emptyCommunity: "社区索引尚未收录模块。开发者可以通过 GitHub PR 提交。",
+      noMatch: "没有匹配的模块",
+      noMatchText: "试试其他关键词，或切换到另一索引。",
+      verified: "已验证",
+      unverified: "未审核",
+      yanked: "已撤回",
+      officialIndex: "官方索引",
+      communityIndex: "社区索引 · 未审核",
+      authorYanked: "作者已撤回",
+      firstParty: "官方自研",
+      details: "查看详情",
+      download: "下载",
+      downloadEhmod: "下载 .ehmod",
+      basicInfo: "基本信息",
+      author: "作者",
+      version: "版本",
+      license: "许可证",
+      type: "类型",
+      size: "大小",
+      source: "来源",
+      category: "分类",
+      price: "价格",
+      pricePaid: "付费（核心不处理支付）",
+      priceSponsor: "赞助",
+      permissionsTitle: "权限",
+      noPermissions: "未申请额外权限。",
+      unknownPermission: "未识别的权限，请谨慎评估",
+      dependencies: "依赖",
+      dependencyNote: "首次安装会为模块创建独立 venv 并联网安装这些依赖。",
+      scan: "扫描结果",
+      scanStatus: "状态",
+      scanRisk: "风险",
+      viewReport: "查看完整扫描报告",
+      repo: "仓库与源码",
+      homepage: "主页",
+      sha: "SHA-256",
+      nonDiagnostic: "非诊断声明",
+      nonDiagnosticText: "模块输出不构成医疗建议，不是医疗器械，不用于诊断、治疗或替代专业医疗判断。",
+      close: "关闭",
+      yankedNotice: "该版本已被作者撤回，不建议新安装；已安装用户请考虑回滚。",
+      communityNotice: "社区模块未经人工审核，仅经过自动扫描。安装前请自行评估来源与代码。",
+      features: "能做什么",
+      usage: "怎么用",
+      inputs: "输入",
+      outputs: "输出",
+      goodFor: "适合",
+      limits: "限制与边界",
+      techNote: "技术说明",
+      featureCount: function (n) { return n + " 项能力"; },
+      errFetch: "无法读取索引文件。请确认已通过本地静态服务器打开本站（直接双击 HTML 文件时浏览器会阻止 fetch）。",
+      err404: "索引尚未发布：对应目录下没有 index.json。",
+      errJson: "索引文件不是合法 JSON。",
+      errGeneric: "读取索引失败",
+      types: {
+        "device-adapter": "设备适配",
+        "signal-engine": "信号引擎",
+        "analysis-model": "分析模型",
+        "health-domain": "健康领域",
+        "dashboard-widget": "界面组件",
+        exporter: "导出器",
+        "ai-tool": "AI 工具",
+        theme: "主题",
+        locale: "语言包",
+        "data-source": "数据源"
+      },
+      permissions: {
+        "records:read": "读取记录、测量与分析结果",
+        "records:write": "创建或更新记录",
+        "records:delete": "删除记录（高风险，默认不授予）",
+        "files:user-selected": "读取你主动选择的文件",
+        "files:export": "写入你确认的导出目录",
+        network: "访问网络（仅限 allowedHosts 列出的主机）",
+        llm: "调用你配置的 LLM",
+        "models:download": "下载模型权重",
+        "ui:custom": "在沙箱中提供自定义界面",
+        "system:notify": "发送系统通知",
+        "system:background": "最小化后继续在后台运行"
+      },
+      risks: { green: "低风险", yellow: "中风险", orange: "高风险", red: "拒绝安装" },
+      categories: {
+        devices: "设备", signal: "信号", analysis: "分析", health: "健康", ui: "界面",
+        export: "导出", ai: "AI", theme: "主题", locale: "语言", data: "数据", other: "其他"
+      },
+      unknownType: "未知类型",
+      uncategorized: "未分类"
+    },
+    en: {
+      themeToLight: "Switch to light theme",
+      themeToDark: "Switch to dark theme",
+      copied: "Copied",
+      copyFailed: "Copy failed",
+      copy: "Copy",
+      moduleCount: function (n) { return n + (n === 1 ? " module" : " modules"); },
+      indexMeta: function (date, signed, key) {
+        return "Index generated " + date + " · " + (signed ? "signed index" : "unsigned index (development)") +
+          (key ? " · " + key : "") + " · signature verified by the app installer";
+      },
+      loadingTitle: "Loading index…",
+      loadingText: "The first load reads both the official and community indexes.",
+      errorPublished: "Index not published yet",
+      errorUnavailable: "Index temporarily unavailable",
+      retry: "Retry",
+      clearFilters: "Clear filters",
+      emptyIndex: "No modules in this index yet",
+      emptyOfficial: "The official index has no modules yet. Developers can start with a pull request.",
+      emptyCommunity: "The community index has no modules yet. Developers can submit one via GitHub PR.",
+      noMatch: "No matching modules",
+      noMatchText: "Try another keyword, or switch to the other index.",
+      verified: "Verified",
+      unverified: "Unreviewed",
+      yanked: "Withdrawn",
+      officialIndex: "Official index",
+      communityIndex: "Community index · unreviewed",
+      authorYanked: "Withdrawn by author",
+      firstParty: "First-party",
+      details: "Details",
+      download: "Download",
+      downloadEhmod: "Download .ehmod",
+      basicInfo: "Basic info",
+      author: "Author",
+      version: "Version",
+      license: "License",
+      type: "Type",
+      size: "Size",
+      source: "Source",
+      category: "Category",
+      price: "Price",
+      pricePaid: "Paid (the core does not handle payments)",
+      priceSponsor: "Sponsorship",
+      permissionsTitle: "Permissions",
+      noPermissions: "Requests no extra permissions.",
+      unknownPermission: "Unrecognised permission — evaluate carefully",
+      dependencies: "Dependencies",
+      dependencyNote: "The first install creates a dedicated venv for the module and fetches these dependencies.",
+      scan: "Scan result",
+      scanStatus: "Status",
+      scanRisk: "Risk",
+      viewReport: "Open full scan report",
+      repo: "Repository and source",
+      homepage: "Homepage",
+      sha: "SHA-256",
+      nonDiagnostic: "Non-diagnostic notice",
+      nonDiagnosticText: "Module output is not medical advice. It is not a medical device and must not be used for diagnosis, treatment, or as a substitute for professional judgement.",
+      close: "Close",
+      yankedNotice: "This version was withdrawn by the author. Do not install it for new use; existing users should consider rolling back.",
+      communityNotice: "Community modules are not manually reviewed, only automatically scanned. Assess the source and code before installing.",
+      features: "What it does",
+      usage: "How to use it",
+      inputs: "Inputs",
+      outputs: "Outputs",
+      goodFor: "Good for",
+      limits: "Limits",
+      techNote: "Technical note",
+      featureCount: function (n) { return n + (n === 1 ? " capability" : " capabilities"); },
+      errFetch: "Could not read the index. Open this site through a local static server — browsers block fetch() when an HTML file is opened directly.",
+      err404: "Index not published: index.json is missing from that directory.",
+      errJson: "The index file is not valid JSON.",
+      errGeneric: "Could not read the index",
+      types: {
+        "device-adapter": "Device adapter",
+        "signal-engine": "Signal engine",
+        "analysis-model": "Analysis model",
+        "health-domain": "Health domain",
+        "dashboard-widget": "Dashboard widget",
+        exporter: "Exporter",
+        "ai-tool": "AI tool",
+        theme: "Theme",
+        locale: "Locale pack",
+        "data-source": "Data source"
+      },
+      permissions: {
+        "records:read": "Read records, measurements and analysis results",
+        "records:write": "Create or update records",
+        "records:delete": "Delete records (high risk, never granted by default)",
+        "files:user-selected": "Read files you explicitly choose",
+        "files:export": "Write to an export directory you confirm",
+        network: "Access the network (only hosts listed in allowedHosts)",
+        llm: "Call the LLM you configured",
+        "models:download": "Download model weights",
+        "ui:custom": "Provide custom UI inside a sandbox",
+        "system:notify": "Send system notifications",
+        "system:background": "Keep running in the background when minimised"
+      },
+      risks: { green: "Low risk", yellow: "Medium risk", orange: "High risk", red: "Install refused" },
+      categories: {
+        devices: "Devices", signal: "Signal", analysis: "Analysis", health: "Health", ui: "UI",
+        export: "Export", ai: "AI", theme: "Theme", locale: "Locale", data: "Data", other: "Other"
+      },
+      unknownType: "Unknown type",
+      uncategorized: "Uncategorised"
+    }
+  };
+
+  var T = STRINGS[LANG];
+  var LOCALE = LANG === "en" ? "en-US" : "zh-CN";
 
   /* ------------------------------------------------------------ theme */
   function currentTheme() {
@@ -19,7 +237,7 @@
     if (!button) return;
     var isDark = currentTheme() === "dark";
     button.setAttribute("aria-pressed", String(isDark));
-    button.setAttribute("aria-label", isDark ? "切换到亮色主题" : "切换到暗色主题");
+    button.setAttribute("aria-label", isDark ? T.themeToLight : T.themeToDark);
   }
 
   function setupTheme() {
@@ -91,13 +309,13 @@
         var label = button.textContent;
         copyText(target.textContent.trim())
           .then(function () {
-            button.textContent = "已复制";
+            button.textContent = T.copied;
             window.setTimeout(function () {
               button.textContent = label;
             }, 1600);
           })
           .catch(function () {
-            button.textContent = "复制失败";
+            button.textContent = T.copyFailed;
             window.setTimeout(function () {
               button.textContent = label;
             }, 1600);
@@ -144,7 +362,7 @@
     var date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     try {
-      return date.toLocaleString("zh-CN", {
+      return date.toLocaleString(LOCALE, {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -156,72 +374,37 @@
     }
   }
 
-  var TYPE_LABELS = {
-    "device-adapter": "设备适配",
-    "signal-engine": "信号引擎",
-    "analysis-model": "分析模型",
-    "health-domain": "健康领域",
-    "dashboard-widget": "界面组件",
-    exporter: "导出器",
-    "ai-tool": "AI 工具",
-    theme: "主题",
-    locale: "语言包",
-    "data-source": "数据源",
-  };
-
-  var PERMISSION_TEXT = {
-    "records:read": "读取记录、测量与分析结果",
-    "records:write": "创建或更新记录",
-    "records:delete": "删除记录（高风险，默认不授予）",
-    "files:user-selected": "读取你主动选择的文件",
-    "files:export": "写入你确认的导出目录",
-    network: "访问网络（仅限 allowedHosts 列出的主机）",
-    llm: "调用你配置的 LLM",
-    "models:download": "下载模型权重",
-    "ui:custom": "在沙箱中提供自定义界面",
-    "system:notify": "发送系统通知",
-    "system:background": "最小化后继续在后台运行",
-  };
-
-  var RISK_LABELS = {
-    green: "低风险",
-    yellow: "中风险",
-    orange: "高风险",
-    red: "拒绝安装",
-  };
-
-  var CATEGORY_LABELS = {
-    devices: "设备",
-    signal: "信号",
-    analysis: "分析",
-    health: "健康",
-    ui: "界面",
-    export: "导出",
-    ai: "AI",
-    theme: "主题",
-    locale: "语言",
-    data: "数据",
-    other: "其他",
-  };
-
   function categoryLabel(value) {
-    return CATEGORY_LABELS[value] || value;
+    return T.categories[value] || value;
   }
 
   function typeLabel(type) {
-    return TYPE_LABELS[type] || type || "未知类型";
+    return T.types[type] || type || T.unknownType;
+  }
+
+  function permissionText(value) {
+    return T.permissions[value] || T.unknownPermission;
+  }
+
+  function riskLabel(value) {
+    return T.risks[value] || value || "";
+  }
+
+  /* ------------------------------------------------------------ paths */
+  function indexPath(source) {
+    return (DEPTH === 2 ? "../.." : "..") + "/" + source + "/index.json";
+  }
+
+  function copyPath() {
+    return (DEPTH === 2 ? ".." : ".") + "/module-copy." + LANG + ".json";
   }
 
   /* ------------------------------------------------------------ index loading */
-  var INDEX_PATHS = {
-    official: "official/index.json",
-    community: "community/index.json",
-  };
-
   var state = {
     source: "official",
     query: "",
     category: "all",
+    copy: {},
     sources: {
       official: { status: "idle", modules: [], error: "", meta: null },
       community: { status: "idle", modules: [], error: "", meta: null },
@@ -304,8 +487,7 @@
     var slot = state.sources[source];
     if (slot.status !== "idle") return Promise.resolve();
     slot.status = "loading";
-    var url = INDEX_PATHS[source];
-    return fetch(url, { cache: "no-store", credentials: "same-origin" })
+    return fetch(indexPath(source), { cache: "no-store", credentials: "same-origin" })
       .then(function (response) {
         if (!response.ok) {
           throw new Error("HTTP " + response.status);
@@ -329,38 +511,106 @@
       });
   }
 
+  function loadCopy() {
+    return fetch(copyPath(), { cache: "no-store", credentials: "same-origin" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+      })
+      .then(function (raw) {
+        state.copy = raw && typeof raw.modules === "object" && raw.modules ? raw.modules : {};
+      })
+      .catch(function () {
+        state.copy = {};
+      });
+  }
+
   function friendlyLoadError(error) {
     var message = error && error.message ? error.message : "";
     if (/Failed to fetch|NetworkError|Load failed/i.test(message)) {
-      return "无法读取索引文件。请确认已通过本地静态服务器打开本站（直接双击 HTML 文件时浏览器会阻止 fetch）。";
+      return T.errFetch;
     }
     if (/HTTP 404/.test(message)) {
-      return "索引尚未发布：对应目录下没有 index.json。";
+      return T.err404;
     }
     if (/JSON|Unexpected token|parse/i.test(message)) {
-      return "索引文件不是合法 JSON。";
+      return T.errJson;
     }
-    return "读取索引失败" + (message ? "：" + message : "。");
+    return T.errGeneric + (message ? ": " + message : ".");
   }
 
   function activeSlot() {
     return state.sources[state.source];
   }
 
+  function withCopy(item) {
+    var copy = state.copy[item.id] || {};
+    var merged = {
+      id: item.id,
+      version: item.version,
+      type: item.type,
+      description: item.description,
+      author: item.author,
+      license: item.license,
+      homepage: item.homepage,
+      repository: item.repository,
+      permissions: item.permissions,
+      dependencies: item.dependencies,
+      categories: item.categories,
+      verified: item.verified,
+      file: item.file,
+      downloadUrl: item.downloadUrl,
+      size: item.size,
+      sha256: item.sha256,
+      scan: item.scan,
+      yanked: item.yanked,
+      pricing: item.pricing,
+      source: item.source,
+      name: typeof copy.name === "string" && copy.name ? copy.name : item.name,
+      tagline: typeof copy.tagline === "string" ? copy.tagline : "",
+      summary: typeof copy.summary === "string" && copy.summary ? copy.summary : item.description,
+      features: Array.isArray(copy.features) ? copy.features : [],
+      usage: Array.isArray(copy.usage) ? copy.usage : [],
+      inputs: Array.isArray(copy.inputs) ? copy.inputs : [],
+      outputs: Array.isArray(copy.outputs) ? copy.outputs : [],
+      goodFor: typeof copy.goodFor === "string" ? copy.goodFor : "",
+      limits: Array.isArray(copy.limits) ? copy.limits : [],
+      techNote: typeof copy.techNote === "string" ? copy.techNote : "",
+      firstParty: item.id.indexOf("org.eclipsehealth.") === 0,
+    };
+    return merged;
+  }
+
+  function allModules() {
+    return state.sources.official.modules
+      .concat(state.sources.community.modules)
+      .map(withCopy);
+  }
+
+  var FIRST_PARTY_ORDER = {
+    "org.eclipsehealth.relay-ecg": 0,
+    "org.eclipsehealth.relay-sleep": 1,
+  };
+
   function currentModules() {
     var slot = activeSlot();
     var query = state.query.trim().toLowerCase();
     return slot.modules
+      .map(withCopy)
       .filter(function (item) {
         if (state.category !== "all") {
           var haystackCategories = item.categories.concat([item.type]);
           if (haystackCategories.indexOf(state.category) === -1) return false;
         }
         if (!query) return true;
+        var featureText = item.features.map(function (feature) {
+          return (feature.title || "") + " " + (feature.text || "");
+        });
         var haystack = [
           item.id,
           item.name,
-          item.description,
+          item.tagline,
+          item.summary,
           item.author,
           item.type,
           typeLabel(item.type),
@@ -368,13 +618,22 @@
         ]
           .concat(item.categories)
           .concat(item.categories.map(categoryLabel))
+          .concat(featureText)
           .join(" ")
           .toLowerCase();
         return haystack.indexOf(query) !== -1;
       })
       .sort(function (a, b) {
+        if (a.firstParty !== b.firstParty) return a.firstParty ? -1 : 1;
+        if (a.firstParty) {
+          var orderA = FIRST_PARTY_ORDER[a.id];
+          var orderB = FIRST_PARTY_ORDER[b.id];
+          if (orderA !== undefined || orderB !== undefined) {
+            return (orderA === undefined ? 99 : orderA) - (orderB === undefined ? 99 : orderB);
+          }
+        }
         if (a.verified !== b.verified) return a.verified ? -1 : 1;
-        return a.name.localeCompare(b.name, "zh-CN");
+        return a.name.localeCompare(b.name, LANG === "en" ? "en" : "zh-CN");
       });
   }
 
@@ -384,13 +643,13 @@
     var slot = activeSlot();
     var counts = new Map();
     slot.modules.forEach(function (item) {
-      var labels = item.categories.length ? item.categories : [item.type || "未分类"];
+      var labels = item.categories.length ? item.categories : [item.type || "other"];
       labels.forEach(function (label) {
         counts.set(label, (counts.get(label) || 0) + 1);
       });
     });
     var labels = Array.from(counts.keys()).sort(function (a, b) {
-      return counts.get(b) - counts.get(a) || String(a).localeCompare(String(b), "zh-CN");
+      return counts.get(b) - counts.get(a) || String(a).localeCompare(String(b), LANG === "en" ? "en" : "zh-CN");
     });
 
     container.textContent = "";
@@ -409,7 +668,7 @@
       container.appendChild(button);
     }
 
-    addChip("all", "全部");
+    addChip("all", LANG === "en" ? "All" : "全部");
     labels.slice(0, 12).forEach(function (label) {
       addChip(label, categoryLabel(label));
     });
@@ -430,7 +689,7 @@
 
     if (count) {
       if (slot.status === "ready" || slot.status === "empty") {
-        count.textContent = modules.length + " 个模块";
+        count.textContent = T.moduleCount(modules.length);
       } else {
         count.textContent = "";
       }
@@ -438,11 +697,11 @@
 
     if (meta) {
       if (slot.meta && slot.meta.generatedAt) {
-        var signatureText = slot.meta.signed ? "索引已签名" : "索引未签名（开发模式）";
-        var keyText = slot.meta.keyId ? " · " + slot.meta.keyId : "";
-        meta.textContent =
-          "索引生成于 " + formatDate(slot.meta.generatedAt) + " · " + signatureText + keyText +
-          " · 签名由应用安装器校验";
+        meta.textContent = T.indexMeta(
+          formatDate(slot.meta.generatedAt),
+          slot.meta.signed,
+          slot.meta.keyId
+        );
       } else {
         meta.textContent = "";
       }
@@ -450,18 +709,20 @@
 
     if (slot.status === "idle" || slot.status === "loading") {
       var loading = el("div", "state-box");
-      loading.appendChild(el("h2", null, "正在读取索引…"));
-      loading.appendChild(el("p", null, "首次加载会同时读取官方与社区索引。"));
+      loading.appendChild(el("h2", null, T.loadingTitle));
+      loading.appendChild(el("p", null, T.loadingText));
       grid.appendChild(loading);
       return;
     }
 
     if (slot.status === "error") {
       var failed = el("div", "state-box");
-      var failedTitle = slot.error.indexOf("索引尚未发布") === 0 ? "索引尚未发布" : "索引暂时不可用";
+      var failedTitle = slot.error.indexOf(T.err404) === 0 || slot.error === T.err404
+        ? T.errorPublished
+        : T.errorUnavailable;
       failed.appendChild(el("h2", null, failedTitle));
       failed.appendChild(el("p", null, slot.error));
-      var retry = el("button", "btn btn-ghost btn-small", "重试");
+      var retry = el("button", "btn btn-ghost btn-small", T.retry);
       retry.type = "button";
       retry.style.marginTop = "1rem";
       retry.addEventListener("click", function () {
@@ -479,11 +740,9 @@
 
     if (slot.status === "empty" && state.query.trim() === "") {
       var emptyIndex = el("div", "state-box");
-      emptyIndex.appendChild(el("h2", null, "索引里还没有模块"));
+      emptyIndex.appendChild(el("h2", null, T.emptyIndex));
       emptyIndex.appendChild(
-        el("p", null, state.source === "official"
-          ? "官方索引尚未发布模块。开发者可以从提交 PR 开始。"
-          : "社区索引尚未收录模块。开发者可以通过 GitHub PR 提交。")
+        el("p", null, state.source === "official" ? T.emptyOfficial : T.emptyCommunity)
       );
       grid.appendChild(emptyIndex);
       return;
@@ -491,9 +750,9 @@
 
     if (modules.length === 0) {
       var noMatch = el("div", "state-box");
-      noMatch.appendChild(el("h2", null, "没有匹配的模块"));
-      noMatch.appendChild(el("p", null, "试试其他关键词，或切换到另一索引。"));
-      var clear = el("button", "btn btn-ghost btn-small", "清除筛选");
+      noMatch.appendChild(el("h2", null, T.noMatch));
+      noMatch.appendChild(el("p", null, T.noMatchText));
+      var clear = el("button", "btn btn-ghost btn-small", T.clearFilters);
       clear.type = "button";
       clear.style.marginTop = "1rem";
       clear.addEventListener("click", function () {
@@ -524,21 +783,37 @@
     heading.appendChild(el("h2", null, item.name));
     heading.appendChild(el("div", "module-id", item.id));
     top.appendChild(heading);
-    if (item.verified) top.appendChild(el("span", "badge badge-ok", "已验证"));
-    else if (item.source === "community") top.appendChild(el("span", "badge badge-warn", "未审核"));
+    var badgeGroup = el("div", "module-card-badges");
+    if (item.firstParty) badgeGroup.appendChild(el("span", "badge badge-accent", T.firstParty));
+    else if (item.verified) badgeGroup.appendChild(el("span", "badge badge-ok", T.verified));
+    if (item.source === "community") badgeGroup.appendChild(el("span", "badge badge-warn", T.unverified));
+    if (item.yanked) badgeGroup.appendChild(el("span", "badge badge-danger", T.yanked));
+    top.appendChild(badgeGroup);
     card.appendChild(top);
 
-    if (item.description) card.appendChild(el("p", "module-desc", item.description));
+    if (item.tagline) card.appendChild(el("p", "module-tagline", item.tagline));
+
+    if (item.features.length) {
+      var points = el("ul", "module-points");
+      item.features.slice(0, 3).forEach(function (feature) {
+        if (feature && feature.title) points.appendChild(el("li", null, feature.title));
+      });
+      if (points.childNodes.length) card.appendChild(points);
+    } else if (item.description) {
+      card.appendChild(el("p", "module-desc", item.description));
+    }
 
     var meta = el("div", "module-meta");
     if (item.version) meta.appendChild(el("span", "badge", "v" + item.version));
     meta.appendChild(el("span", "badge badge-accent", typeLabel(item.type)));
     if (item.license) meta.appendChild(el("span", "badge", item.license));
-    if (item.yanked) meta.appendChild(el("span", "badge badge-danger", "已撤回"));
+    if (item.features.length) {
+      meta.appendChild(el("span", "module-count", T.featureCount(item.features.length)));
+    }
     card.appendChild(meta);
 
     var actions = el("div", "module-actions");
-    var detail = el("button", "btn btn-ghost btn-small", "查看详情");
+    var detail = el("button", "btn btn-ghost btn-small", T.details);
     detail.type = "button";
     detail.addEventListener("click", function () {
       lastOpener = detail;
@@ -548,7 +823,7 @@
 
     var download = resolveDownload(item);
     if (download) {
-      var link = el("a", "btn btn-primary btn-small", "下载");
+      var link = el("a", "btn btn-primary btn-small", T.download);
       link.href = download;
       link.rel = "noopener";
       link.setAttribute("download", "");
@@ -585,6 +860,19 @@
     return null;
   }
 
+  function appendList(parent, className, values) {
+    if (!values.length) return false;
+    var list = el("ul", className || null);
+    values.forEach(function (value) {
+      if (value !== undefined && value !== null && String(value).trim()) {
+        list.appendChild(el("li", null, value));
+      }
+    });
+    if (!list.childNodes.length) return false;
+    parent.appendChild(list);
+    return true;
+  }
+
   function openDialog(item) {
     var dialog = document.getElementById("module-dialog");
     if (!dialog || typeof dialog.showModal !== "function") return;
@@ -598,91 +886,147 @@
     badges.appendChild(el(
       "span",
       "badge " + (item.source === "official" ? "badge-ok" : "badge-warn"),
-      item.source === "official" ? "官方索引" : "社区索引 · 未审核"
+      item.source === "official" ? T.officialIndex : T.communityIndex
     ));
+    if (item.firstParty) badges.appendChild(el("span", "badge badge-accent", T.firstParty));
     if (item.version) badges.appendChild(el("span", "badge", "v" + item.version));
-    if (item.yanked) badges.appendChild(el("span", "badge badge-danger", "作者已撤回"));
+    if (item.yanked) badges.appendChild(el("span", "badge badge-danger", T.authorYanked));
 
     var body = document.getElementById("dialog-body");
     body.textContent = "";
 
-    if (item.description) {
-      body.appendChild(el("p", null, item.description));
-    }
+    if (item.tagline) body.appendChild(el("p", "dialog-tagline", item.tagline));
+    if (item.summary) body.appendChild(el("p", null, item.summary));
 
     if (item.yanked) {
-      body.appendChild(el("p", "notice-inline", "该版本已被作者撤回，不建议新安装；已安装用户请考虑回滚。"));
+      body.appendChild(el("p", "notice-inline", T.yankedNotice));
     }
 
     if (item.source === "community") {
-      body.appendChild(el("p", "notice-inline", "社区模块未经人工审核，仅经过自动扫描。安装前请自行评估来源与代码。"));
+      body.appendChild(el("p", "notice-inline", T.communityNotice));
     }
 
-    body.appendChild(el("h3", null, "基本信息"));
+    if (item.features.length) {
+      body.appendChild(el("h3", null, T.features));
+      var featureList = el("ul", "feature-list");
+      item.features.forEach(function (feature) {
+        if (!feature) return;
+        var row = el("li");
+        if (feature.title) row.appendChild(el("strong", null, feature.title));
+        if (feature.text) row.appendChild(el("span", null, feature.text));
+        featureList.appendChild(row);
+      });
+      body.appendChild(featureList);
+    }
+
+    if (item.usage.length) {
+      body.appendChild(el("h3", null, T.usage));
+      var steps = el("ol", "steps");
+      item.usage.forEach(function (step) {
+        steps.appendChild(el("li", null, step));
+      });
+      body.appendChild(steps);
+    }
+
+    if (item.inputs.length || item.outputs.length) {
+      var spec = el("div", "spec-grid");
+      if (item.inputs.length) {
+        var inBlock = el("div", "spec-block");
+        inBlock.appendChild(el("h4", null, T.inputs));
+        appendList(inBlock, null, item.inputs);
+        spec.appendChild(inBlock);
+      }
+      if (item.outputs.length) {
+        var outBlock = el("div", "spec-block");
+        outBlock.appendChild(el("h4", null, T.outputs));
+        appendList(outBlock, null, item.outputs);
+        spec.appendChild(outBlock);
+      }
+      body.appendChild(spec);
+    }
+
+    if (item.goodFor) {
+      body.appendChild(el("h3", null, T.goodFor));
+      body.appendChild(el("p", null, item.goodFor));
+    }
+
+    if (item.limits.length) {
+      body.appendChild(el("h3", null, T.limits));
+      appendList(body, "limit-list", item.limits);
+    }
+
+    body.appendChild(el("h3", null, T.basicInfo));
     var dl = el("dl", "detail-list");
     function addPair(label, value) {
       if (!value) return;
       dl.appendChild(el("dt", null, label));
       dl.appendChild(el("dd", null, value));
     }
-    addPair("作者", item.author);
-    addPair("版本", item.version);
-    addPair("许可证", item.license);
-    addPair("类型", typeLabel(item.type));
-    addPair("大小", item.size ? formatBytes(item.size) : "");
-    addPair("来源", item.source === "official" ? "官方索引" : "社区索引");
-    if (item.categories.length) addPair("分类", item.categories.map(categoryLabel).join(" · "));
+    addPair(T.author, item.author);
+    addPair(T.version, item.version);
+    addPair(T.license, item.license);
+    addPair(T.type, typeLabel(item.type));
+    addPair(T.size, item.size ? formatBytes(item.size) : "");
+    addPair(T.source, item.source === "official" ? T.officialIndex : T.communityIndex);
+    if (item.categories.length) addPair(T.category, item.categories.map(categoryLabel).join(" · "));
     if (item.pricing && item.pricing.model && item.pricing.model !== "free") {
-      addPair("价格", item.pricing.model === "paid" ? "付费（核心不处理支付）" : "赞助");
+      addPair(T.price, item.pricing.model === "paid" ? T.pricePaid : T.priceSponsor);
     }
     body.appendChild(dl);
 
-    body.appendChild(el("h3", null, "权限（" + item.permissions.length + "）"));
+    body.appendChild(el("h3", null, T.permissionsTitle + " (" + item.permissions.length + ")"));
     if (item.permissions.length === 0) {
-      body.appendChild(el("p", null, "未申请额外权限。"));
+      body.appendChild(el("p", null, T.noPermissions));
     } else {
       var list = el("ul", "permission-list");
       item.permissions.forEach(function (permission) {
         var row = el("li");
         row.appendChild(el("code", null, permission));
-        row.appendChild(el("span", null, PERMISSION_TEXT[permission] || "未识别的权限，请谨慎评估"));
+        row.appendChild(el("span", null, permissionText(permission)));
         list.appendChild(row);
       });
       body.appendChild(list);
     }
 
     if (item.dependencies.length) {
-      body.appendChild(el("h3", null, "依赖"));
+      body.appendChild(el("h3", null, T.dependencies));
       var deps = el("div");
       item.dependencies.forEach(function (dep) {
         deps.appendChild(el("span", "tag", dep));
         deps.appendChild(document.createTextNode(" "));
       });
       body.appendChild(deps);
-      body.appendChild(el("p", "fine-print", "首次安装会为模块创建独立 venv 并联网安装这些依赖。"));
+      body.appendChild(el("p", "fine-print", T.dependencyNote));
     }
 
     if (item.scan && (item.scan.status || item.scan.risk)) {
-      body.appendChild(el("h3", null, "扫描结果"));
-      var risk = item.scan.risk && RISK_LABELS[item.scan.risk] ? RISK_LABELS[item.scan.risk] : (item.scan.risk || "未知");
-      var scanLine = el("p", null,
-        "状态：" + (item.scan.status || "未知") + " · 风险：" + risk +
+      body.appendChild(el("h3", null, T.scan));
+      var line = el("p", null,
+        T.scanStatus + ": " + (item.scan.status || "—") +
+        " · " + T.scanRisk + ": " + riskLabel(item.scan.risk) +
         (item.scan.scannedAt ? " · " + formatDate(item.scan.scannedAt) : ""));
-      body.appendChild(scanLine);
+      body.appendChild(line);
       var report = safeHttpUrl(item.scan.reportUrl);
       if (report) {
-        var reportLink = el("a", "btn btn-ghost btn-small", "查看完整扫描报告");
+        var reportLink = el("a", "btn btn-ghost btn-small", T.viewReport);
         reportLink.href = report;
         reportLink.rel = "noopener";
         body.appendChild(reportLink);
       }
     }
 
+    if (item.techNote) {
+      var details = el("details", "tech-details");
+      details.appendChild(el("summary", null, T.techNote));
+      details.appendChild(el("p", null, item.techNote));
+      body.appendChild(details);
+    }
+
     var links = el("div");
     links.style.marginTop = "1rem";
     var repo = safeHttpUrl(item.repository);
     if (repo) {
-      var repoLink = el("a", null, "仓库与源码");
+      var repoLink = el("a", null, T.repo);
       repoLink.href = repo;
       repoLink.rel = "noopener";
       links.appendChild(repoLink);
@@ -690,7 +1034,7 @@
     var homepage = safeHttpUrl(item.homepage);
     if (homepage) {
       if (repo) links.appendChild(document.createTextNode(" · "));
-      var homeLink = el("a", null, "主页");
+      var homeLink = el("a", null, T.homepage);
       homeLink.href = homepage;
       homeLink.rel = "noopener";
       links.appendChild(homeLink);
@@ -698,34 +1042,30 @@
     if (links.childNodes.length) body.appendChild(links);
 
     if (item.sha256) {
-      body.appendChild(el("h3", null, "SHA-256"));
+      body.appendChild(el("h3", null, T.sha));
       var mono = el("div", "mono-line");
       mono.appendChild(el("code", null, item.sha256));
-      var copyButton = el("button", "copy-btn", "复制");
+      var copyButton = el("button", "copy-btn", T.copy);
       copyButton.type = "button";
       copyButton.addEventListener("click", function () {
         copyText(item.sha256).then(function () {
-          copyButton.textContent = "已复制";
-          window.setTimeout(function () { copyButton.textContent = "复制"; }, 1600);
+          copyButton.textContent = T.copied;
+          window.setTimeout(function () { copyButton.textContent = T.copy; }, 1600);
         }).catch(function () {
-          copyButton.textContent = "复制失败";
-          window.setTimeout(function () { copyButton.textContent = "复制"; }, 1600);
+          copyButton.textContent = T.copyFailed;
+          window.setTimeout(function () { copyButton.textContent = T.copy; }, 1600);
         });
       });
       mono.appendChild(copyButton);
       body.appendChild(mono);
     }
 
-    body.appendChild(el("h3", null, "非诊断声明"));
-    body.appendChild(el(
-      "p",
-      null,
-      "模块输出不构成医疗建议，不是医疗器械，不用于诊断、治疗或替代专业医疗判断。"
-    ));
+    body.appendChild(el("h3", null, T.nonDiagnostic));
+    body.appendChild(el("p", null, T.nonDiagnosticText));
 
     var foot = document.getElementById("dialog-foot");
     foot.textContent = "";
-    var close = el("button", "btn btn-ghost btn-small", "关闭");
+    var close = el("button", "btn btn-ghost btn-small", T.close);
     close.type = "button";
     close.addEventListener("click", function () {
       dialog.close();
@@ -733,7 +1073,7 @@
     foot.appendChild(close);
     var download = resolveDownload(item);
     if (download) {
-      var downloadLink = el("a", "btn btn-primary btn-small", "下载 .ehmod");
+      var downloadLink = el("a", "btn btn-primary btn-small", T.downloadEhmod);
       downloadLink.href = download;
       downloadLink.rel = "noopener";
       downloadLink.setAttribute("download", "");
@@ -743,6 +1083,16 @@
     dialog.showModal();
     var closeButton = document.getElementById("dialog-close");
     if (closeButton) closeButton.focus();
+  }
+
+  function findModule(id) {
+    var match = null;
+    ["official", "community"].forEach(function (source) {
+      state.sources[source].modules.forEach(function (item) {
+        if (!match && item.id === id) match = withCopy(item);
+      });
+    });
+    return match;
   }
 
   function setupModulesPage() {
@@ -814,9 +1164,24 @@
     }
 
     syncTabs();
-    Promise.all([loadIndex("official"), loadIndex("community")]).then(function () {
+    Promise.all([loadIndex("official"), loadIndex("community"), loadCopy()]).then(function () {
       buildCategoryChips();
       renderModules();
+
+      var requestedModule = params.get("module");
+      if (requestedModule) {
+        var module = findModule(requestedModule);
+        if (module) {
+          if (module.source !== state.source) {
+            state.source = module.source;
+            syncTabs();
+            buildCategoryChips();
+            renderModules();
+          }
+          lastOpener = null;
+          openDialog(module);
+        }
+      }
     });
   }
 
