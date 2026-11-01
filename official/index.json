@@ -1,0 +1,768 @@
+{
+  "schemaVersion": "1",
+  "source": "official",
+  "generatedAt": "2026-11-01T04:49:38Z",
+  "keyId": "dev-2026",
+  "modules": [
+    {
+      "id": "io.github.alexandrebarachant.muselsl",
+      "name": "Muse LSL Stream",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "Adapted from https://github.com/alexandrebarachant/muse-lsl. Streams Muse headband EEG over LSL and imports MuseLSL CSV recordings. Requires a Muse headband and Bluetooth; non-medical, not for diagnosis.",
+      "author": "Alexandre Barachant & eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/alexandrebarachant/muse-lsl",
+      "permissions": [
+        "files:user-selected",
+        "records:write"
+      ],
+      "dependencies": [
+        "muselsl>=2.2,<3",
+        "pylsl>=1.16,<2",
+        "bleak>=0.21,<1"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.alexandrebarachant.muselsl-0.1.0.ehmod",
+      "size": 18057,
+      "sha256": "0cda07687f4b49f001571b377ea33fc0eec0b12917a74b5a64174e00b6c32be8"
+    },
+    {
+      "id": "io.github.apache.echarts",
+      "name": "ECharts · 通用图表",
+      "version": "0.1.0",
+      "type": "dashboard-widget",
+      "description": "适配自 https://github.com/apache/echarts 的声明式图表 widget：用核心受控组件表达折线、柱状与分布，不打包上游 JS。适合指标趋势与分类统计。非医疗器械，不用于诊断。",
+      "author": "Apache ECharts + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/apache/echarts",
+      "permissions": [
+        "records:read"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "ui"
+      ],
+      "verified": true,
+      "file": "modules/io.github.apache.echarts-0.1.0.ehmod",
+      "size": 15501,
+      "sha256": "1345343f2dd8fd179b6f014bdcc04883c8b08ab0902529bd5cff8bd6fe884175"
+    },
+    {
+      "id": "io.github.aura-healthcare.hrv-analysis",
+      "name": "hrv-analysis · HRV",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "适配自 https://github.com/Aura-healthcare/hrv-analysis 的 HRV 时域/频域/非线性分析模块。上游为 GPL-3.0，只经 stdio JSON-RPC 调用。非医疗器械，不用于诊断。",
+      "author": "Aura Healthcare + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/Aura-healthcare/hrv-analysis",
+      "permissions": [
+        "records:read",
+        "llm"
+      ],
+      "dependencies": [
+        "hrv-analysis>=1.0,<2",
+        "pandas>=2.1,<3",
+        "numpy>=1.26,<3",
+        "scipy>=1.11,<2",
+        "astropy>=6,<8",
+        "nolds>=1.1,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/io.github.aura-healthcare.hrv-analysis-0.1.0.ehmod",
+      "size": 23587,
+      "sha256": "f2f9f8c19e196017850b121010c759fb65a3eea92f11bbb3db0c247e087b01b9"
+    },
+    {
+      "id": "io.github.blinry.habitctl",
+      "name": "habitctl · 习惯追踪",
+      "version": "0.1.0",
+      "type": "health-domain",
+      "description": "适配自 https://github.com/blinry/habitctl 的极简习惯追踪：通过子进程调用 habitctl CLI，解析每日打卡与连续天数。非医疗器械，不用于诊断。",
+      "author": "blinry + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/blinry/habitctl",
+      "permissions": [
+        "records:read",
+        "records:write"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "health"
+      ],
+      "verified": true,
+      "file": "modules/io.github.blinry.habitctl-0.1.0.ehmod",
+      "size": 18261,
+      "sha256": "69d8aa27ab19aa4e67945765c27ad96647ab5f1285bae0e58f7d8f668d326051"
+    },
+    {
+      "id": "io.github.brainflow-dev.brainflow",
+      "name": "BrainFlow EEG/EMG Capture",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "Adapted from https://github.com/brainflow-dev/brainflow. Streams EEG/EMG/ECG from supported boards, summarises signal quality, and imports recorded JSONL. Requires compatible hardware; non-medical, not for diagnosis.",
+      "author": "Andrey Parfenov / BrainFlow contributors & eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/brainflow-dev/brainflow",
+      "permissions": [
+        "files:user-selected",
+        "records:write"
+      ],
+      "dependencies": [
+        "brainflow>=5.13,<6"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.brainflow-dev.brainflow-0.1.0.ehmod",
+      "size": 17857,
+      "sha256": "b4ebabce65de24462b55720c44e7c79dc301817004e013250e6840791d46294a"
+    },
+    {
+      "id": "io.github.coddingtonbear.myfitnesspal",
+      "name": "MyFitnessPal Diary Import",
+      "version": "0.1.0",
+      "type": "data-source",
+      "description": "Adapted from https://github.com/coddingtonbear/python-myfitnesspal. Imports the user's own MyFitnessPal food diary as nutrition records. Unofficial, fragile scraper; non-medical, not for diagnosis.",
+      "author": "Adam Coddington & eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/coddingtonbear/python-myfitnesspal",
+      "permissions": [
+        "network",
+        "records:write"
+      ],
+      "dependencies": [
+        "myfitnesspal>=2.5,<3",
+        "lxml>=5,<6",
+        "cloudscraper>=1.2,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "data"
+      ],
+      "verified": true,
+      "file": "modules/io.github.coddingtonbear.myfitnesspal-0.1.0.ehmod",
+      "size": 14150,
+      "sha256": "5760f36d2a169c57b1eb53272ecf65c826c718f588848853ffb4a902bb7654ea"
+    },
+    {
+      "id": "io.github.cyberjunky.garminconnect",
+      "name": "Garmin Connect 导入",
+      "version": "0.1.0",
+      "type": "data-source",
+      "description": "适配自 https://github.com/cyberjunky/python-garminconnect 的非官方 Garmin Connect 客户端：登录后拉取活动、睡眠与身体成分。仅导入用户本人数据，凭据不落盘、不写日志。非医疗器械，不用于诊断。",
+      "author": "cyberjunky + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/cyberjunky/python-garminconnect",
+      "permissions": [
+        "network",
+        "records:write"
+      ],
+      "dependencies": [
+        "garminconnect>=0.2,<1",
+        "curl_cffi>=0.7,<1"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "data"
+      ],
+      "verified": true,
+      "file": "modules/io.github.cyberjunky.garminconnect-0.1.0.ehmod",
+      "size": 19744,
+      "sha256": "e698e13f498c9c185d4f10df1aad8f8fd03794a89eddc8fc55b2d8cfa7430cb3"
+    },
+    {
+      "id": "io.github.dogsheep.healthkit-to-sqlite",
+      "name": "Apple Health 导入",
+      "version": "0.1.0",
+      "type": "data-source",
+      "description": "适配自 https://github.com/dogsheep/healthkit-to-sqlite：用 stdlib zipfile/plistlib 流式解析 Apple Health export.zip 或 export.xml，导入活动、生命体征与睡眠记录。数据只在本机处理。非医疗器械，不用于诊断。",
+      "author": "Simon Willison + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/dogsheep/healthkit-to-sqlite",
+      "permissions": [
+        "files:user-selected",
+        "records:write"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "data"
+      ],
+      "verified": true,
+      "file": "modules/io.github.dogsheep.healthkit-to-sqlite-0.1.0.ehmod",
+      "size": 20166,
+      "sha256": "518d96c07bf6d4ea7477ed648b369de1c63537f04772e57777a427c5a6c1701d"
+    },
+    {
+      "id": "io.github.dtcooper.fitparse",
+      "name": "FIT Parser",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "适配自 dtcooper/python-fitparse：解析 .FIT 文件的 record 与 lap 摘要，提供活动时长、距离与心率。非医疗器械，不用于诊断。",
+      "author": "dtcooper + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/dtcooper/python-fitparse",
+      "permissions": [
+        "files:user-selected",
+        "records:write"
+      ],
+      "dependencies": [
+        "fitparse>=1.2,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.dtcooper.fitparse-0.1.0.ehmod",
+      "size": 17451,
+      "sha256": "f296d0c8ae7a95748c2d272108f583143eba1292a1c689f67f1e090d42b304b0"
+    },
+    {
+      "id": "io.github.gagebenne.pydexcom",
+      "name": "Dexcom CGM",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "适配自 gagebenne/pydexcom：通过 Dexcom Share 读取本人 CGM 血糖读数并计算时间范围内占比。非医疗器械，不用于诊断。",
+      "author": "Gage Benne + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/gagebenne/pydexcom",
+      "permissions": [
+        "network",
+        "records:write"
+      ],
+      "dependencies": [
+        "pydexcom>=0.4,<1"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.gagebenne.pydexcom-0.1.0.ehmod",
+      "size": 17905,
+      "sha256": "75dd93b0ad6c0d4851efd6e76de40a823324215ace3d6ed7f48d97cb23d989d7"
+    },
+    {
+      "id": "io.github.grubersjoe.activity-calendar",
+      "name": "Activity Calendar · 活动热力图",
+      "version": "0.1.0",
+      "type": "dashboard-widget",
+      "description": "适配自 https://github.com/grubersjoe/react-activity-calendar 的活动热力图 widget：把每日活动计数映射为受控列表/统计，不打包上游 React。非医疗器械，不用于诊断。",
+      "author": "Jonas Gruber + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/grubersjoe/react-activity-calendar",
+      "permissions": [
+        "records:read"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "ui"
+      ],
+      "verified": true,
+      "file": "modules/io.github.grubersjoe.activity-calendar-0.1.0.ehmod",
+      "size": 14295,
+      "sha256": "b70814913e92c0a36ed20f41035a5eed6af51f7e8bdf256b9f5d4e0fd44d2d4e"
+    },
+    {
+      "id": "io.github.hbldh.bleak",
+      "name": "BLE Health",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "适配自 hbldh/bleak：通过 Windows WinRT 读取 BLE 心率带与体重秤的 GATT 特征，输出心率/体重记录。非医疗器械，不用于诊断。",
+      "author": "Henrik Blidh + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/hbldh/bleak",
+      "permissions": [
+        "files:user-selected",
+        "records:write"
+      ],
+      "dependencies": [
+        "bleak>=0.22,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.hbldh.bleak-0.1.0.ehmod",
+      "size": 19280,
+      "sha256": "3a42d56de2d89184580ed4d49d4eb38965553eeab59831bd7168f0454e253444"
+    },
+    {
+      "id": "io.github.holgern.pyedflib",
+      "name": "pyedflib · EDF/BDF 读写",
+      "version": "0.1.0",
+      "type": "exporter",
+      "description": "适配自 https://github.com/holgern/pyedflib：导出 EDF+ 文件、读取 EDF/BDF 通道，并提供 CSV 导出。非医疗器械，不用于诊断。",
+      "author": "Holger Nahrstaedt + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/holgern/pyedflib",
+      "permissions": [
+        "files:user-selected",
+        "files:export",
+        "records:read"
+      ],
+      "dependencies": [
+        "pyedflib>=0.1.38,<1"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "export"
+      ],
+      "verified": true,
+      "file": "modules/io.github.holgern.pyedflib-0.1.0.ehmod",
+      "size": 21545,
+      "sha256": "86ec6135745c639bf4f240e9013c521b25339f4edde94415eb930a7c00a77f47"
+    },
+    {
+      "id": "io.github.jrnl-org.jrnl",
+      "name": "jrnl · 日记与心情",
+      "version": "0.1.0",
+      "type": "health-domain",
+      "description": "适配自 https://github.com/jrnl-org/jrnl 的加密 CLI 日记：通过子进程调用 jrnl --export json，导入条目并提供搜索工具。数据只在本机处理。非医疗器械，不用于诊断。",
+      "author": "jrnl-org + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/jrnl-org/jrnl",
+      "permissions": [
+        "records:read",
+        "llm"
+      ],
+      "dependencies": [
+        "jrnl>=4.0,<5"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "health"
+      ],
+      "verified": true,
+      "file": "modules/io.github.jrnl-org.jrnl-0.1.0.ehmod",
+      "size": 19025,
+      "sha256": "6198789bc282eb8e329248c29059bc2196d1842b48d9f5120101b28b9dcaca02"
+    },
+    {
+      "id": "io.github.leeoniya.uplot",
+      "name": "uPlot · 轻量趋势图",
+      "version": "0.1.0",
+      "type": "dashboard-widget",
+      "description": "适配自 https://github.com/leeoniya/uPlot 的声明式趋势 widget：用核心受控 sparkline/table 表达轻量时序图能力，不打包上游 JS。适合心率、HRV、体重等趋势展示。非医疗器械，不用于诊断。",
+      "author": "leeoniya + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/leeoniya/uPlot",
+      "permissions": [
+        "records:read"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "ui"
+      ],
+      "verified": true,
+      "file": "modules/io.github.leeoniya.uplot-0.1.0.ehmod",
+      "size": 13890,
+      "sha256": "ec3304e85f8816740087a381c88165ba105288b62b522b1717131716efcc90f3"
+    },
+    {
+      "id": "io.github.mit-lcp.wfdb",
+      "name": "WFDB · ECG 记录读写",
+      "version": "0.1.0",
+      "type": "exporter",
+      "description": "适配自 https://github.com/MIT-LCP/wfdb-python：用 wfdb.wrsamp 导出 WFDB 记录、用 wfdb.rdrecord 读取 .hea/.dat，并可把通道写成 CSV。非医疗器械，不用于诊断。",
+      "author": "MIT-LCP + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/MIT-LCP/wfdb-python",
+      "permissions": [
+        "files:user-selected",
+        "files:export",
+        "records:read"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "export"
+      ],
+      "verified": true,
+      "file": "modules/io.github.mit-lcp.wfdb-0.1.0.ehmod",
+      "size": 20570,
+      "sha256": "94c042c2be543241954d9483991e54790b0310102db5860d7d819354fd1ce4c4"
+    },
+    {
+      "id": "io.github.neuropsychology.neurokit2",
+      "name": "NeuroKit2 · ECG/HRV",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "适配自 https://github.com/neuropsychology/NeuroKit 的 ECG/PPG 处理与 HRV 分析模块，调用 nk.ecg_process 与 nk.hrv_time。非医疗器械，不用于诊断。",
+      "author": "NeuroKit2 authors + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/neuropsychology/NeuroKit",
+      "permissions": [
+        "records:read",
+        "llm"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/io.github.neuropsychology.neurokit2-0.1.0.ehmod",
+      "size": 25026,
+      "sha256": "7065632196dd67d078f92639e0ca405fcb194e949763c768a497dc51cec0f7dd"
+    },
+    {
+      "id": "io.github.observablehq.plot",
+      "name": "Observable Plot · 声明式图形",
+      "version": "0.1.0",
+      "type": "dashboard-widget",
+      "description": "适配自 https://github.com/observablehq/plot 的声明式图形 widget：把趋势、直方图与分位数映射到核心受控组件，不打包上游 JS。非医疗器械，不用于诊断。",
+      "author": "Observable Plot + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/observablehq/plot",
+      "permissions": [
+        "records:read"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "ui"
+      ],
+      "verified": true,
+      "file": "modules/io.github.observablehq.plot-0.1.0.ehmod",
+      "size": 14357,
+      "sha256": "0bde410b9624b9651bf516f164df1fcc6c5b2c222f0c614008b7920c7d63bd9a"
+    },
+    {
+      "id": "io.github.openbci-archive.openbci",
+      "name": "OpenBCI Serial Capture",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "Adapted from https://github.com/openbci-archive/OpenBCI_Python. Reads OpenBCI boards over serial and imports OpenBCI raw text recordings. Requires OpenBCI hardware; upstream is archived. Non-medical, not for diagnosis.",
+      "author": "OpenBCI & eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/openbci-archive/OpenBCI_Python",
+      "permissions": [
+        "files:user-selected",
+        "records:write"
+      ],
+      "dependencies": [
+        "pyserial>=3.5,<4"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.openbci-archive.openbci-0.1.0.ehmod",
+      "size": 16543,
+      "sha256": "f0a59806e83101127d922d8f95590d1fed09e4460921f08892f4da81641dffa4"
+    },
+    {
+      "id": "io.github.openfoodfacts.openfoodfacts",
+      "name": "Open Food Facts",
+      "version": "0.1.0",
+      "type": "data-source",
+      "description": "适配自 openfoodfacts/openfoodfacts-python：按条码查询食品营养，输出每 100g 营养与摄入记录。数据 © Open Food Facts 贡献者（ODbL）。非医疗器械，不用于诊断。",
+      "author": "Open Food Facts + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/openfoodfacts/openfoodfacts-python",
+      "permissions": [
+        "network",
+        "llm",
+        "records:write"
+      ],
+      "dependencies": [
+        "openfoodfacts>=1.0,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "data"
+      ],
+      "verified": true,
+      "file": "modules/io.github.openfoodfacts.openfoodfacts-0.1.0.ehmod",
+      "size": 18411,
+      "sha256": "f3e211285ffe7220d540a8574f764db14a33695980d7da480587ed9c6c56505d"
+    },
+    {
+      "id": "io.github.orcasgit.fitbit",
+      "name": "Fitbit Data Sync",
+      "version": "0.1.0",
+      "type": "data-source",
+      "description": "Adapted from https://github.com/orcasgit/python-fitbit. Imports Fitbit Web API activity, sleep, heart-rate and weight data into eclipse health. Non-medical; not for diagnosis.",
+      "author": "ORCAS, Inc. & eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/orcasgit/python-fitbit",
+      "permissions": [
+        "network",
+        "records:write"
+      ],
+      "dependencies": [
+        "fitbit>=0.3.1,<0.4",
+        "requests>=2.31,<3",
+        "requests-oauthlib>=1.3,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "data"
+      ],
+      "verified": true,
+      "file": "modules/io.github.orcasgit.fitbit-0.1.0.ehmod",
+      "size": 18379,
+      "sha256": "b9c73daea0a90bf41acb0638045c789cc718b19e97e7d43b1adc14cad041959b"
+    },
+    {
+      "id": "io.github.paulvangentcom.heartpy",
+      "name": "HeartPy · PPG/ECG",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "适配自 https://github.com/paulvangentcom/heartrate_analysis_python 的 PPG/ECG 心率与 HRV 分析模块，调用 hp.process 并保留信号质量标志。非医疗器械，不用于诊断。",
+      "author": "Paul van Gent + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/paulvangentcom/heartrate_analysis_python",
+      "permissions": [
+        "records:read",
+        "llm"
+      ],
+      "dependencies": [
+        "heartpy>=1.2,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/io.github.paulvangentcom.heartpy-0.1.0.ehmod",
+      "size": 24618,
+      "sha256": "0b5aaf2733a48e99797179989088702a79b90860a6a6eeb3ed60ef0a9975897b"
+    },
+    {
+      "id": "io.github.pgomes92.pyhrv",
+      "name": "pyhrv · HRV 工具箱",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "适配自 https://github.com/PGomes92/pyhrv 的 HRV 时域/频域/非线性指标模块，调用 pyhrv.time_domain。非医疗器械，不用于诊断。",
+      "author": "Pedro Gomes + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/PGomes92/pyhrv",
+      "permissions": [
+        "records:read",
+        "llm"
+      ],
+      "dependencies": [
+        "pyhrv>=0.4,<1",
+        "biosppy>=0.6,<1",
+        "nolds>=1.1,<2",
+        "spectrum>=0.8,<1",
+        "numpy>=1.26,<3",
+        "scipy>=1.11,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/io.github.pgomes92.pyhrv-0.1.0.ehmod",
+      "size": 23118,
+      "sha256": "eb6434a69196010396b83053ceda43a4a0c245266e84cf814c498d1619ee2713"
+    },
+    {
+      "id": "io.github.polyvertex.fitdecode",
+      "name": "FIT Decoder",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "适配自 polyvertex/fitdecode：解码 Garmin/ANT .FIT 活动文件，输出活动会话、距离与心率摘要。非医疗器械，不用于诊断。",
+      "author": "polyvertex + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/polyvertex/fitdecode",
+      "permissions": [
+        "files:user-selected",
+        "records:write"
+      ],
+      "dependencies": [
+        "fitdecode>=0.10,<1"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.polyvertex.fitdecode-0.1.0.ehmod",
+      "size": 17008,
+      "sha256": "03ebcac454da3264f76190f182533e766a263290c612f575f59236c007fb891f"
+    },
+    {
+      "id": "io.github.raphaelvallat.yasa",
+      "name": "YASA · 睡眠分期",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "适配自 https://github.com/raphaelvallat/yasa 的 PSG 睡眠分期模块，调用 yasa.SleepStaging；同时提供离线睡眠效率计算。非医疗器械，不用于诊断。",
+      "author": "Raphael Vallat + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/raphaelvallat/yasa",
+      "permissions": [
+        "records:read",
+        "llm"
+      ],
+      "dependencies": [
+        "yasa>=0.6,<1",
+        "mne>=1.6,<2",
+        "lightgbm>=4,<5",
+        "pooch>=1.8,<2",
+        "pandas>=2.1,<3",
+        "numpy>=1.26,<3"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/io.github.raphaelvallat.yasa-0.1.0.ehmod",
+      "size": 23771,
+      "sha256": "b2dc2bcc697b7fe9efaabf1bad1abb53a1bd61853da96ddce245b9f9ecfcca41"
+    },
+    {
+      "id": "io.github.scientisst.biosppy",
+      "name": "BioSPPy · ECG",
+      "version": "0.1.0",
+      "type": "analysis-model",
+      "description": "适配自 https://github.com/scientisst/BioSPPy 的 ECG 信号处理模块（仅 ECG/HRV 子集），调用 biosppy.signals.ecg。非医疗器械，不用于诊断。",
+      "author": "BioSPPy authors + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/scientisst/BioSPPy",
+      "permissions": [
+        "records:read",
+        "llm"
+      ],
+      "dependencies": [
+        "biosppy>=0.6,<1",
+        "numpy>=1.26,<3",
+        "scipy>=1.11,<2",
+        "h5py>=3.10,<4",
+        "scikit-learn>=1.4,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "analysis"
+      ],
+      "verified": true,
+      "file": "modules/io.github.scientisst.biosppy-0.1.0.ehmod",
+      "size": 24555,
+      "sha256": "234df45934431cc88fe00d82e62dc9e195ccbe3d6af6a5e091db26ddbfbf8ada"
+    },
+    {
+      "id": "io.github.stravalib.stravalib",
+      "name": "Strava Sync · 运动数据导入",
+      "version": "0.1.0",
+      "type": "data-source",
+      "description": "适配自 https://github.com/stravalib/stravalib 的 Strava v3 活动导入适配层：把活动距离、时长、心率规范化为本地活动记录与周汇总。仅处理用户本人数据，token 不写日志。非医疗器械，不用于诊断。",
+      "author": "stravalib contributors + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/stravalib/stravalib",
+      "permissions": [
+        "records:read",
+        "records:write",
+        "network"
+      ],
+      "dependencies": [
+        "stravalib>=2.0,<3"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "data"
+      ],
+      "verified": true,
+      "file": "modules/io.github.stravalib.stravalib-0.1.0.ehmod",
+      "size": 18284,
+      "sha256": "2054a77c83e552574a0ccc4379d1846291b1d7f8198943d87f4c35570e967333"
+    },
+    {
+      "id": "io.github.tkrajina.gpxpy",
+      "name": "GPX Track",
+      "version": "0.1.0",
+      "type": "device-adapter",
+      "description": "适配自 tkrajina/gpxpy：解析与生成 GPX 轨迹，计算距离、爬升、时长与心率摘要。非医疗器械，不用于诊断。",
+      "author": "Tomo Krajina + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/tkrajina/gpxpy",
+      "permissions": [
+        "files:user-selected",
+        "files:export",
+        "records:write"
+      ],
+      "dependencies": [
+        "gpxpy>=1.6,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "devices"
+      ],
+      "verified": true,
+      "file": "modules/io.github.tkrajina.gpxpy-0.1.0.ehmod",
+      "size": 27073,
+      "sha256": "39f8a33ed6f4512b3b738c0f17d85464019ae4e19a2b56342fe8218311da1fbc"
+    },
+    {
+      "id": "io.github.tremorlabs.tremor",
+      "name": "Tremor · KPI 仪表盘",
+      "version": "0.1.0",
+      "type": "dashboard-widget",
+      "description": "适配自 https://github.com/tremorlabs/tremor 的 KPI 卡片 widget：把指标值、变化量、进度映射到核心受控 stat/list 组件，不打包上游 React。非医疗器械，不用于诊断。",
+      "author": "Tremor Labs + eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/tremorlabs/tremor",
+      "permissions": [
+        "records:read"
+      ],
+      "dependencies": [],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "ui"
+      ],
+      "verified": true,
+      "file": "modules/io.github.tremorlabs.tremor-0.1.0.ehmod",
+      "size": 13514,
+      "sha256": "830a9baf1040c9ab0778bed6b624f87dec6648024de7380f6bd9e673879797fb"
+    },
+    {
+      "id": "io.github.vangorra.withings",
+      "name": "Withings Body Measurements",
+      "version": "0.1.0",
+      "type": "data-source",
+      "description": "Adapted from https://github.com/vangorra/python_withings_api. Imports the user's own Withings weight, body composition and blood-pressure measurements via the Withings REST API. Non-medical; not for diagnosis.",
+      "author": "vangorra & eclipse health adapters",
+      "license": "GPL-3.0-only",
+      "repository": "https://github.com/vangorra/python_withings_api",
+      "permissions": [
+        "network",
+        "records:write"
+      ],
+      "dependencies": [
+        "requests>=2.31,<3",
+        "requests-oauthlib>=1.3,<2"
+      ],
+      "minCoreVersion": "1.0.0",
+      "categories": [
+        "data"
+      ],
+      "verified": true,
+      "file": "modules/io.github.vangorra.withings-0.1.0.ehmod",
+      "size": 15585,
+      "sha256": "0afdf5495e9de35ee500574d65554b660eb1d86dea300195b793db5e1115d890"
+    }
+  ],
+  "signature": "GN72W31tB6UgwZyPDqYxpxpMeDY8TywD41RqiEDGp6erURdf0o/M+zRxUML9bdKvx145qnV2H3plpuCpRFIQBQ=="
+}

@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>开发者文档 · eclipse health 模块</title>
+  <meta name="description" content="eclipse health 模块开发指南：契约 v2、.ehmod 包结构、module.json、权限、依赖、测试与 GitHub PR 提交流程。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2326251f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%235f7358' stroke-width='2'/%3E%3Ccircle cx='22' cy='10' r='5' fill='%23f6f3ec'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="developers">
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health 首页">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="modules.html" data-nav="modules">模块市场</a>
+        <a href="developers.html" data-nav="developers">开发者</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="切换亮色或暗色主题" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <div class="docs-layout">
+        <aside class="docs-toc" aria-label="文档目录">
+          <h2>目录</h2>
+          <ol>
+            <li><a href="#contract">契约概览</a></li>
+            <li><a href="#package">.ehmod 包结构</a></li>
+            <li><a href="#manifest">module.json 示例</a></li>
+            <li><a href="#permissions">权限</a></li>
+            <li><a href="#dependencies">依赖与网络</a></li>
+            <li><a href="#testing">测试清单</a></li>
+            <li><a href="#submit">提交 PR</a></li>
+            <li><a href="#license">许可证与署名</a></li>
+            <li><a href="#safety">安全与非诊断声明</a></li>
+          </ol>
+        </aside>
+
+        <div class="docs-main">
+          <div class="page-head" style="padding-top:0">
+            <p class="eyebrow"><span class="dot" aria-hidden="true"></span>module contract v2</p>
+            <h1>开发一个模块</h1>
+            <p class="lede">
+              模块是独立 Python 进程，通过 stdio JSON-RPC 与核心通信。核心不 import 模块代码；
+              数据、权限与 UI 都经受限接口传递。本页给出可以照着做的最小路径。
+            </p>
+            <p class="fine-print">
+              事实源：<code>schemas/module.schema.json</code>、<code>docs/MODULE_CONTRACT_V2.md</code>。
+              文档与实现冲突时以 schema 为准。
+            </p>
+          </div>
+
+          <section id="contract">
+            <h2>1 · 契约概览</h2>
+            <p>契约分为传输层与贡献层。传输层保证模块能启动、被调用、被审计；贡献层告诉核心模块提供哪些能力。</p>
+            <div class="grid grid-3" style="margin-bottom:1.2rem">
+              <article class="card feature">
+                <h3>传输：JSON-RPC over stdio</h3>
+                <p>每行一条 JSON。请求 <code>{"jsonrpc":"2.0","id":1,"method":"...","params":{}}</code>；单条消息上限 4 MB，大结果写临时文件并返回路径与 sha256。</p>
+              </article>
+              <article class="card feature">
+                <h3>生命周期</h3>
+                <p>discover → verify → install → start → initialize → operate。核心注入 <code>ECLIPSE_MODULE_ID</code>、<code>ECLIPSE_RPC_TOKEN</code>、<code>ECLIPSE_PERMISSIONS</code>。</p>
+              </article>
+              <article class="card feature">
+                <h3>贡献是声明式的</h3>
+                <p><code>contributes</code> 在安装时校验。UI 只渲染受控组件；禁止任意 React/JSX、内联脚本与 iframe。</p>
+              </article>
+            </div>
+            <p>
+              模块类型决定必须声明哪些贡献：<span class="tag">device-adapter</span> 需要 <code>importFormats</code>；
+              <span class="tag">signal-engine</span> 需要 <code>pipelines</code>；<span class="tag">analysis-model</span> 需要 <code>models</code>；
+              <span class="tag">dashboard-widget</span> 需要 <code>ui.widgets</code>；<span class="tag">exporter</span> 需要 <code>exporters</code>；
+              <span class="tag">ai-tool</span> 需要 <code>tools</code>。
+            </p>
+          </section>
+
+          <section id="package">
+            <h2>2 · .ehmod 包结构</h2>
+            <p><code>.ehmod</code> 是 ZIP 包，安装时执行路径穿越、符号链接、文件数与解压体积检查。</p>
+            <div class="code-block">
+              <div class="code-block-head"><span>目录结构</span></div>
+              <pre><code>my-module/
+├── module.json          # 必需：manifest
+├── src/
+│   └── main.py          # 必需：entry.python 指向的文件
+├── models/              # 可选：ONNX / safetensors 权重
+├── ui/                  # 可选：声明式 UI 资源
+├── LICENSE              # 必需：完整许可证文本
+├── NOTICE               # Apache-2.0 等许可证要求时必需
+├── README.md            # 建议：用法、权限、数据来源
+└── checksums.json       # 打包时生成：逐文件 sha256</code></pre>
+            </div>
+            <ul class="check-list">
+              <li>安装路径为 <code>&lt;dataDir&gt;/modules/&lt;id&gt;/&lt;version&gt;/</code>；目录视为只读。</li>
+              <li>单文件 ≤ 64 MB，解压后 ≤ 256 MB；禁止符号链接、绝对路径、<code>..</code> 与 Windows 保留设备名。</li>
+              <li>发布包必须包含 <code>checksums.json</code>；安装时逐文件校验，缺失只会降级为警告。</li>
+              <li>不要把 <code>venv/</code>、<code>__pycache__/</code>、<code>.git/</code> 或任何密钥打进包。</li>
+            </ul>
+          </section>
+
+          <section id="manifest">
+            <h2>3 · module.json 示例</h2>
+            <p>下面这份 manifest 通过 <code>schemas/module.schema.json</code> 校验，可直接改 ID 与入口后使用。</p>
+            <div class="code-block">
+              <div class="code-block-head">
+                <span>module.json · schema 1.0</span>
+                <button class="copy-btn" type="button" data-copy-target="manifest-example">复制</button>
+              </div>
+              <pre><code id="manifest-example" data-json="module-manifest">{
+  "schemaVersion": "1.0",
+  "id": "io.github.example.heart-rate",
+  "name": "Heart Rate Summary",
+  "description": "Summarize heart rate from user-selected CSV files. Not a medical device.",
+  "version": "0.1.0",
+  "apiVersion": "1.0",
+  "engines": { "eclipse": ">=1.0 &lt;2.0" },
+  "type": "ai-tool",
+  "author": { "name": "Example Author", "url": "https://github.com/example" },
+  "license": "MIT",
+  "homepage": "https://github.com/example/heart-rate",
+  "repository": "https://github.com/example/heart-rate",
+  "permissions": ["files:user-selected", "records:write"],
+  "dependencies": ["numpy>=2.0,<3"],
+  "entry": { "python": "src/main.py", "factory": "create_module" },
+  "contributes": {
+    "tools": [
+      {
+        "id": "hr.summary",
+        "name": "Heart rate summary",
+        "description": "Return mean and max heart rate from a CSV file.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "path": { "type": "string" } },
+          "required": ["path"]
+        }
+      }
+    ],
+    "ui": {
+      "widgets": [
+        {
+          "id": "hr-latest",
+          "title": "最近心率",
+          "size": "sm",
+          "dataSource": { "type": "module-rpc", "method": "summary" },
+          "view": { "type": "stat", "valuePath": "mean", "unit": "bpm" }
+        }
+      ]
+    }
+  },
+  "resources": { "memoryMb": 256, "cpu": 0.5, "startupTimeoutMs": 8000 },
+  "updateChannel": "stable"
+}</code></pre>
+            </div>
+            <p>社区模块 ID 必须是 <code>io.github.&lt;GitHub 用户名或组织&gt;.&lt;模块名&gt;</code>；官方前缀 <code>org.eclipsehealth.*</code> 保留给项目维护者。</p>
+          </section>
+
+          <section id="permissions">
+            <h2>4 · 权限</h2>
+            <p>只申请实际需要的最小集合。升级新增权限必须由用户重新确认，不会自动继承。</p>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Scope</th><th>风险</th><th>含义</th></tr></thead>
+                <tbody>
+                  <tr><td><code>records:read</code></td><td>低</td><td>读取记录、测量与分析结果</td></tr>
+                  <tr><td><code>records:write</code></td><td>中</td><td>创建或更新记录</td></tr>
+                  <tr><td><code>records:delete</code></td><td>高</td><td>删除记录；默认不授予</td></tr>
+                  <tr><td><code>files:user-selected</code></td><td>低</td><td>读取用户主动选择的文件</td></tr>
+                  <tr><td><code>files:export</code></td><td>中</td><td>写入用户确认的目录</td></tr>
+                  <tr><td><code>network</code></td><td>高</td><td>访问 <code>allowedHosts</code> 中列出的主机</td></tr>
+                  <tr><td><code>llm</code></td><td>中</td><td>调用用户配置的 LLM</td></tr>
+                  <tr><td><code>models:download</code></td><td>中</td><td>下载模型权重</td></tr>
+                  <tr><td><code>ui:custom</code></td><td>高</td><td>沙箱中的自定义 UI</td></tr>
+                  <tr><td><code>system:notify</code></td><td>低</td><td>发送系统通知</td></tr>
+                  <tr><td><code>system:background</code></td><td>中</td><td>最小化后继续运行</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>声明 <code>network</code> 时必须同时提供 <code>allowedHosts</code>，且每个主机必须是具体域名，禁止通配符 <code>*</code>。</p>
+          </section>
+
+          <section id="dependencies">
+            <h2>5 · 依赖与网络</h2>
+            <ul>
+              <li>每个模块使用独立 venv；<code>dependencies</code> 是 PEP 508 列表，安装到该模块自己的环境。</li>
+              <li>只接受包名、extra、版本范围与环境标记；<strong>拒绝</strong> URL（<code>@</code>）、本地路径、<code>file:</code> 与 <code>-e</code> 形式。</li>
+              <li>锁版本或给出合理上界，避免上游大版本破坏；首次安装会联网，用户需知情。</li>
+              <li><code>models</code> 仅允许 <code>onnx</code> / <code>safetensors</code> / <code>remote</code>；禁止 pickle。远程权重必须有 sha256。</li>
+              <li>API Key / token 必须存 OS 密钥库，不得写入日志、manifest 或模块包。</li>
+            </ul>
+            <div class="code-block">
+              <div class="code-block-head">
+                <span>允许与拒绝的依赖写法</span>
+              </div>
+              <pre><code># 允许
+"numpy>=2.0,<3"
+"heartpy==1.2.7"
+"pandas[performance]>=2.2 ; python_version >= '3.12'"
+
+# 拒绝（CI 与安装器都会拦截）
+"https://example.com/pkg.whl"
+"git+https://github.com/owner/repo"
+"-e ../local-package"
+"../../somewhere"</code></pre>
+            </div>
+          </section>
+
+          <section id="testing">
+            <h2>6 · 测试清单</h2>
+            <p>提交 PR 前至少完成以下检查；CI 会重新执行结构与打包校验。</p>
+            <ul class="check-list">
+              <li><code>module.json</code> 通过 <code>schemas/module.schema.json</code> 校验。</li>
+              <li>空 stdin、未知方法、非法参数都返回结构化 JSON-RPC 错误，不崩溃、不挂起。</li>
+              <li>启动后发送 <code>initialize</code>，确认返回 <code>moduleId</code> 与 <code>apiVersion</code>。</li>
+              <li>用临时目录跑主路径；不要读取真实用户健康数据，不要写日志记录波形或文件名。</li>
+              <li>断网、超时与空数据场景有明确错误码；大结果使用临时文件。</li>
+              <li>打包后在干净目录解包并运行一次，确认不依赖仓库外的相对路径。</li>
+            </ul>
+            <div class="code-block">
+              <div class="code-block-head"><span>本地校验（示例路径）</span></div>
+              <pre><code>python -m json.tool module.json
+python -m pip install jsonschema
+python .github/scripts/validate_module.py marketplace/submissions/my-module</code></pre>
+            </div>
+          </section>
+
+          <section id="submit">
+            <h2>7 · 提交 PR</h2>
+            <ol class="steps">
+              <li>Fork 仓库，在 <code>marketplace/submissions/&lt;module-id&gt;/</code> 下放入 <code>module.json</code>、<code>src/</code>、<code>LICENSE</code>（Apache-2.0 另需 <code>NOTICE</code>）与 <code>README.md</code>。</li>
+              <li>本地运行校验脚本并打包，确认 <code>.ehmod</code> 可解包、校验和一致。</li>
+              <li>填写 PR 模板（<code>.github/PULL_REQUEST_TEMPLATE/module.md</code>）：作者、许可证、上游、权限、测试、截图与非诊断声明。</li>
+              <li>CI <code>validate-module</code> 检查 schema、路径安全、许可证白名单、NOTICE 与包完整性；失败会阻止合并。</li>
+              <li>合并后由维护者在 GitHub Releases 上传 <code>.ehmod</code>，再生成并离线签名索引。</li>
+            </ol>
+            <p>
+              <a class="btn btn-primary btn-small" href="https://github.com/Muhan-Qiu/ecg-agent/pulls" rel="noopener">打开 GitHub Pull Requests</a>
+            </p>
+            <p class="fine-print">仓库地址为占位；发布后替换为真实组织名。提交清单见 <code>marketplace/CONTRIBUTING.md</code>。</p>
+          </section>
+
+          <section id="license">
+            <h2>8 · 许可证与署名</h2>
+            <p>官方索引只接受 OSI 开源许可证；社区索引允许专有/付费模块，但必须显著标注。CI 白名单会拒绝 AGPL 与无许可证提交。</p>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>许可证</th><th>官方索引</th><th>要求</th></tr></thead>
+                <tbody>
+                  <tr><td>MIT / ISC / BSD-2-Clause / BSD-3-Clause</td><td>允许</td><td>保留版权声明与许可证全文</td></tr>
+                  <tr><td>Apache-2.0</td><td>允许</td><td>保留 LICENSE 与 NOTICE，标注修改</td></tr>
+                  <tr><td>MPL-2.0</td><td>允许</td><td>修改文件需公开源码</td></tr>
+                  <tr><td>GPL-2.0 / GPL-3.0 / LGPL</td><td>允许</td><td>仅经 stdio JSON-RPC 隔离，不静态链接进核心</td></tr>
+                  <tr><td>AGPL / SSPL / BUSL / 无许可证</td><td>拒绝</td><td>与分发模型冲突或无法确认再分发权</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <ul>
+              <li>保留上游 LICENSE/NOTICE，不得删除版权头；在 <code>README.md</code> 与 description 中写清 upstream 仓库、原版权人与修改内容。</li>
+              <li>作者字段写适配层维护者，不得暗示上游为你的模块背书。</li>
+              <li>优先 wrapper（子进程或库调用），确需 patch 时保留原许可证并公开修改源码。</li>
+              <li>模型权重与代码许可证分开记录：来源 URL、SPDX、sha256、许可范围。</li>
+            </ul>
+          </section>
+
+          <section id="safety">
+            <h2>9 · 安全与非诊断声明</h2>
+            <div class="callout" style="margin-bottom:1.2rem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"></path>
+                <path d="M12 8v5M12 16.5v.5"></path>
+              </svg>
+              <div>
+                <h3>必须写进模块描述</h3>
+                <p>“本模块不是医疗器械，输出不用于诊断或治疗。”任何声称诊断、治愈或替代医生的描述都会被扫描标记为高风险并可能被拒绝。</p>
+              </div>
+            </div>
+            <ul>
+              <li>禁止把 API Key、私钥、令牌打进包；CI 会扫描常见密钥模式。</li>
+              <li>禁止下载并执行任意代码、混淆、<code>pickle</code> 反序列化与可疑网络请求。</li>
+              <li>健康数据默认不出本机；联网必须声明 <code>network</code> 并在安装页逐项解释。</li>
+              <li>日志不得包含波形内容、用户备注、原始文件名；只允许 ID 与哈希。</li>
+              <li>社区模块未经人工审核：安装页会显示“未审核，风险自担”。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · 核心以 GPL-3.0-only 开源。</p>
+        <p>模块输出不构成医疗建议，不是医疗器械，不用于诊断、治疗或替代专业医疗判断。</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">首页</a>
+          <a href="modules.html">模块市场</a>
+          <a href="developers.html">开发者</a>
+          <a href="https://github.com/Muhan-Qiu/ecg-agent" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
