@@ -753,4 +753,13 @@
 - 官方索引只收 OSI 开源（宽松 + GPL 兼容）；社区索引标注未审核。
 - `.ehmod` 走 GitHub Releases；静态站只放索引/页面。
 - 不做自动更新；安装前展示权限/依赖/许可证。
-- 完成后全量测试、重打安装包。 
+- 完成后全量测试、重打安装包。
+
+### Stage H 验收结果（2026-11-01）
+
+- H8：Ed25519 签名索引、sha256 校验、下载安装/更新、审计；官方 30 条、社区 0 条（待开发者提交）。
+- H9：安装对话框三 tab（官方/社区/本地）、搜索/分类/详情/权限/依赖、更新横幅、社区未审核警告。
+- H10：静态市场站三页、开发者 PR 模板、validate/publish workflows、域名/CNAME 与签名文档。
+- 验证：`pytest backend/tests` **991 passed / 16 skipped**；ruff/build 通过；市场 API + 实际安装 uPlot 模块冒烟成功。
+- 最终安装包重打中。
+- 待用户：域名/仓库、生产签名钥、GitHub Pages CNAME、Releases 上传 `.ehmod`。 
