@@ -41,6 +41,6 @@
 
 | 文件 | 大小 | SHA-256 |
 |---|---|---|
-| `eclipse health_0.1.0_x64-setup.exe`（NSIS） | 239,801,353 字节（228.69 MiB） | `AEEBECB8B8719BBE1D05FE8E5F0AD1DF2991BBC5D612B47922022FDFE53F0399` |
+| `eclipse health_0.1.0_x64-setup.exe`（NSIS） | 383,561,944 字节（365.79 MiB） | `E5FAB8AE396589C9076915056304C5214FBA0AF1DD2517EB3D036EF47F0F796D` |
 
 > 校验命令（PowerShell）：`Get-FileHash ".\eclipse health_0.1.0_x64-setup.exe" -Algorithm SHA256`
