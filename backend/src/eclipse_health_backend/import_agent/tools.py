@@ -173,8 +173,8 @@ TOOL_SPECS: list[dict[str, Any]] = [
                 "kind 只能是 app/device/manual/unknown；不要往 source 里塞 file。"
                 "startAt/endAt 必须带时区（+08:00 或 Z）。evidence.file 必须是本次上传文件"
                 "或其子路径，可选 line/page/locator/snippet。"
-                "kind=ecg 必须额外提供 waveform：采样数据先写入 output/ 下的 CSV，"
-                'waveform={"file":"output/ecg.csv","format":"csv","column":"voltage",'
+                "kind=ecg 必须额外提供 waveform：采样数据先写入 output/ 下的 CSV（waveform.file 写相对 output/ 的文件名，如 ecg.csv），"
+                'waveform={"file":"ecg.csv","format":"csv","column":"voltage",'
                 '"timeColumn":"time","samplingRate":500,"unit":"mV","lead":"I"}；'
                 "PDF/图片没有采样表时不要创建 ecg。"
                 "先提交 1 条验证格式，再批量提交。服务端逐条校验并返回 accepted/rejected/issues。"

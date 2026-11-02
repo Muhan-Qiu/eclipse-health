@@ -238,3 +238,67 @@ def test_same_file_is_idempotent_across_sessions(client: TestClient, providers_f
     assert created[1]["created"] == 0
     assert created[1]["skipped"] == 1
     assert len(list_records(client, "org.eclipsehealth.health.steps")) == 1
+
+
+def test_ecg_waveform_output_prefix_is_accepted(client: TestClient, providers_file) -> None:
+    """Agent 常写 output/ecg.csv；waveform.file 是相对 output/ 的路径。"""
+    session = upload_session(client, {"ecg.csv": "time,voltage\n"})
+    _workspace, meta = store.load_session(session["sessionId"])
+    box = ToolBox(session["sessionId"], meta)
+    rows = ["time,voltage"] + [f"{i / 500:.6f},{0.1 * ((i % 50) - 25) / 25:.6f}" for i in range(500)]
+    assert box.execute("write_output", {"path": "ecg.csv", "content": "\n".join(rows)}).ok
+    proposal = {
+        "kind": "ecg",
+        "value": {"lead": "I"},
+        "unit": "mV",
+        "startAt": "2026-10-30T11:00:00+08:00",
+        "source": {"kind": "device", "device": "Agent"},
+        "evidence": {"file": "ecg.csv", "locator": "rows 2-501"},
+        "confidence": 0.9,
+        "waveform": {
+            "file": "output/ecg.csv",
+            "format": "csv",
+            "column": "voltage",
+            "timeColumn": "time",
+            "samplingRate": 500,
+            "lead": "I",
+        },
+    }
+    proposed = box.execute("propose_records", {"records": [proposal]})
+    assert proposed.result["accepted"] == 1, proposed.result
+
+    body = commit(client, session["sessionId"]).json()
+    assert body["created"] == 1
+    assert body["failed"] == 0
+
+
+def test_failed_ecg_commit_keeps_session_retryable(client: TestClient, providers_file) -> None:
+    """提交有失败记录时不能删除 output/，也不能标记 committed。"""
+    session = upload_session(client, {"ecg.csv": "time,voltage\n"})
+    workspace, meta = store.load_session(session["sessionId"])
+    box = ToolBox(session["sessionId"], meta)
+    proposal = {
+        "kind": "ecg",
+        "value": {"lead": "I"},
+        "unit": "mV",
+        "startAt": "2026-10-30T11:00:00+08:00",
+        "source": {"kind": "device", "device": "Agent"},
+        "evidence": {"file": "ecg.csv", "locator": "rows 2-501"},
+        "confidence": 0.9,
+        "waveform": {"file": "later.csv", "format": "csv", "column": 1, "timeColumn": 0},
+    }
+    assert box.execute("propose_records", {"records": [proposal]}).result["accepted"] == 1
+
+    first = commit(client, session["sessionId"]).json()
+    assert first["created"] == 0
+    assert first["failed"] == 1
+    assert first["errors"][0]["code"] == "ecg_waveform_missing"
+    meta_after = store.read_meta(workspace)
+    assert meta_after["status"] == "ready"
+    assert (workspace / store.OUTPUT_DIR).is_dir()
+
+    rows = ["time,voltage"] + [f"{i / 500:.6f},{0.1 * ((i % 50) - 25) / 25:.6f}" for i in range(500)]
+    assert box.execute("write_output", {"path": "later.csv", "content": "\n".join(rows)}).ok
+    second = commit(client, session["sessionId"]).json()
+    assert second["created"] == 1
+    assert second["failed"] == 0

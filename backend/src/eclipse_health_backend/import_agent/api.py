@@ -429,9 +429,15 @@ def commit_session(
         timezone=timezone,
     )
     meta["commit"] = result
-    meta["status"] = "committed"
-    store.write_meta(workspace, meta)
-    store.delete_payload_dirs(workspace)
+    if result["failed"]:
+        # 有记录失败时保留 input/work/output，用户修正后可以重试；
+        # 已成功写入的记录靠 externalId 去重，不会重复。
+        meta["status"] = "ready"
+        store.write_meta(workspace, meta)
+    else:
+        meta["status"] = "committed"
+        store.write_meta(workspace, meta)
+        store.delete_payload_dirs(workspace)
     audit.record(
         "committed",
         session_id,

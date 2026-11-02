@@ -545,6 +545,9 @@ def _normalize_waveform(raw: Any, unit: str) -> dict[str, Any]:
     if unknown:
         _fail("waveform has unexpected fields", details={"fields": sorted(unknown)})
     file_name = _safe_relative(raw.get("file"), "waveform.file")
+    # Agent 常写 "output/ecg.csv"；waveform.file 是相对 output/ 的路径，接受两种写法。
+    if file_name.lower().startswith("output/"):
+        file_name = file_name[len("output/") :]
     fmt = (_text(raw.get("format"), "waveform.format", max_length=16, required=False) or "csv").lower()
     if fmt in {"float32", "bin", "f32"}:
         fmt = "f32"

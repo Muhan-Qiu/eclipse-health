@@ -1,7 +1,7 @@
 """导入 Agent 的工具循环（SSE 事件）。
 
 与 ``llm.agent.stream_reply`` 同构，但工具集、预算与系统提示都只服务数据导入：
-12 次工具调用、整轮 180 s、无网络、候选必须带证据。
+24 次工具调用、整轮 300 s、无网络、候选必须带证据。
 """
 
 from __future__ import annotations
@@ -47,8 +47,8 @@ SYSTEM_PROMPT = f"""你是 eclipse health 的“数据导入 Agent”。用户�
 8. PDF 或图片里的心电图波形**无法可靠还原为采样点**：只提取报告中的数值/结论，绝不创建
    ecg 记录。只有文件里确实有采样数据（CSV/HTML/XLSX/JSON 中的 time+voltage、
    sample+value、timestamp+mv 等成对列，或输出里的采样表）时，才把采样写成
-   output/ 下的 CSV（两列：time 或 sample，voltage）并在候选里提供：
-   "waveform":{{"file":"output/ecg.csv","format":"csv","column":"voltage",
+   两列（time 或 sample，voltage）写到 output/ 下的 CSV，waveform.file 写相对 output/ 的文件名（如 ecg.csv），并在候选里提供：
+   "waveform":{{"file":"ecg.csv","format":"csv","column":"voltage",
    "timeColumn":"time","samplingRate":<Hz>,"unit":"mV","lead":"I"}}。
    采样率可由 time 列间隔推断；无法推断时写 samplingRate=null 让用户确认。
 9. 用 propose_records 分批提交（单次 ≤1000 条），根据返回的 rejected/issues 修正后重试。
