@@ -239,6 +239,9 @@ def load_waveform(
 ) -> tuple[np.ndarray, float, str]:
     waveform = proposal.get("waveform") or {}
     relative = str(waveform.get("file") or "")
+    # 兼容历史候选里的 "output/ecg.csv"；磁盘路径是 workspace/output/<file>。
+    if relative.lower().startswith("output/"):
+        relative = relative[len("output/") :]
     path = store.safe_join(workspace / store.OUTPUT_DIR, relative)
     if not path.is_file():
         raise RecordValidationError(
