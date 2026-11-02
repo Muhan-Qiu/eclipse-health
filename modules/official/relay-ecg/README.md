@@ -59,7 +59,7 @@ ONNX 不提交 git：导出到 `uploads/relay-ecg/models/`，索引在
 重新导出（需 torch 2.5.1 + onnx + onnxruntime）：
 
 ```powershell
-python modules\official\relay-ecg\tools\export_onnx.py
+C:\Users\qiumuhan\anaconda3\python.exe modules\official\relay-ecg\tools\export_onnx.py
 ```
 
 导出脚本对每个模型做 PyTorch/onnxruntime argmax 一致率校验（阈值 ≥99%，实测 100%）。

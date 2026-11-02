@@ -137,8 +137,17 @@ class CardiaBridge:
         }
 
     # ------------------------------------------------------------------ 分析
-    def analyze(self, request: dict[str, Any]) -> dict[str, Any]:
-        result = self.manager.call(CARDIA_MODULE_ID, "analyze", request)
+    def analyze(
+        self, request: dict[str, Any], *, timeout: float | None = None
+    ) -> dict[str, Any]:
+        """调用模块分析；``timeout`` 由服务层按作业上限传入。
+
+        逐搏分类是长任务，默认 30 秒的通用 RPC 超时会把正常的长记录误杀；
+        取消/卡死由分析服务的看门狗通过 ``manager.interrupt`` 中断。
+        """
+        result = self.manager.call(
+            CARDIA_MODULE_ID, "analyze", request, timeout=timeout
+        )
         if not isinstance(result, dict):
             raise ModuleError("MODULE_ERROR", "Cardia 模块返回了非对象结果")
         reference = result.get("resultRef")

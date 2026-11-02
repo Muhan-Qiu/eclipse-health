@@ -37,6 +37,10 @@ class AnalysisOptionsIn(BaseModel):
 class AnalysisCreate(BaseModel):
     engine: str = Field(default=CARDIA_ENGINE, max_length=64)
     options: AnalysisOptionsIn = Field(default_factory=AnalysisOptionsIn)
+    force: bool = Field(
+        default=False,
+        description="取消该记录上仍在 queued/running 的旧分析后重新发起",
+    )
 
 
 class AnalysisAccepted(BaseModel):
@@ -157,6 +161,7 @@ def create_analysis(
         record_id=record_id,
         engine=payload.engine,
         options=payload.options.model_dump(by_alias=True),
+        force=payload.force,
     )
     return JSONResponse(status_code=202, content=accepted)
 
@@ -190,6 +195,73 @@ def list_available_engines() -> EngineCatalogModel:
     return EngineCatalogModel(
         items=[EngineDescriptorModel(**item.to_dict()) for item in list_engines()]
     )
+
+
+# --------------------------------------------------------------------------- #
+# 运行控制（队列 / 取消 / 重试 / 修复）
+# --------------------------------------------------------------------------- #
+
+
+def _require_analysis_row(session: Any, analysis_id: str) -> Any:
+    row = analysis_repo.get_analysis_row(session, analysis_id)
+    if row is None:
+        raise not_found("analysis", analysis_id)
+    return row
+
+
+@router.get(
+    "/analyses/queue",
+    summary="分析队列状态（暂停/运行中/排队数/引擎状态）",
+    description=(
+        "供 UI 与智能体诊断卡死：返回当前运行的分析、已运行秒数、活跃分析行。"
+        "看门狗会把超过 `jobTimeoutSeconds` 且 worker 未持有的 running 行标记为中断。"
+    ),
+)
+def get_queue_status() -> dict[str, Any]:
+    return get_analysis_service().queue_status()
+
+
+@router.post("/analyses/queue/pause", summary="暂停领取新的分析任务")
+def pause_analysis_queue() -> dict[str, Any]:
+    return get_analysis_service().pause_queue()
+
+
+@router.post("/analyses/queue/resume", summary="恢复分析队列")
+def resume_analysis_queue() -> dict[str, Any]:
+    return get_analysis_service().resume_queue()
+
+
+@router.post(
+    "/analyses/recover",
+    summary="修复卡死的分析（把超时的 queued/running 标记为 interrupted）",
+)
+def recover_stalled_analyses(
+    max_age_s: Annotated[float | None, Query(alias="maxAgeSeconds", ge=0)] = None,
+) -> dict[str, Any]:
+    service = get_analysis_service()
+    recovered = service.repair_stalled(max_age_s=max_age_s)
+    return {"recovered": recovered, "queue": service.queue_status()}
+
+
+@router.post(
+    "/analyses/{analysis_id}/cancel",
+    summary="取消一条分析（运行中会中断引擎，队列立即继续）",
+)
+def cancel_analysis(analysis_id: str, session: SessionDep) -> dict[str, Any]:
+    _require_analysis_row(session, analysis_id)
+    return get_analysis_service().cancel(analysis_id)
+
+
+@router.post(
+    "/analyses/{analysis_id}/retry",
+    response_model=AnalysisAccepted,
+    status_code=202,
+    summary="按原参数重试一条分析（先取消旧任务）",
+)
+def retry_analysis(analysis_id: str, session: SessionDep) -> JSONResponse:
+    _require_analysis_row(session, analysis_id)
+    accepted, _reused = get_analysis_service().retry(analysis_id)
+    return JSONResponse(status_code=202, content=accepted)
 
 
 @router.get(

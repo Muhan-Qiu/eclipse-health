@@ -26,7 +26,7 @@ import torch
 from torch import nn
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_V1 = Path(r"<relay-checkpoint-dir>")
+DEFAULT_V1 = Path(r"C:\Users\qiumuhan\Downloads\relay LSTM\V1")
 DEFAULT_OUT = REPO_ROOT / "uploads" / "relay-ecg" / "models"
 DEFAULT_INDEX = REPO_ROOT / "modules" / "official" / "relay-ecg" / "models" / "index.json"
 

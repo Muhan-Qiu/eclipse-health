@@ -266,6 +266,33 @@ const realApi: ApiClient = {
       );
       return normalizeAnalysis(body);
     },
+
+    cancel: async (id) => {
+      const raw = await requestJson<Record<string, unknown>>(
+        `/analyses/${encodeURIComponent(id)}/cancel`,
+        { method: "POST" },
+        30_000,
+      );
+      return {
+        analysisId: String(raw.analysisId ?? id),
+        cancelled: Boolean(raw.cancelled),
+        status: String(raw.status ?? "cancelled"),
+      };
+    },
+
+    retry: async (id): Promise<AnalysisStartResponse> => {
+      const raw = await requestJson<Record<string, unknown>>(
+        `/analyses/${encodeURIComponent(id)}/retry`,
+        { method: "POST" },
+        30_000,
+      );
+      return {
+        analysisId: String(raw.analysisId ?? raw.id ?? ""),
+        recordId: String(raw.recordId ?? ""),
+        status: (raw.status as AnalysisStartResponse["status"]) ?? "queued",
+        engine: String(raw.engine ?? "cardia"),
+      };
+    },
   },
 
   engine: {

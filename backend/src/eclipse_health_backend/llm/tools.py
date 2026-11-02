@@ -24,7 +24,7 @@ from sqlmodel import Session, select
 
 from ..db import analysis_repo
 from ..db.models import RecordTable
-from ..db.repositories import get_record_row
+from ..db.repositories import get_record_row, list_signal_rows
 from ..domain.common import to_storage_dt, utc_now
 from ..domain.ids import uuid7
 
@@ -139,6 +139,132 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "name": "get_model_card",
             "description": "读取分析模型卡：模型版本、类别、局限与非诊断声明。",
             "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_analysis_queue",
+            "description": (
+                "读取分析队列与引擎状态：是否暂停、当前运行的分析、已运行秒数、"
+                "活跃分析进度、排队数和看门狗超时。用户说「分析卡住了/一直 40%」"
+                "或需要诊断时先调用这个工具。"
+            ),
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_analyses",
+            "description": "列出某条记录的全部分析任务（状态、进度、错误、耗时）。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "recordId": {"type": "string"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                },
+                "required": ["recordId"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "start_analysis",
+            "description": (
+                "为当前成员的一条 ECG 记录发起分析。只有用户明确要求「开始分析/重新分析」"
+                "时才调用；同一记录已有进行中任务时会复用它。force=true 会先取消旧任务"
+                "再新建，用于卡死后的重新分析。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "recordId": {"type": "string"},
+                    "engine": {"type": "string", "maxLength": 64},
+                    "force": {
+                        "type": "boolean",
+                        "description": "取消该记录上仍在排队/运行的任务后重新发起",
+                    },
+                    "allowShortRecord": {
+                        "type": "boolean",
+                        "description": "允许少于 64 搏的短记录（零填充）",
+                    },
+                    "tailMode": {"type": "string", "enum": ["pad", "drop"]},
+                },
+                "required": ["recordId"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "cancel_analysis",
+            "description": (
+                "取消一条分析。运行中的任务会中断分析引擎，让队列立即继续；"
+                "只有用户明确要求停止/取消时才调用。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"analysisId": {"type": "string"}},
+                "required": ["analysisId"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "retry_analysis",
+            "description": "按原引擎与参数重试一条失败、取消或卡住的分析（先取消旧任务再新建）。",
+            "parameters": {
+                "type": "object",
+                "properties": {"analysisId": {"type": "string"}},
+                "required": ["analysisId"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "pause_analysis_queue",
+            "description": (
+                "暂停领取新的分析任务；正在运行的任务不会被中断。"
+                "用户要求「暂停分析队列」时调用。"
+            ),
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "resume_analysis_queue",
+            "description": "恢复分析队列，继续执行排队中的任务。",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recover_stuck_analyses",
+            "description": (
+                "修复卡死的分析：把超时仍处于 queued/running 的任务标记为 interrupted，"
+                "释放同记录的分析占用。用户反馈「删了/重开也不能分析」时调用。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "maxAgeSeconds": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "只修复超过该秒数的任务；省略时使用看门狗超时",
+                    }
+                },
+                "additionalProperties": False,
+            },
         },
     },
     {
@@ -730,6 +856,155 @@ class ToolBox:
             "模型卡",
         )
 
+    # ------------------------------------------------------------------ 分析控制
+    def _analysis_service(self) -> Any:
+        from ..analysis_service import get_analysis_service
+
+        return get_analysis_service()
+
+    def _owned_active_items(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """队列是全局的；对模型只暴露当前成员记录上的任务。"""
+        owned: list[dict[str, Any]] = []
+        for item in items:
+            record_id = item.get("recordId")
+            if not isinstance(record_id, str):
+                continue
+            row = get_record_row(self._session, record_id)
+            if row is None or row.deleted_at is not None or row.member_id != self._member_id:
+                continue
+            owned.append(item)
+        return owned
+
+    def _tool_get_analysis_queue(self, _args: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        status = self._analysis_service().queue_status()
+        active = self._owned_active_items(list(status.get("active") or []))
+        running_id = status.get("runningAnalysisId")
+        owned_running = next(
+            (item for item in active if item.get("analysisId") == running_id), None
+        )
+        engine = status.get("engine") or {}
+        result = {
+            "paused": bool(status.get("paused")),
+            "running": owned_running,
+            "active": active,
+            "activeCount": len(active),
+            "queuedInMemory": status.get("queuedInMemory"),
+            "jobTimeoutSeconds": status.get("jobTimeoutSeconds"),
+            "engine": {
+                "status": engine.get("status"),
+                "engine": engine.get("engine"),
+                "modelId": engine.get("modelId"),
+                "modelVersion": engine.get("modelVersion"),
+                "message": engine.get("message"),
+                "error": engine.get("error"),
+                "warmupSeconds": engine.get("warmupSeconds"),
+            },
+        }
+        summary = (
+            f"队列{'已暂停' if result['paused'] else '运行中'}，"
+            f"我的活跃分析 {len(active)} 条"
+        )
+        return result, summary
+
+    def _tool_list_analyses(self, args: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        record_id = _as_str(args.get("recordId"), "recordId")
+        self._require_record(record_id)
+        limit = _as_int(args.get("limit"), 10, minimum=1, maximum=50)
+        rows = analysis_repo.list_analysis_rows(
+            self._session, record_id, limit=limit, offset=0
+        )
+        items = [analysis_repo.summary_of(row) for row in rows]
+        return (
+            {"recordId": record_id, "items": items, "count": len(items)},
+            f"{len(items)} 条分析",
+        )
+
+    def _tool_start_analysis(self, args: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        record_id = _as_str(args.get("recordId"), "recordId")
+        self._require_record(record_id)
+        if not list_signal_rows(self._session, record_id):
+            raise ToolError("NO_SIGNAL", "record has no signal to analyze")
+        engine = str(args.get("engine") or "cardia")
+        options: dict[str, Any] = {}
+        if args.get("allowShortRecord") is not None:
+            options["allowShortRecord"] = bool(args["allowShortRecord"])
+        if args.get("tailMode") in {"pad", "drop"}:
+            options["tailMode"] = args["tailMode"]
+        try:
+            accepted, reused = self._analysis_service().submit(
+                record_id=record_id,
+                engine=engine,
+                options=options,
+                force=bool(args.get("force", False)),
+            )
+        except Exception as exc:
+            code = str(getattr(exc, "code", "") or "ANALYSIS_START_FAILED")[:48]
+            message = str(getattr(exc, "message", "") or "无法开始分析")[:200]
+            raise ToolError(code, message) from exc
+        return (
+            {**accepted, "reused": reused},
+            f"已{'复用' if reused else '提交'}分析 {accepted.get('analysisId')}",
+        )
+
+    def _tool_cancel_analysis(self, args: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        analysis_id = _as_str(args.get("analysisId"), "analysisId")
+        self._require_analysis(analysis_id)
+        try:
+            result = self._analysis_service().cancel(analysis_id)
+        except Exception as exc:
+            code = str(getattr(exc, "code", "") or "ANALYSIS_CANCEL_FAILED")[:48]
+            raise ToolError(code, "无法取消分析") from exc
+        return result, f"分析 {analysis_id}：{result.get('status')}"
+
+    def _tool_retry_analysis(self, args: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        analysis_id = _as_str(args.get("analysisId"), "analysisId")
+        self._require_analysis(analysis_id)
+        try:
+            accepted, reused = self._analysis_service().retry(analysis_id)
+        except Exception as exc:
+            code = str(getattr(exc, "code", "") or "ANALYSIS_RETRY_FAILED")[:48]
+            raise ToolError(code, "无法重试分析") from exc
+        return (
+            {**accepted, "retriedFrom": analysis_id, "reused": reused},
+            f"已重新提交分析 {accepted.get('analysisId')}",
+        )
+
+    def _tool_pause_analysis_queue(self, _args: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        status = self._analysis_service().pause_queue()
+        return (
+            {"paused": bool(status.get("paused")), "activeCount": len(self._owned_active_items(status.get("active") or []))},
+            "分析队列已暂停",
+        )
+
+    def _tool_resume_analysis_queue(self, _args: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        status = self._analysis_service().resume_queue()
+        return (
+            {"paused": bool(status.get("paused")), "activeCount": len(self._owned_active_items(status.get("active") or []))},
+            "分析队列已恢复",
+        )
+
+    def _tool_recover_stuck_analyses(
+        self, args: dict[str, Any]
+    ) -> tuple[dict[str, Any], str]:
+        max_age = args.get("maxAgeSeconds")
+        try:
+            limit = float(max_age) if max_age is not None else None
+        except (TypeError, ValueError):
+            raise ToolError("INVALID_ARGUMENT", "maxAgeSeconds must be a number") from None
+        if limit is not None and limit < 0:
+            raise ToolError("INVALID_ARGUMENT", "maxAgeSeconds must be >= 0")
+        service = self._analysis_service()
+        recovered = service.repair_stalled(max_age_s=limit)
+        status = service.queue_status()
+        return (
+            {
+                "recovered": recovered,
+                "paused": bool(status.get("paused")),
+                "activeCount": len(self._owned_active_items(status.get("active") or [])),
+            },
+            f"已修复 {recovered} 条卡死分析",
+        )
+
     # ------------------------------------------------------------------ 仪表盘卡片
     def _tool_list_card_templates(
         self, _args: dict[str, Any]
@@ -898,6 +1173,39 @@ class ToolBox:
                         "kind": "dashboard-card",
                         "id": card.get("id"),
                         "label": card.get("title") or card.get("kind") or card.get("id"),
+                    }
+                )
+        elif name in {"start_analysis", "retry_analysis"}:
+            analysis_id = result.get("analysisId")
+            if analysis_id:
+                citations.append(
+                    {
+                        "kind": "analysis",
+                        "id": analysis_id,
+                        "label": f"分析 {result.get('status') or 'queued'}",
+                        "recordId": result.get("recordId"),
+                    }
+                )
+        elif name == "cancel_analysis":
+            analysis_id = result.get("analysisId")
+            if analysis_id:
+                citations.append(
+                    {
+                        "kind": "analysis",
+                        "id": analysis_id,
+                        "label": f"分析 {result.get('status') or 'cancelled'}",
+                    }
+                )
+        elif name == "get_analysis_queue":
+            running = result.get("running") or {}
+            if running.get("analysisId"):
+                progress = running.get("progress") or {}
+                citations.append(
+                    {
+                        "kind": "analysis",
+                        "id": running.get("analysisId"),
+                        "label": f"运行中 {progress.get('percent', 0)}%",
+                        "recordId": running.get("recordId"),
                     }
                 )
         # 去重（同一引用在多次工具调用中重复出现）

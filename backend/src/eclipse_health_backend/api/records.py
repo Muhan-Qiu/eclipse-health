@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -54,6 +55,8 @@ from ..storage.files import (
 from .deps import SessionDep
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 LatestAnalysisStatus = Literal["none", "queued", "running", "completed", "failed"]
@@ -476,6 +479,14 @@ def patch_record(
 @router.delete("/{record_id}", status_code=status.HTTP_204_NO_CONTENT, summary="软删除记录")
 def delete_record(record_id: str, session: SessionDep) -> Response:
     row = _require_record(session, record_id)
+    # 先取消进行中的分析：否则 running 行会继续占用串行队列，且旧任务复用逻辑
+    # 会让用户以为「删了记录/分析仍然卡住」。取消失败不应阻止删除。
+    try:
+        from ..analysis_service import get_analysis_service
+
+        get_analysis_service().cancel_record(record_id)
+    except Exception:
+        logger.debug("cancel active analyses on record delete failed", exc_info=True)
     current = record_from_row(row)
     now = utc_now()
     merged = current.model_dump(by_alias=True, mode="json")

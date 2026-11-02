@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN" data-palette="a">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
+    <title>eclipse health · reports preview</title>
+    <style>
+      html {
+        background-color: #0a0c0f;
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var root = document.documentElement;
+          var mode = localStorage.getItem("eh-theme") || "system";
+          var dark =
+            mode === "dark" ||
+            (mode === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          root.classList.toggle("dark", dark);
+          root.style.colorScheme = dark ? "dark" : "light";
+          var palette = localStorage.getItem("eh-palette");
+          root.dataset.palette =
+            palette === "b" || palette === "c" ? palette : "a";
+          root.lang =
+            localStorage.getItem("eh-locale") === "en-US" ? "en-US" : "zh-CN";
+        } catch (e) {
+          /* ignore */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/features/reports/preview.tsx"></script>
+  </body>
+</html>

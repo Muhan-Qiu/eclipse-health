@@ -58,6 +58,14 @@ export interface ApiClient {
   };
   analyses: {
     get(id: string, includeBeats?: boolean): Promise<AnalysisResult>;
+    /** 取消排队/运行中的分析；运行中会中断分析引擎。 */
+    cancel(id: string): Promise<{
+      analysisId: string;
+      cancelled: boolean;
+      status: string;
+    }>;
+    /** 按原引擎与参数重试；返回新任务。 */
+    retry(id: string): Promise<AnalysisStartResponse>;
   };
   engine: {
     status(): Promise<EngineStatus>;

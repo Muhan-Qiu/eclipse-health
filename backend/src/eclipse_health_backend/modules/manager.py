@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import sys
@@ -60,6 +61,8 @@ from .permissions import (
 )
 
 _MISSING = object()
+
+logger = logging.getLogger(__name__)
 
 # 模块可回调的核心数据方法；权限映射见 permissions.CORE_RPC_SCOPES。
 _DATA_METHODS = frozenset(
@@ -668,7 +671,19 @@ class ModuleManager:
             }
 
     # ------------------------------------------------------------------ RPC
-    def call(self, module_id: str, method: str, params: dict[str, Any] | None = None) -> Any:
+    def call(
+        self,
+        module_id: str,
+        method: str,
+        params: dict[str, Any] | None = None,
+        *,
+        timeout: float | None = None,
+    ) -> Any:
+        """调用模块方法。
+
+        ``timeout`` 只覆盖本次调用；长任务（如 ECG 逐搏分析）可显式放宽，
+        不改变其它 RPC 的默认 30 秒上限。
+        """
         if not method or len(method) > 128:
             raise ModuleError("INVALID_INPUT", "方法名无效")
         params = params or {}
@@ -692,7 +707,9 @@ class ModuleManager:
                 ):
                     raise ModuleError("MODULE_CRASH", "模块连续崩溃，需要手动 start")
                 self._ensure_host(module_id, manifest, granted)
-                result = self._request_with_recovery(module_id, manifest, granted, method, params)
+                result = self._request_with_recovery(
+                    module_id, manifest, granted, method, params, timeout=timeout
+                )
                 ok = True
                 self._crash_counts.pop(module_id, None)
                 return result
@@ -714,6 +731,24 @@ class ModuleManager:
                         },
                     )
 
+    def interrupt(self, module_id: str) -> bool:
+        """强制停止模块进程，用于打断一个卡住的长 RPC。
+
+        不走 ``_lock_for(module_id)``：调用方（分析工作线程）正持有该锁等待 RPC
+        返回，如果这里也去抢锁就会一起卡死。``ModuleHost.stop()`` 自身线程安全，
+        会 terminate/kill 子进程并让 pending 请求立即收到 ``MODULE_CRASH``。
+        """
+        host = self._hosts.pop(module_id, None)
+        if host is None:
+            return False
+        try:
+            host.stop()
+        except Exception:
+            logger.exception("module interrupt failed module=%s", module_id)
+            return False
+        self._states[module_id] = "stopped"
+        return True
+
     def _request_with_recovery(
         self,
         module_id: str,
@@ -721,12 +756,14 @@ class ModuleManager:
         granted: list[str],
         method: str,
         params: dict[str, Any],
+        *,
+        timeout: float | None = None,
     ) -> Any:
         host = self._hosts.get(module_id)
         if host is None or not host.alive:
             raise ModuleError("MODULE_CRASH", "模块进程未运行")
         try:
-            return host.request(method, params, timeout=self.call_timeout_s)
+            return host.request(method, params, timeout=timeout or self.call_timeout_s)
         except ModuleError as exc:
             if exc.code == "MODULE_TIMEOUT":
                 host.stop()

@@ -30,9 +30,9 @@ import torch
 from torch import nn
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_DATA_ROOT = Path(r"<sleep-data-root>")
+DEFAULT_DATA_ROOT = Path(r"C:\Users\qiumuhan\Downloads\relay LSTM\10月23日Sleep-EDF复现")
 DEFAULT_BRAINDECODE = Path(
-    r"<braindecode-src>"
+    r"C:\Users\qiumuhan\Downloads\relay LSTM\Sleep-EDF数据集\pipelines\braindecode"
 )
 DEFAULT_MODULE_MODELS = REPO_ROOT / "modules" / "official" / "relay-sleep" / "models"
 DEFAULT_WEIGHTS_DIR = REPO_ROOT / "uploads" / "relay-sleep" / "models"

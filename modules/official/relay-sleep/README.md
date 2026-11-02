@@ -41,7 +41,7 @@ argmax 与 `summary`（计数、占比、多数类）。权重缺失时返回
 复制进 `.ehmod`。重新导出（需要用户的原始实验目录与 torch 2.5.1）：
 
 ```powershell
-python modules\official\relay-sleep\tools\export_models.py
+C:\Users\qiumuhan\anaconda3\python.exe modules\official\relay-sleep\tools\export_models.py
 ```
 
 ## 限制

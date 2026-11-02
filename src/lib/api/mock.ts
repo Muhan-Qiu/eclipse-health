@@ -961,6 +961,24 @@ const mockApi: ApiClient = {
       }
       throw new ApiError("分析不存在", { status: 404, code: "analysis_not_found" });
     },
+    cancel: async (id) => {
+      const removed = runningAnalyses.delete(id);
+      return sleep(
+        {
+          analysisId: id,
+          cancelled: removed,
+          status: removed ? "cancelled" : "completed",
+        },
+        80,
+      );
+    },
+    retry: async (id) => {
+      throw new ApiError("示例模式不支持重试", {
+        status: 400,
+        code: "mock_not_supported",
+        details: { analysisId: id },
+      });
+    },
   },
 
   engine: {

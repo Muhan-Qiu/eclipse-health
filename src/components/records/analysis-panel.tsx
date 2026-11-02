@@ -8,6 +8,7 @@ import {
   Play,
   RefreshCw,
   ShieldAlert,
+  Square,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,8 @@ interface AnalysisPanelProps {
   onStart: () => void;
   startPending: boolean;
   startError: unknown;
+  onCancel: () => void;
+  cancelPending: boolean;
   engine: EngineStatus | undefined;
   engineLoading: boolean;
   engineError: unknown;
@@ -295,6 +298,8 @@ export function AnalysisPanel({
   onStart,
   startPending,
   startError,
+  onCancel,
+  cancelPending,
   engine,
   engineLoading,
   engineError,
@@ -406,6 +411,19 @@ export function AnalysisPanel({
             }),
           })}
         </p>
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={onCancel}
+          disabled={cancelPending}
+        >
+          {cancelPending ? (
+            <Loader2 className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <Square data-icon="inline-start" />
+          )}
+          {cancelPending ? t("analysis.cancelling") : t("analysis.cancel")}
+        </Button>
       </div>
     );
   } else if (current.status === "failed" || current.status === "cancelled") {

@@ -30,7 +30,7 @@ marketplace/
 本地预览（面条路径必须通过 HTTP，不要直接双击 HTML）：
 
 ```powershell
-cd <repo-root>
+cd C:\Users\qiumuhan\Documents\claude\心电智能体\v3
 backend\.venv\Scripts\python.exe -m http.server 8123
 # 打开 http://127.0.0.1:8123/marketplace/site/index.html
 ```
