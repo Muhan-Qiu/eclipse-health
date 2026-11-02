@@ -950,9 +950,9 @@ const enUS: typeof zhCN = {
       unsupported_format:
         "Unrecognised file format. Provide WFDB (.hea/.dat or .zip) or CSV.",
       invalid_file: "The file is corrupted or incomplete.",
-      file_too_large: "The file exceeds the 200 MB limit.",
-      archive_too_large: "The extracted contents exceed the 300 MB limit.",
-      too_many_files: "More than 200 files in the archive.",
+      file_too_large: "The file is too large to read.",
+      archive_too_large: "The extracted contents are too large to process.",
+      too_many_files: "The number of files is too large to process.",
       empty_selection: "No file selected.",
       import_not_found: "The import session expired. Choose the file again.",
       invalid_sampling_rate: "Sample rate must be positive.",

@@ -877,9 +877,9 @@ const zhCN = {
     errors: {
       unsupported_format: "无法识别这个文件的格式。请提供 WFDB（.hea/.dat 或 .zip）或 CSV。",
       invalid_file: "文件损坏或内容不完整。",
-      file_too_large: "文件超过 200MB 限制。",
-      archive_too_large: "解压后总大小超过 300MB 限制。",
-      too_many_files: "文件数量超过 200 个限制。",
+      file_too_large: "文件过大，无法读取。",
+      archive_too_large: "解压后总大小超出可处理范围。",
+      too_many_files: "文件数量超出可处理范围。",
       empty_selection: "没有选择文件。",
       import_not_found: "导入会话不存在或已过期，请重新选择文件。",
       invalid_sampling_rate: "采样率必须为正数。",

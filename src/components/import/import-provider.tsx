@@ -55,7 +55,7 @@ const EMPTY_COUNTS: ImportRecordCounts = {
   ecg: 0,
 };
 
-const MAX_AGENT_FILES = 20;
+const MAX_AGENT_FILES = 10_000;
 
 export interface AgentView {
   session: AgentSession;

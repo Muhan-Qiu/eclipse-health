@@ -77,8 +77,19 @@ for _package in (
     "multipart",
     "pywt",
     "jinja2",
+    "tiktoken",
 ):
     _collect(_package)
+
+# tiktoken 的编码插件（tiktoken_ext）是 namespace 包，PyInstaller 不会自动收集；
+# 以数据文件放到 _MEIPASS 后，tiktoken 的 pkgutil.iter_modules 才能发现它。
+try:
+    import tiktoken_ext
+
+    for _ext_path in tiktoken_ext.__path__:
+        datas.append((str(_ext_path), "tiktoken_ext"))
+except Exception as exc:  # pragma: no cover - 构建期诊断
+    print(f"[spec] skip tiktoken_ext: {exc}")
 
 # 运行时按字符串惰性导入的模块（importers / reports / assistant / 模块系统）。
 hiddenimports += collect_submodules("eclipse_health_backend")
@@ -103,6 +114,8 @@ datas += [
     (str(ROOT / "modules" / "official" / "cardia"), "modules/official/cardia"),
     (str(BACKEND_DIR / "resources" / "models" / "cardia"), "backend/resources/models/cardia"),
     (str(BACKEND_DIR / "resources" / "samples"), "backend/resources/samples"),
+    # 离线 tiktoken 词表缓存；LiteLLM 计数 token 时不再联网下载。
+    (str(BACKEND_DIR / "resources" / "tiktoken_cache"), "tiktoken_cache"),
     (str(ROOT / "schemas" / "module.schema.json"), "eclipse_health_backend/modules"),
     (str(ROOT / "marketplace" / "official" / "index.json"), "eclipse_health_backend/marketplace/indexes/official"),
     (str(ROOT / "marketplace" / "community" / "index.json"), "eclipse_health_backend/marketplace/indexes/community"),

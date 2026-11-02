@@ -6,16 +6,18 @@
 
 from __future__ import annotations
 
-MAX_UPLOAD_BYTES = 200 * 1024 * 1024
-ZIP_MAX_FILES = 200
-ZIP_MAX_TOTAL_BYTES = 300 * 1024 * 1024
+# 健康导出没有固定大小：Apple Health 的 export.xml、多年份 ECG 目录都可能很大。
+# 这里只保留防止磁盘被误写的上限（16 GiB / 20 万文件），不再是 200 MB / 200 个。
+MAX_UPLOAD_BYTES = 16 * 1024 * 1024 * 1024
+ZIP_MAX_FILES = 200_000
+ZIP_MAX_TOTAL_BYTES = 32 * 1024 * 1024 * 1024
 IMPORT_TTL_HOURS = 24
 
-# 健康数据导出（Apple / 小米）一次最多导入的记录数；超过时报错而不是 OOM。
-HEALTH_MAX_RECORDS = 20_000
-HEALTH_MAX_ECG_FILES = 200
+# 健康数据导出一次最多导入的记录数；仅为避免浏览器/内存失控，不限制正常年份。
+HEALTH_MAX_RECORDS = 5_000_000
+HEALTH_MAX_ECG_FILES = 200_000
 # 超过这个数量在预览里提示「数据较多，提交需要更久」。
-HEALTH_LARGE_RECORDS = 2_000
+HEALTH_LARGE_RECORDS = 50_000
 
 __all__ = [
     "HEALTH_LARGE_RECORDS",
