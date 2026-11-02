@@ -26,7 +26,7 @@ export function SuggestionCard({
 
   const talkToCoach = (prompt: string) => {
     // 助手页（G3/G4）读取 query 后填入输入框，不自动发送。
-    navigate(`/assistant?prompt=${encodeURIComponent(prompt)}`);
+    navigate(`/assistant?prompt=${encodeURIComponent(prompt)}&new=1`);
   };
 
   return (

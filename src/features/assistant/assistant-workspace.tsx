@@ -112,11 +112,14 @@ function applyEvent(message: ChatMessage, event: StreamEvent): ChatMessage {
 export interface AssistantWorkspaceProps {
   initialPrompt?: string | null;
   initialMode?: AssistantMode;
+  /** 从其他功能带入问题时，强制新建会话，避免不同任务的上下文混在一起。 */
+  startNewSession?: boolean;
 }
 
 export function AssistantWorkspace({
   initialPrompt = null,
   initialMode,
+  startNewSession = false,
 }: AssistantWorkspaceProps = {}) {
   const { t } = useTranslation();
   const data = useAssistantData();
@@ -137,6 +140,7 @@ export function AssistantWorkspace({
   const abortFallbackRef = useRef<number | null>(null);
   const activeServerIdRef = useRef<string | null>(null);
   const appliedSessionRef = useRef<string | null>(null);
+  const startNewAppliedRef = useRef(false);
 
   const { providers, sessions, records, messages, activeSessionId } = data;
   const activeProvider = useMemo(
@@ -150,6 +154,14 @@ export function AssistantWorkspace({
   useEffect(() => {
     if (initialMode) setMode(initialMode);
   }, [initialMode]);
+
+  // 从仪表盘/建议卡等入口带入问题时，先清空当前会话；随后的发送会自动新建。
+  useEffect(() => {
+    if (!startNewSession || startNewAppliedRef.current || data.loading) return;
+    startNewAppliedRef.current = true;
+    appliedSessionRef.current = null;
+    data.setActiveSessionId(null);
+  }, [data.loading, data.setActiveSessionId, startNewSession]);
 
   // 城市输入停止 600ms 后再查天气；失败只清空卡片，不弹错误。
   useEffect(() => {

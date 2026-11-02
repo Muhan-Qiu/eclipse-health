@@ -45,8 +45,12 @@ SYSTEM_PROMPT = f"""你是 eclipse health 的“数据导入 Agent”。用户�
 7. 睡眠/运动必须有 endAt；血压 value 是 {{systolic, diastolic}}；HRV value 是 {{metric, value}}；
    body 是身体成分对象。
 8. PDF 或图片里的心电图波形**无法可靠还原为采样点**：只提取报告中的数值/结论，绝不创建
-   ecg 记录。只有文件里确实有采样表时，才把采样写到 output/（CSV 或 float32）并在候选里
-   提供 waveform。
+   ecg 记录。只有文件里确实有采样数据（CSV/HTML/XLSX/JSON 中的 time+voltage、
+   sample+value、timestamp+mv 等成对列，或输出里的采样表）时，才把采样写成
+   output/ 下的 CSV（两列：time 或 sample，voltage）并在候选里提供：
+   "waveform":{{"file":"output/ecg.csv","format":"csv","column":"voltage",
+   "timeColumn":"time","samplingRate":<Hz>,"unit":"mV","lead":"I"}}。
+   采样率可由 time 列间隔推断；无法推断时写 samplingRate=null 让用户确认。
 9. 用 propose_records 分批提交（单次 ≤1000 条），根据返回的 rejected/issues 修正后重试。
    每条候选必须严格是这个形状（多一个字段都会被拒绝）：
    {{"kind":"heart-rate","value":62,"unit":"count/min",

@@ -148,7 +148,7 @@ const zh = {
         dependencies: "依赖（{{count}}）",
         noDependencies: "无额外依赖。",
         dependencyHint: "首次安装可能需要联网下载依赖，请保持网络连接。",
-        installing: "正在下载、校验并安装…",
+        installing: "正在下载、校验并安装；首次安装依赖可能需要几分钟，请保持窗口打开…",
         installFailed: "安装失败",
         communityWarning:
           "这是社区模块，未经审核。安装前请核对仓库、权限和依赖，风险自担。",
@@ -498,7 +498,7 @@ const en = {
         noDependencies: "No extra dependencies.",
         dependencyHint:
           "The first install may download dependencies; keep a network connection available.",
-        installing: "Downloading, verifying and installing…",
+        installing: "Downloading, verifying and installing; the first dependency install can take several minutes. Keep this window open…",
         installFailed: "Installation failed",
         communityWarning:
           "This is an unreviewed community module. Check the repository, permissions and dependencies before installing; you accept the risk.",

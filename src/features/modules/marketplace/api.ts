@@ -14,7 +14,7 @@ import type {
 
 const INDEX_TIMEOUT_MS = 20_000;
 /** 安装包含下载 + 校验 + 写盘，给足时间；仍由 AbortController 兜底。 */
-const INSTALL_TIMEOUT_MS = 300_000;
+const INSTALL_JOB_TIMEOUT_MS = 30 * 60_000;
 
 function buildQuery(params: Record<string, string | undefined>): string {
   const search = new URLSearchParams();
@@ -209,17 +209,47 @@ export async function getMarketplaceSources(): Promise<MarketplaceSources> {
 export async function installMarketplaceModule(
   body: MarketplaceInstallBody,
 ): Promise<ModuleSummary> {
-  const payload = asRecord(
+  // 依赖安装可能在后台跑几分钟（venv + pip），先拿 jobId 再轮询，
+  // 避免 300 秒 HTTP 超时被误判为“卡死”。
+  const started = asRecord(
     await requestJson<unknown>(
-      "/marketplace/install",
+      "/marketplace/install?async=1",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       },
-      INSTALL_TIMEOUT_MS,
+      INDEX_TIMEOUT_MS,
     ),
   );
+  const jobId = asString(started.jobId);
+  if (!jobId) {
+    throw new ApiError("安装任务创建失败", { code: "install_job_missing" });
+  }
+  const deadline = Date.now() + INSTALL_JOB_TIMEOUT_MS;
+  let job: Record<string, unknown> = {};
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    job = asRecord(
+      await requestJson<unknown>(`/marketplace/install/${encodeURIComponent(jobId)}`),
+    );
+    const status = asString(job.status);
+    if (status === "done") break;
+    if (status === "error") {
+      const error = asRecord(job.error);
+      throw new ApiError(asString(error.message) ?? "模块安装失败", {
+        code: asString(error.code) ?? "module_install_failed",
+        details: error.details,
+      });
+    }
+    if (!status) {
+      throw new ApiError("安装任务不存在或已过期", { code: "install_job_not_found" });
+    }
+  }
+  if (asString(job.status) !== "done") {
+    throw new ApiError("安装超时，请检查网络后重试", { code: "install_timeout" });
+  }
+  const payload = asRecord(job.result);
   // H8 安装结果是 {source, moduleId, version, ..., module: <模块摘要>}；
   // 兼容直接返回摘要的旧契约。
   const summary = asRecord(payload.module ?? payload);
