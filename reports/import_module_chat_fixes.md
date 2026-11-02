@@ -55,3 +55,16 @@
      导致 `ecg_waveform_missing`；现在接受 `ecg.csv` 与 `output/ecg.csv` 两种写法。
   2. 提交有失败记录时仍会删除 `input/work/output` 并标记 committed，无法重试；
      现在保留工作区、状态回到 `ready`，已成功的记录靠 externalId 去重。
+
+## 5. 安装模块「卡死/装不上」的真正原因（2026-11-02 追加）
+
+- 冻结版 sidecar 没有独立 `python.exe`，原实现用 `sys.executable -m venv` 创建模块 venv，
+  实际会重新启动 sidecar 而不是 Python，依赖模块一直等到 300 秒超时 → 前台看起来卡死。
+- 修复：冻结模式下用随包 `pip`（`backend/packaging/pip_install.py`）把依赖
+  `--target` 安装到模块目录 `deps/`；worker 启动时 `serve.py` 把 `deps/` 加入
+  `sys.path`。开发模式仍使用独立 venv。
+- 额外修复 pip 在 PyInstaller 下的 `distlib` finder 注册问题。
+- 实测（冻结 sidecar）：安装 `gpxpy` 4.5 秒完成，`deps/.deps-ready` 生成，
+  模块 `enable → start` 后 `initialize ok`。
+- 前台体验：点击安装后立即关闭弹窗并提示「正在后台安装，可继续使用」；
+  后台轮询完成/失败时通知并刷新模块列表，不再需要盯着进度条。
