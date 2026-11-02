@@ -68,3 +68,20 @@
   模块 `enable → start` 后 `initialize ok`。
 - 前台体验：点击安装后立即关闭弹窗并提示「正在后台安装，可继续使用」；
   后台轮询完成/失败时通知并刷新模块列表，不再需要盯着进度条。
+
+## 6. 「引擎就绪」但「没有可用的分析引擎」（2026-11-02 追加）
+
+- 两个接口用了不同事实源：`GET /engine` 读运行时预热状态（已安装的 Cardia 模块），
+  `GET /analyses/engines` 读内置源码目录 `CARDIA_SOURCE_DIR`。
+- 冻结后 `CARDIA_SOURCE_DIR` 仍指向仓库外的 `modules/official/cardia`，目录不存在，
+  于是目录接口返回 `available=false, reason=缺少内置 Cardia 模块清单`，
+  前端禁用「开始分析」并显示「没有可用的分析引擎」。
+- 修复：冻结时指向 `_MEIPASS/modules/official/cardia`。用新侧车实测
+  `GET /analyses/engines` 返回 `available=true, reason=null`。
+
+## 7. 模块下载失败（relay-ecg / relay-sleep）
+
+- 27/43 MB 模块每次走 GitHub Pages，httpx 读超时只有 15 秒，国内网络稍慢即失败。
+- 修复：优先使用安装包内置的 `.ehmod`（32 个模块全部随包），只有索引里新增、
+  包内没有的模块才联网；HTTP 下载改为连接 20 s / 读取 300 s，并重试 3 次。
+- 冻结侧车实测：安装 `relay-ecg` 时日志中没有对应网络 GET，使用本地包。
