@@ -60,5 +60,18 @@ src-tauri/binaries/
 src-tauri/_internal/
 .playwright-mcp/
 
+# Internal working docs and local agent config (not part of the public repo)
+reports/
+prompts/
+uploads/
+website-handoff/
+.claude/
+.secrets/
+.mcp.json
+.tmp-public/
+
 # Internal marketing drafts and launch copy
 marketing/
+
+# Verification download (not part of the repo)
+downloaded-installer.exe

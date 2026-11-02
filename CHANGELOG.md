@@ -26,20 +26,20 @@ First public alpha. Windows 10/11 x64. **Pre-release**: the installer is unsigne
 
 ### Known limitations
 
+- Alpha: unknown bugs are still being found; UI and behaviour can change.
+- Some data cannot be read: vendor watch/health exports are experimental and can fail depending on device, OS and export method.
+- Python and dependency versions affect some features when running from source, installing modules or re-exporting models.
+- Modules are not fully tested; a successful install does not guarantee working functionality.
+- Core ECG import + Cardia 2.0 beat analysis is the most stable path.
 - Auto-update is not enabled.
-- Vendor health formats are not verified against real device exports.
 - Windows only.
 - One built-in analysis engine (Cardia 2.0); third-party engines install as modules.
 - The installer is not code-signed.
 
 ### Release assets
 
-| File | Size | SHA-256 |
-|---|---|---|
-| `eclipse.health_0.1.0_x64-setup.exe` (NSIS) | 383,829,823 bytes (366.05 MiB) | `CC8F1ACB3CD9E1CAE316966037C8877A422DB399DE04F1A32479383068BAC177` |
-
-Verify on Windows:
+The current installer name, size and SHA-256 are published on the [release page](https://github.com/Muhan-Qiu/eclipse-health/releases/tag/v0.1.0-alpha). Every release also carries a `SHA256SUMS.txt` asset; verify the downloaded file against it:
 
 ```powershell
-Get-FileHash ".\eclipse.health_0.1.0_x64-setup.exe" -Algorithm SHA256
+Get-FileHash ".\<installer>.exe" -Algorithm SHA256
 ```

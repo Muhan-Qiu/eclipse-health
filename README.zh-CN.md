@@ -94,7 +94,7 @@
 
 ## 安装
 
-1. 从 [Releases](https://github.com/Muhan-Qiu/eclipse-health/releases) 下载最新的 **`eclipse health_0.1.0_x64-setup.exe`**。
+1. 从 [Releases](https://github.com/Muhan-Qiu/eclipse-health/releases) 下载最新的 Windows 安装包（`*-x64-setup.exe`）。
 2. 用发布说明里的 SHA-256 校验文件。
 3. 运行安装包，启动 **eclipse health**。
 4. Python 后端 sidecar 会自动在 `127.0.0.1:8765` 启动，无需额外安装。
@@ -142,8 +142,14 @@ uv run ruff check .
 
 ## 已知限制
 
+这是 alpha 测试版：会有未发现的 bug，界面和功能都可能变化。
+
+- **仍会不断发现未知 bug。** 尝试新导入或新模块前请先备份数据。
+- **部分数据无法读取。** Apple 健康、Samsung、华为等厂商导出标记为 *experimental*；不同手机/系统版本和导出方式可能解析失败，失败时请保留原始文件。
+- **Python 与依赖库版本会影响部分功能。** 打包版自带 Python，但从源码运行、安装模块或重新导出模型时，环境差异可能导致行为不同。
+- **模块没有经过完整测试。** 安装成功不代表模块可用，功能不保证。
+- **核心心电分析是最稳定的路径。** 心电导入 + Cardia 2.0 心搏分析通常可用。
 - **自动更新未启用**，需要手动安装新版本。
-- **厂商健康格式未经真实导出包验证**。Apple / Samsung / 华为适配器标记为 *experimental*；解析失败请保留原始文件。
 - **目前仅 Windows**。
 - **仅内置一个分析引擎（Cardia 2.0）**。第三方引擎以模块安装，ONNX loader 已就绪。
 - **安装包未签名**，SmartScreen 提示属预期行为。
