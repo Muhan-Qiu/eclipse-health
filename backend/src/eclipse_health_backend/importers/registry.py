@@ -108,6 +108,7 @@ def build_default_registry() -> AdapterRegistry:
     from .huawei_adapter import HuaweiImportAdapter
     from .placeholders import placeholder_adapters
     from .samsung_adapter import SamsungImportAdapter
+    from .samsung_health_adapter import SamsungHealthAdapter
     from .scp_ecg_adapter import ScpEcgImportAdapter
     from .wfdb_adapter import WfdbImportAdapter
     from .xiaomi_adapter import XiaomiAdapter
@@ -121,6 +122,7 @@ def build_default_registry() -> AdapterRegistry:
             AppleImportAdapter(),
             AppleHealthAdapter(),
             XiaomiAdapter(),
+            SamsungHealthAdapter(),
             SamsungImportAdapter(),
             HuaweiImportAdapter(),
         ]

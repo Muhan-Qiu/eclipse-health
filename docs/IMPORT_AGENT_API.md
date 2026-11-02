@@ -63,11 +63,11 @@ Content-Type: multipart/form-data
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `files` 或 `files[]` | file[] | 本次上传的文件，最多 20 个 |
+| `files` 或 `files[]` | file[] | 本次上传的文件，最多 100,000 个 |
 | `file` | file | 单文件上传（兼容） |
 | `path` | string | 仅调试：本机绝对文件/目录路径；目录会递归复制 |
 
-限制：单文件 ≤ 200 MB，session 总量 ≤ 300 MB；符号链接、`..` 条目拒绝。
+限制：单文件 ≤ 16 GiB，session 总量 ≤ 32 GiB；符号链接、`..` 条目拒绝。
 
 `201`：
 
@@ -89,7 +89,7 @@ Content-Type: multipart/form-data
   "limits": {
     "maxFiles": 20,
     "maxUploadBytes": 209715200,
-    "maxToolCalls": 12,
+    "maxToolCalls": 24,
     "maxTurnSeconds": 180,
     "maxRunSeconds": 120,
     "maxProposalRecords": 20000,
@@ -127,7 +127,7 @@ Content-Type: application/json
 | `done` | `{summary, proposalCount, toolCalls, durationMs, status}` | 正常结束 |
 | `error` | `{code, message, details?}` | 失败结束 |
 
-限制：最多 **12** 次工具调用，整轮 ≤ **180 s**；达到上限返回 `tool_limit` / `agent_timeout`。
+限制：最多 **24** 次工具调用，整轮 ≤ **300 s**；达到上限返回 `tool_limit` / `agent_timeout`。
 
 ### 4.3 确认并提交
 
@@ -260,8 +260,8 @@ Agent 的脚本可 `import eh_import_helpers`，提供：
 | `invalid_file` / `file_too_large` | 422/413 | 上传问题 |
 | `path_escape` | 422 | 工具路径越界 |
 | `binary_file` | 422 | 对二进制文件调用 `read_text_file` |
-| `tool_limit` | SSE error | 工具调用超过 12 次 |
-| `agent_timeout` | SSE error | 整轮超过 180 s |
+| `tool_limit` | SSE error | 工具调用超过 24 次 |
+| `agent_timeout` | SSE error | 整轮超过 300 s |
 | `invalid_record` | 422 | 候选记录字段非法 |
 | `ecg_waveform_required` | 422 | `kind=ecg` 但没有采样文件 |
 | `record_not_proposed` | 422 | 提交了未提案的记录 |

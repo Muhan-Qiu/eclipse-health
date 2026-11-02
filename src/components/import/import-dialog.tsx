@@ -208,6 +208,7 @@ interface ImportDialogProps {
   agentCommitting: boolean;
   onPickSource: (source: ImportSourceKind) => void;
   onChooseFiles: () => void;
+  onChooseFilesForAgent: () => void;
   onChooseFolder: () => void;
   onOpenDialog: () => void;
   onStartAgent: () => void;
@@ -239,6 +240,7 @@ export function ImportDialog(props: ImportDialogProps) {
     agentBusy,
     agentCommitting,
     onChooseFiles,
+    onChooseFilesForAgent,
     onChooseFolder,
     onStartAgent,
     onRunAgent,
@@ -388,7 +390,15 @@ export function ImportDialog(props: ImportDialogProps) {
                 {t("imports.picker.desc")}
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                <Button onClick={onChooseFiles}>
+                <Button onClick={onChooseFilesForAgent} disabled={agentBusy}>
+                  {agentBusy ? (
+                    <Loader2 className="animate-spin" data-icon="inline-start" />
+                  ) : (
+                    <Sparkles data-icon="inline-start" />
+                  )}
+                  {t("imports.picker.chooseFilesAi")}
+                </Button>
+                <Button variant="outline" onClick={onChooseFiles}>
                   <FilePlus2 data-icon="inline-start" />
                   {t("imports.picker.chooseFiles")}
                 </Button>

@@ -163,9 +163,17 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "function": {
             "name": "propose_records",
             "description": (
-                "提交一批候选健康记录（单次 ≤1000 条）。每条必须含 kind/value/unit/startAt/"
-                "source/evidence/confidence；evidence.file 必须是本次上传文件或其子路径。"
-                "服务端会逐条校验，返回 accepted/rejected/issues。"
+                "提交一批候选健康记录（单次 ≤1000 条）。每条必须严格使用下面的形状：\n"
+                '{"kind":"heart-rate","value":62,"unit":"count/min",'
+                '"startAt":"2026-10-01T08:00:00+08:00","endAt":null,'
+                '"source":{"kind":"app","app":"Samsung Health"},'
+                '"evidence":{"file":"export.csv","line":2,"snippet":"..."},'
+                '"confidence":0.95}\n'
+                "规则：source 只有 kind/app/device/manufacturer 四个字段，"
+                "kind 只能是 app/device/manual/unknown；不要往 source 里塞 file。"
+                "startAt/endAt 必须带时区（+08:00 或 Z）。evidence.file 必须是本次上传文件"
+                "或其子路径，可选 line/page/locator/snippet。"
+                "先提交 1 条验证格式，再批量提交。服务端逐条校验并返回 accepted/rejected/issues。"
             ),
             "parameters": {
                 "type": "object",

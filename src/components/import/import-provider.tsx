@@ -52,6 +52,9 @@ const EMPTY_COUNTS: ImportRecordCounts = {
   sleep: 0,
   bodyMass: 0,
   bloodPressure: 0,
+  stress: 0,
+  workout: 0,
+  respiratoryRate: 0,
   ecg: 0,
 };
 
@@ -130,6 +133,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const previewRef = useRef<ImportPreview | null>(null);
   const sourceRef = useRef<ImportSourceKind>("auto");
   const filesRef = useRef<DroppedFile[] | null>(null);
+  const forceAgentRef = useRef(false);
   const agentRef = useRef<AgentView | null>(null);
   const agentAbortRef = useRef<AbortController | null>(null);
   const demoStartedRef = useRef(false);
@@ -194,6 +198,43 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const beginAgent = useCallback(
+    async (files: File[]) => {
+      if (!files.length || agentBusy) return;
+      if (files.length > MAX_AGENT_FILES) {
+        setError(
+          new ApiError(t("imports.agent.errors.tooManyFiles", { max: MAX_AGENT_FILES }), {
+            code: "too_many_files",
+            status: 413,
+          }),
+        );
+        return;
+      }
+      setAgentBusy(true);
+      setError(null);
+      try {
+        const session = await createAgentSession(files);
+        setAgent({
+          session,
+          status: "created",
+          events: [],
+          thought: "",
+          proposals: [],
+          selectedKinds: [],
+          error: null,
+          summary: null,
+          toolCalls: 0,
+          commit: null,
+        });
+      } catch (caught) {
+        setError(localError(caught));
+      } finally {
+        setAgentBusy(false);
+      }
+    },
+    [agentBusy, t],
+  );
+
   const startFiles = useCallback(
     async (dropped: DroppedFile[]) => {
       if (busyRef.current) return;
@@ -216,6 +257,14 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       setDragActive(false);
       try {
         validateDroppedFiles(dropped);
+        // 用户明确选择「用 AI 解析文件」：跳过预置解析，直接建 Agent 会话。
+        if (forceAgentRef.current) {
+          forceAgentRef.current = false;
+          setBusy(false);
+          busyRef.current = false;
+          await beginAgent(dropped.map((item) => item.file));
+          return;
+        }
         const file = await prepareImportSource(dropped);
         const result = await previewHealthImport(file, sourceRef.current);
         setPreview(result);
@@ -228,7 +277,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         setBusy(false);
       }
     },
-    [],
+    [beginAgent],
   );
 
   const openPicker = useCallback(() => {
@@ -248,6 +297,15 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const chooseFiles = useCallback(() => {
+    forceAgentRef.current = false;
+    setCommitResult(null);
+    setError(null);
+    setPreview(null);
+    window.setTimeout(() => fileInputRef.current?.click(), 0);
+  }, []);
+
+  const chooseFilesForAgent = useCallback(() => {
+    forceAgentRef.current = true;
     setCommitResult(null);
     setError(null);
     setPreview(null);
@@ -255,6 +313,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const chooseFolder = useCallback(() => {
+    forceAgentRef.current = false;
     setCommitResult(null);
     setError(null);
     setPreview(null);
@@ -334,38 +393,9 @@ export function ImportProvider({ children }: { children: ReactNode }) {
 
   const startAgentSession = useCallback(async () => {
     const files = filesRef.current;
-    if (!files?.length || agentBusy) return;
-    if (files.length > MAX_AGENT_FILES) {
-      setError(
-        new ApiError(t("imports.agent.errors.tooManyFiles", { max: MAX_AGENT_FILES }), {
-          code: "too_many_files",
-          status: 413,
-        }),
-      );
-      return;
-    }
-    setAgentBusy(true);
-    setError(null);
-    try {
-      const session = await createAgentSession(files.map((item) => item.file));
-      setAgent({
-        session,
-        status: "created",
-        events: [],
-        thought: "",
-        proposals: [],
-        selectedKinds: [],
-        error: null,
-        summary: null,
-        toolCalls: 0,
-        commit: null,
-      });
-    } catch (caught) {
-      setError(localError(caught));
-    } finally {
-      setAgentBusy(false);
-    }
-  }, [agentBusy, t]);
+    if (!files?.length) return;
+    await beginAgent(files.map((item) => item.file));
+  }, [beginAgent]);
 
   const runAgent = useCallback(async () => {
     const current = agentRef.current;
@@ -682,6 +712,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           setSource(next);
         }}
         onChooseFiles={chooseFiles}
+        onChooseFilesForAgent={chooseFilesForAgent}
         onChooseFolder={chooseFolder}
         onOpenDialog={openDialog}
         onStartAgent={() => void startAgentSession()}

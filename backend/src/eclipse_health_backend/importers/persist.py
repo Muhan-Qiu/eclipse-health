@@ -36,6 +36,9 @@ KIND_COUNT_KEYS = {
     "sleep": "sleep",
     "body-mass": "bodyMass",
     "blood-pressure": "bloodPressure",
+    "stress": "stress",
+    "workout": "workout",
+    "respiratory-rate": "respiratoryRate",
     "ecg": "ecg",
 }
 

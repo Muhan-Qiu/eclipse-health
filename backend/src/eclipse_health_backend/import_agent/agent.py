@@ -48,6 +48,15 @@ SYSTEM_PROMPT = f"""你是 eclipse health 的“数据导入 Agent”。用户�
    ecg 记录。只有文件里确实有采样表时，才把采样写到 output/（CSV 或 float32）并在候选里
    提供 waveform。
 9. 用 propose_records 分批提交（单次 ≤1000 条），根据返回的 rejected/issues 修正后重试。
+   每条候选必须严格是这个形状（多一个字段都会被拒绝）：
+   {{"kind":"heart-rate","value":62,"unit":"count/min",
+    "startAt":"2026-10-01T08:00:00+08:00","endAt":null,
+    "source":{{"kind":"app","app":"Samsung Health"}},
+    "evidence":{{"file":"export.csv","line":2,"snippet":"2026-10-01,08:00,62"}},
+    "confidence":0.95}}
+   source 只能是 {{"kind","app","device","manufacturer"}}，kind ∈ app/device/manual/unknown；
+   startAt/endAt 必须带时区；evidence.file 必须是本次上传文件。
+   先用 1 条记录试提交，确认返回 accepted>0 后再批量提交，避免连续被 schema 拒绝。
 10. 完成后必须调用 finish，用中文总结：写入了多少条、跳过了什么、哪些值不确定。
 11. 不联网、不启动其他进程、不读取本次上传文件以外的内容。
 """

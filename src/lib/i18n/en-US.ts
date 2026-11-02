@@ -759,15 +759,16 @@ const enUS: typeof zhCN = {
       "ECG waveforms, steps, workouts, heart rate, blood oxygen, sleep, blood pressure, weight and stress. Files are processed locally; temporary files are removed on commit or after 24 hours.",
     picker: {
       title: "Choose files or a folder",
-      desc: "Drop a vendor export as ZIP, CSV, JSON, XML, PDF, XLSX, FIT, GPX, TCX or WFDB. Recognised files go straight to preview; anything else can be parsed by AI.",
-      chooseFiles: "Choose files/folder",
+      desc: "Pick a vendor export folder (Samsung, Apple, Huawei, Xiaomi, Zepp...) and let AI parse it, or use auto-detection for ECG waveforms.",
+      chooseFiles: "Auto-detect import",
+      chooseFilesAi: "Parse files with AI",
       chooseFolder: "Choose an entire folder",
       formats:
         "Supports ZIP, CSV, TXT, XML, JSON, HTML, PDF, XLSX, XLS, FIT, GPX, TCX, EDF, BDF, DAT, HEA, ATR",
       drag: "You can also drag files or folders straight into the window.",
-      aiTitle: "Not recognised? Let AI parse it",
+      aiTitle: "Unknown format? AI first",
       aiDesc:
-        "The AI reads the file list and text snippets, writes a parser and proposes records. Nothing is written until you confirm.",
+        "The AI reads the file list and text snippets, writes a parser and proposes records. Nothing is written until you confirm. Samsung Health exports are also parsed natively.",
       selected: "{{count}} files selected",
       privacy:
         "Files stay on this device. A cloud model only receives the file list and text snippets, never a whole file.",
@@ -908,6 +909,9 @@ const enUS: typeof zhCN = {
         sleep: "Sleep",
         bodyMass: "Body mass",
         bloodPressure: "Blood pressure",
+        stress: "Stress",
+        workout: "Workout",
+        respiratoryRate: "Respiratory rate",
         ecg: "ECG",
       },
     },
