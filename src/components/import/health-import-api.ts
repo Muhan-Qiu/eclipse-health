@@ -22,6 +22,9 @@ export interface ImportRecordCounts {
   bodyMass: number;
   bloodPressure: number;
   ecg: number;
+  stress: number;
+  workout: number;
+  respiratoryRate: number;
 }
 
 export interface HealthImportPreview extends ImportPreview {
@@ -48,6 +51,9 @@ const EMPTY_COUNTS: ImportRecordCounts = {
   bodyMass: 0,
   bloodPressure: 0,
   ecg: 0,
+  stress: 0,
+  workout: 0,
+  respiratoryRate: 0,
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -80,6 +86,9 @@ function counts(value: unknown): ImportRecordCounts {
     sleep: num(item.sleep),
     bodyMass: num(item.bodyMass),
     bloodPressure: num(item.bloodPressure),
+    stress: num(item.stress),
+    workout: num(item.workout),
+    respiratoryRate: num(item.respiratoryRate),
     ecg: num(item.ecg),
   };
 }
@@ -239,6 +248,9 @@ export const COUNT_ORDER = [
   "sleep",
   "bodyMass",
   "bloodPressure",
+  "stress",
+  "workout",
+  "respiratoryRate",
   "ecg",
 ] as const;
 
