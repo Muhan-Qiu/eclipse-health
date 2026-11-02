@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import shutil
+import sys
 import tempfile
 import time
 from collections.abc import Callable
@@ -28,7 +29,12 @@ CARDIA_MODEL_ID = "cardia-2.0"
 CARDIA_MODEL_VERSION = "2.0.0"
 CARDIA_ENGINE = "cardia"
 
-CARDIA_SOURCE_DIR = BACKEND_ROOT.parent / "modules" / "official" / "cardia"
+if getattr(sys, "frozen", False):
+    # 冻结后 BACKEND_ROOT 位于 _internal，随包源码在 _MEIPASS/modules/official/cardia。
+    _BUNDLE_ROOT = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    CARDIA_SOURCE_DIR = _BUNDLE_ROOT / "modules" / "official" / "cardia"
+else:
+    CARDIA_SOURCE_DIR = BACKEND_ROOT.parent / "modules" / "official" / "cardia"
 
 WARMUP_POLL_S = 2.0
 DEFAULT_WARM_TIMEOUT_S = 900.0

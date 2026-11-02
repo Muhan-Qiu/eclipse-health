@@ -6,6 +6,7 @@ import hashlib
 import logging
 import shutil
 import tempfile
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -34,6 +35,9 @@ from .models import MarketplaceEntry, MarketplaceIndex
 logger = logging.getLogger(__name__)
 
 _CHUNK = 1024 * 1024
+# 模块包可能几十 MB，GitHub Pages 在国内经常 >15 秒才传完；读超时给足 5 分钟。
+_DOWNLOAD_TIMEOUT = httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=20.0)
+_DOWNLOAD_ATTEMPTS = 3
 
 
 class MarketplaceService:
@@ -222,7 +226,28 @@ class MarketplaceService:
             source_path = Path(url2pathname(parsed.path))
             self._copy_local(entry, source_path, destination)
             return
+        # 随包已带同名 .ehmod 时优先本地拷贝：安装包内置 32 个模块，
+        # 不必再走 GitHub Pages（国内几十 MB 经常超时）。
+        bundled = self._bundled_package(entry)
+        if bundled is not None:
+            self._copy_local(entry, bundled, destination)
+            return
         self._download_http(entry, url, destination)
+
+    @staticmethod
+    def _bundled_package(entry: MarketplaceEntry) -> Path | None:
+        name = Path(entry.file).name
+        candidates = [
+            Path(__file__).resolve().parent / "packages" / name,
+            PROJECT_ROOT / "dist" / "modules" / name,
+        ]
+        for candidate in candidates:
+            try:
+                if candidate.is_file() and candidate.stat().st_size == entry.size:
+                    return candidate
+            except OSError:
+                continue
+        return None
 
     def _resolve_download_url(self, index_url: str, file_value: str) -> str:
         if urlsplit(file_value).scheme:
@@ -279,48 +304,78 @@ class MarketplaceService:
 
     def _download_http(self, entry: MarketplaceEntry, url: str, destination: Path) -> None:
         factory = self._client_factory
-        client = (
-            factory()
-            if factory is not None
-            else httpx.Client(timeout=httpx.Timeout(15.0))
-        )
+        client = factory() if factory is not None else httpx.Client(timeout=_DOWNLOAD_TIMEOUT)
         current = url
+        last_error: httpx.HTTPError | None = None
         with client:
-            for attempt in range(MAX_REDIRECTS + 1):
-                self._check_download_url(current, redirected=attempt > 0)
+            for attempt in range(_DOWNLOAD_ATTEMPTS):
                 try:
-                    with client.stream("GET", current, follow_redirects=False) as response:
-                        if response.status_code in (301, 302, 303, 307, 308):
-                            location = response.headers.get("location")
-                            if not location:
-                                raise MarketplaceError(
-                                    "marketplace_download_failed", "下载重定向缺少 Location"
-                                )
-                            current = str(response.url.join(location))
-                            if attempt == MAX_REDIRECTS:
-                                break
-                            continue
-                        if response.status_code >= 400:
-                            raise MarketplaceError(
-                                "marketplace_download_failed",
-                                "模块包下载返回错误",
-                                {"status": response.status_code},
-                            )
-                        declared = response.headers.get("content-length")
-                        if declared and declared.isdigit() and int(declared) > MAX_DOWNLOAD_BYTES:
-                            raise MarketplaceError(
-                                "marketplace_resource_exceeded",
-                                "模块包超过大小上限",
-                                {"maxBytes": MAX_DOWNLOAD_BYTES},
-                            )
-                        self._write_stream(response, destination, entry)
-                        return
+                    self._fetch_once(entry, current, destination, client)
+                    return
                 except httpx.HTTPError as exc:
+                    last_error = exc
+                    destination.unlink(missing_ok=True)
+                    if attempt + 1 < _DOWNLOAD_ATTEMPTS:
+                        logger.warning(
+                            "marketplace download retry %s/%s module=%s reason=%s",
+                            attempt + 1,
+                            _DOWNLOAD_ATTEMPTS,
+                            entry.id,
+                            type(exc).__name__,
+                        )
+                        time.sleep(1.5 * (attempt + 1))
+        raise MarketplaceError(
+            "marketplace_download_failed",
+            "无法连接模块包地址",
+            {
+                "reason": type(last_error).__name__ if last_error else "unknown",
+                "attempts": _DOWNLOAD_ATTEMPTS,
+            },
+        )
+
+    def _fetch_once(
+        self,
+        entry: MarketplaceEntry,
+        url: str,
+        destination: Path,
+        client: httpx.Client,
+    ) -> None:
+        current = url
+        for attempt in range(MAX_REDIRECTS + 1):
+            self._check_download_url(current, redirected=attempt > 0)
+            with client.stream("GET", current, follow_redirects=False) as response:
+                if response.status_code in (301, 302, 303, 307, 308):
+                    location = response.headers.get("location")
+                    if not location:
+                        raise MarketplaceError(
+                            "marketplace_download_failed", "下载重定向缺少 Location"
+                        )
+                    current = str(response.url.join(location))
+                    if attempt == MAX_REDIRECTS:
+                        break
+                    continue
+                if response.status_code >= 500:
+                    # 交给外层重试。
+                    raise httpx.HTTPStatusError(
+                        f"server error {response.status_code}",
+                        request=response.request,
+                        response=response,
+                    )
+                if response.status_code >= 400:
                     raise MarketplaceError(
                         "marketplace_download_failed",
-                        "无法连接模块包地址",
-                        {"reason": type(exc).__name__},
-                    ) from exc
+                        "模块包下载返回错误",
+                        {"status": response.status_code},
+                    )
+                declared = response.headers.get("content-length")
+                if declared and declared.isdigit() and int(declared) > MAX_DOWNLOAD_BYTES:
+                    raise MarketplaceError(
+                        "marketplace_resource_exceeded",
+                        "模块包超过大小上限",
+                        {"maxBytes": MAX_DOWNLOAD_BYTES},
+                    )
+                self._write_stream(response, destination, entry)
+                return
         raise MarketplaceError(
             "marketplace_download_failed",
             "模块包重定向次数过多",
