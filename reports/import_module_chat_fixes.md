@@ -42,3 +42,16 @@
 
 390,693,242 字节，SHA-256
 `6E00105D8191C93A84AEE43B478771FD9A89C6A515762EF107ABC019C9F39D85`。
+
+## 4. ECG Agent 是「转化」不是「直接丢」（2026-11-02 追加验证）
+
+- Agent 把采样写到 `output/ecg.csv` 后，`commit` 会读取采样、校验有限值、
+  把 uV/V 统一换算成 mV、从 time 列推断采样率，然后走与标准 ECG 导入完全相同的
+  `ParsedImport → create_record_from_parsed` 管线，写入 `signals/` 的 float32 文件。
+- 实测：500 点 HTML → 1 条 ecg 记录 → 信号 `fs=500, lead=I, unit=mV, shape=[500]`
+  → Cardia 分析 `completed`（短记录需 `allowShortRecord`，1 个心搏，质量与摘要均生成）。
+- 修复两个提交 bug：
+  1. `waveform.file` 写成 `output/ecg.csv` 时被拼成 `output/output/ecg.csv`，
+     导致 `ecg_waveform_missing`；现在接受 `ecg.csv` 与 `output/ecg.csv` 两种写法。
+  2. 提交有失败记录时仍会删除 `input/work/output` 并标记 committed，无法重试；
+     现在保留工作区、状态回到 `ready`，已成功的记录靠 externalId 去重。
