@@ -29,7 +29,7 @@ First public alpha. Windows 10/11 x64. **Pre-release**: the installer is unsigne
 - Alpha: unknown bugs are still being found; UI and behaviour can change.
 - Some data cannot be read: vendor watch/health exports are experimental and can fail depending on device, OS and export method.
 - Python and dependency versions affect some features when running from source, installing modules or re-exporting models.
-- Modules are not fully tested; a successful install does not guarantee working functionality.
+- Modules and other extension features are experimental only; they have not been fully tested and their stability and usability are not guaranteed.
 - Core ECG import + Cardia 2.0 beat analysis is the most stable path.
 - Auto-update is not enabled.
 - Windows only.

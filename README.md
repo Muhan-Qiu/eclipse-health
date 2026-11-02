@@ -149,7 +149,7 @@ This is an alpha: expect undiscovered bugs, changing UI, and incomplete features
 - **Unknown bugs are still being found.** Please back up your data before trying new imports or modules.
 - **Some data cannot be read.** Vendor exports from Apple Health, Samsung and Huawei are marked *experimental*; different phone/OS versions and export methods can fail. Keep the original file when parsing fails.
 - **Python and dependency versions affect some features.** The packaged app bundles its own Python, but running from source, installing modules, or re-exporting models can behave differently depending on the environment.
-- **Modules are not fully tested.** Installing successfully does not guarantee that a module works; its functionality is not guaranteed.
+- **Modules and other extension features are experimental only.** They have not been fully tested; stability and usability are not guaranteed.
 - **Core ECG analysis is the most stable path.** Import plus Cardia 2.0 beat analysis generally works.
 - **Auto-update is not enabled.** You install new versions manually.
 - **Windows only** for now.
