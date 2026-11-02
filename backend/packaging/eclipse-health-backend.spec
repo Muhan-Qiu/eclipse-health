@@ -78,6 +78,8 @@ for _package in (
     "pywt",
     "jinja2",
     "tiktoken",
+    # 冻结版没有 python.exe：模块依赖用随包 pip 安装到模块目录 deps/。
+    "pip",
 ):
     _collect(_package)
 
@@ -106,6 +108,8 @@ hiddenimports += [
 ]
 
 datas += [
+    # 冻结版模块依赖安装器（由 sidecar runpy 执行，内含 pip）。
+    (str(SPEC_DIR / "pip_install.py"), "."),
     # A5：Agent 数据导入沙箱的 runner / helper（冻结后由子进程 runpy 执行）。
     (
         str(BACKEND_DIR / "src" / "eclipse_health_backend" / "import_agent" / "sandbox_assets"),

@@ -783,7 +783,8 @@ class ModuleManager:
         if not (module_dir / manifest.entry_path).is_file():
             raise ModuleError("MODULE_CRASH", "模块入口文件缺失")
         venv_python = package.read_ready_venv(module_dir, manifest.dependencies)
-        if manifest.dependencies and venv_python is None:
+        deps_path = package.read_ready_deps(module_dir, manifest.dependencies)
+        if manifest.dependencies and venv_python is None and deps_path is None:
             # 声明的依赖没有就绪环境时不能用核心 Python 硬跑：那只会得到 ImportError 崩溃。
             raise ModuleError(
                 "MODULE_CRASH",
@@ -803,6 +804,7 @@ class ModuleManager:
             startup_timeout_s=manifest.startup_timeout_s,
             call_timeout_s=self.call_timeout_s,
             venv_path=venv_path,
+            deps_path=deps_path,
             core_call_handler=lambda method, params: self._handle_core_call(module_id, method, params),
         )
         host.start()

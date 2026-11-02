@@ -69,6 +69,7 @@ class ModuleHost:
         call_timeout_s: float = DEFAULT_CALL_TIMEOUT_S,
         core_call_handler: CoreCallHandler | None = None,
         venv_path: Path | None = None,
+        deps_path: Path | None = None,
     ) -> None:
         self.module_id = module_id
         self.module_dir = module_dir
@@ -82,6 +83,8 @@ class ModuleHost:
         self.core_call_handler = core_call_handler
         # B3 每模块 venv 的接口预留。
         self.venv_path = venv_path
+        # 冻结版没有独立 python.exe，依赖装在模块目录 deps/，由 serve.py 加入 sys.path。
+        self.deps_path = deps_path
         self.token = secrets.token_hex(24)
         self.capabilities: dict[str, Any] = {}
 
@@ -129,6 +132,8 @@ class ModuleHost:
                 "PYTHONNOUSERSITE": "1",
             }
         )
+        if self.deps_path is not None:
+            env["EH_MODULE_DEPS"] = str(self.deps_path)
         return env
 
     def _rotate_log(self) -> None:

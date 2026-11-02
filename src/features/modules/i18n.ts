@@ -187,6 +187,8 @@ const zh = {
       toast: {
         installed: "已安装 {{name}}",
         updated: "已更新 {{name}} 至 {{version}}",
+        installStarted:
+          "{{name}} 正在后台安装，可继续使用；完成后会通知你。",
       },
       updates: {
         title: "模块更新",
@@ -546,6 +548,8 @@ const en = {
       toast: {
         installed: "Installed {{name}}",
         updated: "Updated {{name}} to {{version}}",
+        installStarted:
+          "{{name}} is installing in the background. You can keep using the app; we'll notify you when it's done.",
       },
       updates: {
         title: "Module updates",

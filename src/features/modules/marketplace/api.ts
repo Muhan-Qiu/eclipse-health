@@ -206,50 +206,23 @@ export async function getMarketplaceSources(): Promise<MarketplaceSources> {
   };
 }
 
-export async function installMarketplaceModule(
+export interface MarketplaceInstallHandle {
+  jobId: string;
+  moduleId: string;
+  name: string;
+  version: string;
+}
+
+const activeInstallJobs = new Map<string, MarketplaceInstallHandle>();
+
+export function getActiveMarketplaceInstalls(): MarketplaceInstallHandle[] {
+  return Array.from(activeInstallJobs.values());
+}
+
+function summaryFromJob(
+  payload: Record<string, unknown>,
   body: MarketplaceInstallBody,
-): Promise<ModuleSummary> {
-  // 依赖安装可能在后台跑几分钟（venv + pip），先拿 jobId 再轮询，
-  // 避免 300 秒 HTTP 超时被误判为“卡死”。
-  const started = asRecord(
-    await requestJson<unknown>(
-      "/marketplace/install?async=1",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      },
-      INDEX_TIMEOUT_MS,
-    ),
-  );
-  const jobId = asString(started.jobId);
-  if (!jobId) {
-    throw new ApiError("安装任务创建失败", { code: "install_job_missing" });
-  }
-  const deadline = Date.now() + INSTALL_JOB_TIMEOUT_MS;
-  let job: Record<string, unknown> = {};
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    job = asRecord(
-      await requestJson<unknown>(`/marketplace/install/${encodeURIComponent(jobId)}`),
-    );
-    const status = asString(job.status);
-    if (status === "done") break;
-    if (status === "error") {
-      const error = asRecord(job.error);
-      throw new ApiError(asString(error.message) ?? "模块安装失败", {
-        code: asString(error.code) ?? "module_install_failed",
-        details: error.details,
-      });
-    }
-    if (!status) {
-      throw new ApiError("安装任务不存在或已过期", { code: "install_job_not_found" });
-    }
-  }
-  if (asString(job.status) !== "done") {
-    throw new ApiError("安装超时，请检查网络后重试", { code: "install_timeout" });
-  }
-  const payload = asRecord(job.result);
+): ModuleSummary {
   // H8 安装结果是 {source, moduleId, version, ..., module: <模块摘要>}；
   // 兼容直接返回摘要的旧契约。
   const summary = asRecord(payload.module ?? payload);
@@ -268,6 +241,88 @@ export async function installMarketplaceModule(
     installedAt: asString(summary.installedAt) ?? null,
     updatedAt: asString(summary.updatedAt) ?? null,
   };
+}
+
+async function pollInstallJob(jobId: string): Promise<Record<string, unknown>> {
+  const deadline = Date.now() + INSTALL_JOB_TIMEOUT_MS;
+  let job: Record<string, unknown> = {};
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    job = asRecord(
+      await requestJson<unknown>(`/marketplace/install/${encodeURIComponent(jobId)}`),
+    );
+    const status = asString(job.status);
+    if (status === "done") return job;
+    if (status === "error") {
+      const error = asRecord(job.error);
+      throw new ApiError(asString(error.message) ?? "模块安装失败", {
+        code: asString(error.code) ?? "module_install_failed",
+        details: error.details,
+      });
+    }
+    if (!status) {
+      throw new ApiError("安装任务不存在或已过期", { code: "install_job_not_found" });
+    }
+  }
+  throw new ApiError("安装超时，请检查网络后重试", { code: "install_timeout" });
+}
+
+async function runInstallJob(
+  handle: MarketplaceInstallHandle,
+  body: MarketplaceInstallBody,
+): Promise<void> {
+  try {
+    const job = await pollInstallJob(handle.jobId);
+    const installed = summaryFromJob(asRecord(job.result), body);
+    window.dispatchEvent(
+      new CustomEvent("eh:module-install-done", {
+        detail: { moduleId: handle.moduleId, name: handle.name, module: installed },
+      }),
+    );
+  } catch (error) {
+    window.dispatchEvent(
+      new CustomEvent("eh:module-install-error", {
+        detail: { moduleId: handle.moduleId, name: handle.name, error },
+      }),
+    );
+  } finally {
+    activeInstallJobs.delete(handle.jobId);
+  }
+}
+
+/**
+ * 启动后台安装并立即返回；下载/依赖安装继续在后台进行，完成后通过
+ * ``eh:module-install-done`` / ``eh:module-install-error`` 事件通知。
+ * 这样用户可以关掉弹窗继续使用应用，不会看起来像卡死。
+ */
+export async function startMarketplaceInstall(
+  body: MarketplaceInstallBody,
+  displayName: string,
+): Promise<MarketplaceInstallHandle> {
+  const started = asRecord(
+    await requestJson<unknown>(
+      "/marketplace/install?async=1",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      INDEX_TIMEOUT_MS,
+    ),
+  );
+  const jobId = asString(started.jobId);
+  if (!jobId) {
+    throw new ApiError("安装任务创建失败", { code: "install_job_missing" });
+  }
+  const handle: MarketplaceInstallHandle = {
+    jobId,
+    moduleId: body.moduleId,
+    name: displayName,
+    version: body.version ?? "",
+  };
+  activeInstallJobs.set(jobId, handle);
+  void runInstallJob(handle, body);
+  return handle;
 }
 
 const ERROR_KEYS: Record<string, string> = {

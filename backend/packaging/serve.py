@@ -263,6 +263,10 @@ def maybe_run_module_worker(argv: list[str]) -> bool:
 
     sys.argv = [str(candidate), *argv[2:]]
     sys.path.insert(0, str(candidate.parent))
+    deps = os.environ.get("EH_MODULE_DEPS")
+    if deps and Path(deps).is_dir():
+        # 冻结版模块依赖装在模块目录 deps/；优先于随包模块。
+        sys.path.insert(0, deps)
     _apply_thread_env()
     install_frozen_path_hook()
     runpy.run_path(str(candidate), run_name="__main__")
