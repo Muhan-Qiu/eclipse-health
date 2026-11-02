@@ -726,8 +726,8 @@ function previewImport(
       details: { fileNameHash: hashOf(name) },
     });
   }
-  if (size > 200 * 1024 * 1024) {
-    throw new ApiError("文件超过 200MB 限制", { status: 413, code: "file_too_large" });
+  if (size > 16 * 1024 * 1024 * 1024) {
+    throw new ApiError("文件过大，无法读取", { status: 413, code: "file_too_large" });
   }
 
   const format = hintFormat !== "auto" ? hintFormat : ext === "hea" || ext === "zip" ? "wfdb" : "csv";

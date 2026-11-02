@@ -77,6 +77,12 @@ def apply_environment(data_dir: Path | None, port: int | None, log_level: str | 
     os.environ.setdefault("LITELLM_LOG", "ERROR")
     os.environ.setdefault("LITELLM_TELEMETRY", "False")
 
+    # 随包 tiktoken 词表缓存：离线也能完成 token 计数（LiteLLM 首次调用依赖它）。
+    if is_frozen():
+        token_cache = bundle_root() / "tiktoken_cache"
+        if token_cache.is_dir():
+            os.environ.setdefault("TIKTOKEN_CACHE_DIR", str(token_cache))
+
     return Path(os.environ.get("EH_DATA_DIR") or (default_data_dir()))
 
 

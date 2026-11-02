@@ -7,9 +7,9 @@ export interface DroppedFile {
   data?: Uint8Array;
 }
 
-export const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
-export const MAX_ARCHIVE_BYTES = 300 * 1024 * 1024;
-export const MAX_ARCHIVE_FILES = 200;
+export const MAX_UPLOAD_BYTES = 16 * 1024 * 1024 * 1024;
+export const MAX_ARCHIVE_BYTES = 32 * 1024 * 1024 * 1024;
+export const MAX_ARCHIVE_FILES = 200_000;
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
