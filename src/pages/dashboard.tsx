@@ -601,7 +601,7 @@ export function DashboardPage() {
         fields.title ||
         autoCardTitle(fields.kind, fields.aggregation, t),
     });
-    navigate(`/assistant?prompt=${encodeURIComponent(prompt)}`);
+    navigate(`/assistant?prompt=${encodeURIComponent(prompt)}&new=1`);
   };
 
   const submitCard = (fields: CardFields) => {

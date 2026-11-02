@@ -16,6 +16,13 @@ export function AssistantPage() {
     queryPrompt ?? (typeof state?.prompt === "string" ? state.prompt : null);
   const mode: AssistantMode =
     searchParams.get("mode") === "coach" ? "coach" : "chat";
+  const startNewSession = searchParams.get("new") === "1";
 
-  return <AssistantWorkspace initialPrompt={prompt} initialMode={mode} />;
+  return (
+    <AssistantWorkspace
+      initialPrompt={prompt}
+      initialMode={mode}
+      startNewSession={startNewSession}
+    />
+  );
 }
