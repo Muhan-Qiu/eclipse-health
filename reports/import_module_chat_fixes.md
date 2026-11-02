@@ -37,3 +37,8 @@
 - `pytest backend/tests/marketplace backend/tests/import_agent backend/tests/imports`：全部通过。
 - `ruff check backend`：通过。
 - `npm run build`：通过。
+
+## 安装包
+
+390,693,242 字节，SHA-256
+`6E00105D8191C93A84AEE43B478771FD9A89C6A515762EF107ABC019C9F39D85`。
