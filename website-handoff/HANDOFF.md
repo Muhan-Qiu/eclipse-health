@@ -71,7 +71,7 @@
 
 1. **Logo 有问题（暂缓）**：用户 2026-11-01 明确说真正的 logo 还没定，先不要改。等品牌定稿后，再换 `src/branding/Logo.tsx` / `public/brand/favicon.svg` 对应的深绿涟漪版本。
 2. **布局/排版**：首页、模块市场、开发者页已做一轮信息层级与移动端适配；后续用户会继续提具体改动。
-3. **下载链接**：首页指向 `https://github.com/Muhan-Qiu/eclipse-health/releases`；`v0.1.0-alpha` 安装包已上传，页面标注「已发布」。发新版本时更新版本号与 Release 标签即可。
+3. **下载链接**：首页按钮直接指向安装包资产 `https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.0-alpha/eclipse-health_0.1.0_x64-setup.exe`（点击即下载，不再跳到 Release 页面）；`v0.1.0-alpha` 安装包已上传，页面标注「已发布」。发新版本时更新版本号、资产名与标签即可。
 4. **模块市场页**：卡片已改为“功能优先”，详情页包含功能、输入输出、适用场景、限制与技术说明；自研模块已改名并配详细文案。
 5. **开发者页**：已写清 PR 流程、许可证白名单、`io.github.<owner>.<name>`、NOTICE/署名与测试要求。
 6. **生产签名**：当前索引是 dev key；上线前需用户用生产 Ed25519 私钥重签，并更新应用内置公钥。不要自己生成/替换生产钥。

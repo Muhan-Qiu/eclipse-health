@@ -9,7 +9,7 @@ from assistant_helpers import create_record, seed_analysis
 from fastapi.testclient import TestClient
 
 from eclipse_health_backend.db.base import session_scope
-from eclipse_health_backend.llm.tools import ToolBox
+from eclipse_health_backend.llm.tools import TOOL_NAMES, ToolBox
 
 
 def _call(member_id: str, name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -114,3 +114,70 @@ def test_model_card_tool(client: TestClient, default_member: dict) -> None:
     assert outcome["ok"] is True
     assert "available" in outcome["result"]
     assert "status" in outcome["result"]
+
+
+def test_analysis_control_tools_are_registered() -> None:
+    assert {
+        "get_analysis_queue",
+        "list_analyses",
+        "start_analysis",
+        "cancel_analysis",
+        "retry_analysis",
+        "pause_analysis_queue",
+        "resume_analysis_queue",
+        "recover_stuck_analyses",
+    } <= set(TOOL_NAMES)
+
+
+def test_analysis_queue_and_pause_resume(client: TestClient, default_member: dict) -> None:
+    queue = _call(default_member["id"], "get_analysis_queue")
+    assert queue["ok"] is True
+    assert "paused" in queue["result"]
+    assert "engine" in queue["result"]
+
+    paused = _call(default_member["id"], "pause_analysis_queue")
+    assert paused["ok"] is True and paused["result"]["paused"] is True
+    try:
+        assert _call(default_member["id"], "get_analysis_queue")["result"]["paused"] is True
+    finally:
+        resumed = _call(default_member["id"], "resume_analysis_queue")
+    assert resumed["ok"] is True
+    assert resumed["result"]["paused"] is False
+
+
+def test_start_analysis_validates_ownership_and_signal(
+    client: TestClient, default_member: dict, empty_record: dict
+) -> None:
+    no_signal = _call(
+        default_member["id"], "start_analysis", {"recordId": empty_record["id"]}
+    )
+    assert no_signal["ok"] is False
+    assert no_signal["result"]["error"]["code"] == "NO_SIGNAL"
+
+    other = client.post("/api/v1/members", json={"displayName": "Other"}).json()
+    foreign = create_record(client, other["id"])
+    foreign_result = _call(
+        default_member["id"], "start_analysis", {"recordId": foreign["id"]}
+    )
+    assert foreign_result["ok"] is False
+    assert foreign_result["result"]["error"]["code"] == "NOT_FOUND"
+
+
+def test_cancel_and_retry_are_member_scoped(
+    client: TestClient, default_member: dict
+) -> None:
+    other = client.post("/api/v1/members", json={"displayName": "Other"}).json()
+    foreign_record = create_record(client, other["id"])
+    foreign_analysis = seed_analysis(foreign_record["id"])
+    for name in ("cancel_analysis", "retry_analysis"):
+        outcome = _call(
+            default_member["id"], name, {"analysisId": foreign_analysis}
+        )
+        assert outcome["ok"] is False
+        assert outcome["result"]["error"]["code"] == "NOT_FOUND"
+
+
+def test_recover_stuck_tool(client: TestClient, default_member: dict) -> None:
+    outcome = _call(default_member["id"], "recover_stuck_analyses", {"maxAgeSeconds": 0})
+    assert outcome["ok"] is True
+    assert outcome["result"]["recovered"] >= 0

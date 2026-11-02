@@ -14,7 +14,7 @@
 2. **Logo 暂缓**：用户明确说真正的 logo 还没定，**不要改 logo 与图标**；等品牌定稿后再统一替换。
 3. **模块文案**：`module-copy.{zh,en}.json` 按模块 ID 覆盖名称、一句话说明、功能清单、输入输出、适用场景与限制；卡片优先展示功能，详情页再展开权限、依赖、扫描与技术说明。
 4. **自研模块**：`relay-ecg` 显示名为「ECG 心搏分析」，`relay-sleep` 为「睡眠分期分析」；模块 ID 保持不变。改名称/简介后要重跑 `scripts/pack_official_modules.py` 与 `scripts/build_marketplace_index.py`。
-5. **下载**：首页指向 `https://github.com/Muhan-Qiu/eclipse-health/releases`，`v0.1.0-alpha` 安装包已上传，页面标注「已发布」；不要伪造 asset 链接。
+5. **下载**：首页按钮直接指向安装包资产 `https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.0-alpha/eclipse-health_0.1.0_x64-setup.exe`，点击即下载、不跳转 Release 页面；`v0.1.0-alpha` 安装包已上传，页面标注「已发布」；不要伪造 asset 链接。
 6. **视觉**：低饱和、与桌面应用设计令牌一致；不要默认玻璃拟态/高饱和；亮暗可读；响应式；纯静态 HTML/CSS/JS，无第三方框架。
 
 你的任务：按用户后续提出的布局、功能与 GitHub 相关改动继续迭代。只修改 `marketplace/site/**`、`modules/official/*/module.json` 的展示字段（改完重打包重签）与 `website-handoff/` 文档；不要改应用核心、后端或模块实现。

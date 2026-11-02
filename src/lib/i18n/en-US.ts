@@ -535,6 +535,8 @@ const enUS: typeof zhCN = {
     inProgress: "In progress",
     queued: "Queued",
     running: "Analysis running",
+    cancel: "Cancel analysis",
+    cancelling: "Cancelling…",
     progressLabel: "Analysis progress",
     stage: "Stage: {{stage}}",
     summaryFallback: "Analysis complete.",

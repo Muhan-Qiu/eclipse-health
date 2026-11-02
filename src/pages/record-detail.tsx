@@ -41,6 +41,7 @@ import type { Beat } from "@/lib/api/types";
 import {
   queryKeys,
   useAnalysis,
+  useCancelAnalysis,
   useDeleteRecord,
   useEngineStatus,
   useRecord,
@@ -73,6 +74,7 @@ export function RecordDetailPage() {
   const engineQuery = useEngineStatus();
   const engineCatalogQuery = useEngineCatalog();
   const startMutation = useStartAnalysis(id);
+  const cancelMutation = useCancelAnalysis(id);
   const deleteMutation = useDeleteRecord(id);
   // 只用于 [ / ] 在相邻记录间跳转；列表按 capturedAt 倒序。
   const recordsQuery = useRecords({ limit: 100, offset: 0 });
@@ -450,6 +452,10 @@ export function RecordDetailPage() {
             onStart={startAnalysis}
             startPending={startMutation.isPending}
             startError={startMutation.error}
+            onCancel={() => {
+              if (analysisId) cancelMutation.mutate(analysisId);
+            }}
+            cancelPending={cancelMutation.isPending}
             engine={engineQuery.data}
             engineLoading={engineQuery.isLoading}
             engineError={engineQuery.error}

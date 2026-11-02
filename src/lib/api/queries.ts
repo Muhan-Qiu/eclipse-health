@@ -193,6 +193,21 @@ export function useStartAnalysis(recordId: string | undefined) {
   });
 }
 
+/** 取消排队/运行中的分析：运行中会中断引擎，队列立即继续。 */
+export function useCancelAnalysis(recordId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (analysisId: string) => api.analyses.cancel(analysisId),
+    onSuccess: () => {
+      if (!recordId) return;
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.recordAnalyses(recordId),
+      });
+      void queryClient.invalidateQueries({ queryKey: ["records"] });
+    },
+  });
+}
+
 export function useDeleteRecord(recordId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({

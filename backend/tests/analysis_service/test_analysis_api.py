@@ -196,7 +196,7 @@ def test_module_crash_marks_analysis_failed(
         def warmup(self) -> float:
             return 0.01
 
-        def analyze(self, request: dict) -> dict:
+        def analyze(self, request: dict, *, timeout: float | None = None) -> dict:
             raise ModuleError("MODULE_CRASH", "模块进程已退出")
 
     service = AnalysisService(direct=False, start_warmup=False)

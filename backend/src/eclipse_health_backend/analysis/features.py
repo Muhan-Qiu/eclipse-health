@@ -174,13 +174,32 @@ def compute_rr_intervals(r_poses: np.ndarray) -> RRIntervals:
 
     global_r = np.zeros(n)
     global_r[0] = pre_r[0]
-    for i in range(1, n):
-        num, avg_val = 0, 0.0
-        for j in range(i):
-            if (r[i] - r[j]) < 108000:
-                avg_val += pre_r[j]
-                num += 1
-        global_r[i] = avg_val / float(max(num, 1))
+    # 参考实现是 O(n²)：对每个 i 扫描 [0, i) 内 5 分钟窗口里的 pre_R。
+    # R 峰位置单调递增，窗口起点可用二分定位，再做前缀和 → O(n log n)。
+    # 非单调输入（理论上不该出现）回退到逐项实现，保证数值完全一致。
+    if n > 1:
+        if np.all(np.diff(r) >= 0):
+            window = 108000.0
+            starts = np.searchsorted(r, r - window, side="right")
+            prefix = np.concatenate(([0.0], np.cumsum(pre_r)))
+            indices = np.arange(n)
+            counts = indices - starts
+            sums = prefix[indices] - prefix[starts]
+            global_r = np.divide(
+                sums,
+                np.maximum(counts, 1),
+                out=np.zeros(n, dtype=np.float64),
+                where=counts > 0,
+            )
+            global_r[0] = pre_r[0]
+        else:
+            for i in range(1, n):
+                num, avg_val = 0, 0.0
+                for j in range(i):
+                    if (r[i] - r[j]) < 108000:
+                        avg_val += pre_r[j]
+                        num += 1
+                global_r[i] = avg_val / float(max(num, 1))
 
     return RRIntervals(pre_r, post_r, local_r, global_r)
 

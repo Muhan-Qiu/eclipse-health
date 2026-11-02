@@ -514,6 +514,8 @@ const zhCN = {
     inProgress: "分析中",
     queued: "排队中",
     running: "分析进行中",
+    cancel: "取消分析",
+    cancelling: "正在取消…",
     progressLabel: "分析进度",
     stage: "阶段：{{stage}}",
     summaryFallback: "分析完成。",
