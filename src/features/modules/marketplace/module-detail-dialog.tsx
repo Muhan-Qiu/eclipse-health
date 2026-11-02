@@ -40,8 +40,8 @@ import {
 } from "../permission-utils";
 import type { PermissionDetail, PermissionRisk } from "../types";
 import {
-  installMarketplaceModule,
   marketplaceErrorMessage,
+  startMarketplaceInstall,
 } from "./api";
 import type { MarketplaceModule, MarketplaceSource } from "./types";
 
@@ -109,34 +109,26 @@ export function ModuleDetailDialog({
   installedVersion,
   open,
   onClose,
-  onInstalled,
 }: ModuleDetailDialogProps) {
   const { t, i18n } = useTranslation();
 
   const install = useMutation({
     mutationFn: () => {
       if (!module) throw new Error("missing module");
-      return installMarketplaceModule({
-        source,
-        moduleId: module.id,
-        version: module.version,
-      });
+      return startMarketplaceInstall(
+        {
+          source,
+          moduleId: module.id,
+          version: module.version,
+        },
+        module.name,
+      );
     },
-    onSuccess: (installed) => {
-      if (module) {
-        const isUpdate = installedVersion !== null && installedVersion !== module.version;
-        toast.success(
-          isUpdate
-            ? t("moduleUi.marketplace.toast.updated", {
-                name: installed.name || module.name,
-                version: module.version,
-              })
-            : t("moduleUi.marketplace.toast.installed", {
-                name: installed.name || module.name,
-              }),
-        );
-        onInstalled(module);
-      }
+    onSuccess: (handle) => {
+      // 后台安装：关闭弹窗，用户可以继续使用应用；完成后由 InstallWatcher 通知。
+      toast.info(
+        t("moduleUi.marketplace.toast.installStarted", { name: handle.name }),
+      );
       onClose();
     },
   });
@@ -437,9 +429,6 @@ export function ModuleDetailDialog({
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 {t("moduleUi.marketplace.details.installing")}
               </p>
-              <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
-              </div>
             </div>
           ) : null}
 

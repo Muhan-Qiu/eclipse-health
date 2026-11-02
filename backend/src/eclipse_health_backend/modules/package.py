@@ -278,6 +278,8 @@ def pack_directory(source_dir: Path, output_path: Path) -> Path:
 
 # ---------------------------------------------------------------- 每模块 venv
 MODULE_VENV_DIRNAME = "venv"
+MODULE_DEPS_DIRNAME = "deps"
+_DEPS_MARKER = ".deps-ready"
 DEPENDENCY_INSTALL_TIMEOUT_S = 300.0
 _MAX_LOG_CHARS = 4000
 _READY_MARKER = ".ready"
@@ -294,6 +296,11 @@ def module_venv_dir(module_dir: Path) -> Path:
     return module_dir / MODULE_VENV_DIRNAME
 
 
+def module_deps_dir(module_dir: Path) -> Path:
+    """冻结版 sidecar 没有独立 python.exe，依赖装进这个目录并加入 worker 的 sys.path。"""
+    return module_dir / MODULE_DEPS_DIRNAME
+
+
 def venv_python_path(venv_dir: Path) -> Path:
     if os.name == "nt":
         return venv_dir / "Scripts" / "python.exe"
@@ -308,8 +315,27 @@ def _site_packages_dir(venv_dir: Path) -> Path:
 
 
 def remove_module_venv(module_dir: Path) -> None:
-    """删除模块版本目录下的 venv；不触碰模块文件或用户数据。"""
+    """删除模块版本目录下的 venv/deps；不触碰模块文件或用户数据。"""
     shutil.rmtree(module_venv_dir(module_dir), ignore_errors=True)
+    shutil.rmtree(module_deps_dir(module_dir), ignore_errors=True)
+
+
+def read_ready_deps(module_dir: Path, dependencies: Sequence[str]) -> Path | None:
+    """冻结模式：返回已安装依赖目录；标记缺失/hash 不符时为 None。"""
+    normalized = validate_dependencies(dependencies)
+    if not normalized:
+        return None
+    directory = module_deps_dir(module_dir)
+    marker = directory / _DEPS_MARKER
+    try:
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("dependencyHash") != dependency_digest(normalized):
+        return None
+    return directory if directory.is_dir() else None
 
 
 def read_ready_venv(module_dir: Path, dependencies: Sequence[str]) -> Path | None:
@@ -405,6 +431,63 @@ def _write_ready_marker(venv_dir: Path, dependencies: Sequence[str]) -> None:
     temp.replace(marker)
 
 
+def _bundle_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    return Path(__file__).resolve().parents[3]
+
+
+def _install_deps_frozen(
+    module_dir: Path,
+    dependencies: Sequence[str],
+    *,
+    timeout_s: float,
+    log: Callable[[str], None] | None,
+) -> Path:
+    """冻结版没有 python.exe：用随包 pip 安装到 deps/，worker 通过 sys.path 使用。"""
+    deps_dir = module_deps_dir(module_dir)
+    shutil.rmtree(deps_dir, ignore_errors=True)
+    deps_dir.mkdir(parents=True, exist_ok=True)
+    helper = _bundle_root() / "pip_install.py"
+    if not helper.is_file():
+        raise _install_error("pip-helper-missing", "安装包缺少 pip 安装器")
+    if log is not None:
+        log(f"[deps] frozen install into deps/ for {len(dependencies)} requirement(s)")
+    result = _run_command(
+        [
+            sys.executable,
+            str(helper),
+            "install",
+            "--disable-pip-version-check",
+            "--no-input",
+            "--no-warn-script-location",
+            "--target",
+            str(deps_dir),
+            *dependencies,
+        ],
+        timeout_s,
+    )
+    _log_output(log, result)
+    if result.returncode != 0:
+        shutil.rmtree(deps_dir, ignore_errors=True)
+        raise _install_error(
+            "pip-install-failed",
+            "依赖安装失败（网络、版本冲突或包不可用）",
+        )
+    payload = {
+        "dependencyHash": dependency_digest(dependencies),
+        "dependencies": list(dependencies),
+        "installedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "python": sys.version.split()[0],
+    }
+    (deps_dir / _DEPS_MARKER).write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    if log is not None:
+        log(f"[deps] frozen ready: {len(dependencies)} requirement(s)")
+    return deps_dir
+
+
 def install_module_venv(
     module_dir: Path,
     dependencies: Sequence[str],
@@ -421,6 +504,15 @@ def install_module_venv(
     remove_module_venv(module_dir)
     if not normalized:
         return None
+
+    if getattr(sys, "frozen", False):
+        try:
+            return _install_deps_frozen(
+                module_dir, normalized, timeout_s=timeout_s, log=log
+            )
+        except subprocess.TimeoutExpired as exc:
+            shutil.rmtree(module_deps_dir(module_dir), ignore_errors=True)
+            raise _install_error("timeout", f"依赖安装超过 {int(timeout_s)} 秒，已回滚") from exc
 
     venv_dir = module_venv_dir(module_dir)
     try:
