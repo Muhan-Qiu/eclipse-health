@@ -66,7 +66,13 @@
 ### 回滚点
 
 - 修复前基线：`84b77fd`
-- 本次修复提交：见 `git log --grep="BUG-001"`
+- 本次修复提交：`f1a97d6`（分支 `v4`）
+
+### 构建注意
+
+- 离线仓库体积约 105 MB，**不提交 git**（`.gitignore: backend/packaging/wheelhouse/`）。
+  每次出安装包时由 `build_release.ps1` / `build_module_wheelhouse.py` 重新生成；
+  换 Python 小版本或平台后必须重建。
 
 ---
 
