@@ -31,6 +31,19 @@ cd backend
 .venv\Scripts\python.exe -m ruff check src tests
 ```
 
+## 本机构建产物（2026-11-06）
+
+| 项 | 值 |
+|---|---|
+| 安装包 | `src-tauri/target/release/bundle/nsis/eclipse health_0.1.1_x64-setup.exe` |
+| 大小 | 320.66 MiB（336,231,519 bytes） |
+| SHA-256 | `6f9200c651902d65857c1db5f56d70049e3b01469ebc91254019dc633de9de77` |
+| 版本 | 应用 / Tauri / 后端均为 `0.1.1` |
+| 冒烟 | 启动后 `GET /api/v1/health` 返回 `status=ok`、`version=0.1.1` |
+
+> 构建包含官方模块离线依赖仓库（wheelhouse）。`uploads/` 下没有 relay-ecg / relay-sleep
+> 的 ONNX 权重，打包脚本只给出警告；这两个模块的模型文件需要先导出再重新打包。
+
 ## 备份与回滚
 
 - 远程仓库：`ssh://git@ssh.github.com:443/Muhan-Qiu/eclipse-health.git`
