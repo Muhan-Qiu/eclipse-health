@@ -76,20 +76,27 @@
         </div>
 
         <aside class="release-card" aria-labelledby="release-title">
-          <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>latest release</p>
-          <h2 id="release-title">eclipse health for desktop</h2>
-          <span class="version">v0.1.0-alpha · released</span>
-          <ul class="release-meta">
-            <li><span>Platform</span><span>Windows 10/11 x64</span></li>
-            <li><span>Installer</span><span>eclipse-health_0.1.0_x64-setup.exe</span></li>
-            <li><span>Runtime</span><span>Bundled Python, nothing to install</span></li>
-            <li><span>Verify</span><span>SHA-256 published with the release</span></li>
-            <li><span>License</span><span>GPL-3.0-only</span></li>
+          <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>Latest updates</p>
+          <h2 id="release-title">Recent updates and fixes</h2>
+          <span class="version">v4-m1 · updated 2026-11-06</span>
+          <ul class="update-list">
+            <li class="update-item">
+              <div class="update-head">
+                <span class="update-version">v4-m1</span>
+                <time datetime="2026-11-06">2026-11-06</time>
+              </div>
+              <ul class="update-points">
+                <li><strong>Module install</strong>: an offline dependency wheelhouse lets functional modules install without network access.</li>
+                <li><strong>Version conflicts</strong>: module dependencies now take precedence over bundled libraries such as numpy and scipy.</li>
+                <li><strong>Safer upgrades</strong>: module environments rebuild automatically after a Python upgrade.</li>
+                <li><strong>Leaner dependencies</strong>: relay-ecg / relay-sleep no longer reinstall libraries already bundled with the core.</li>
+              </ul>
+            </li>
           </ul>
-          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/releases" rel="noopener">
-            View release and checksums
+          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4/docs/V4/CHANGELOG.md" rel="noopener">
+            View full changelog
           </a>
-          <p class="fine-print">Installers and <code>.ehmod</code> packages are checked against SHA-256 before install; signed modules also verify the author's public key.</p>
+          <p class="fine-print">V4 is in development; the current public installer is v0.1.0-alpha, available on Releases with SHA-256 checksums.</p>
         </aside>
       </div>
     </section>

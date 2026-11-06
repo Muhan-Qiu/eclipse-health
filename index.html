@@ -74,20 +74,27 @@
         </div>
 
         <aside class="release-card" aria-labelledby="release-title">
-          <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>latest release</p>
-          <h2 id="release-title">eclipse health 桌面端</h2>
-          <span class="version">v0.1.0-alpha · 已发布</span>
-          <ul class="release-meta">
-            <li><span>平台</span><span>Windows 10/11 x64</span></li>
-            <li><span>安装包</span><span>eclipse-health_0.1.0_x64-setup.exe</span></li>
-            <li><span>运行时</span><span>内置 Python，无需另装</span></li>
-            <li><span>校验</span><span>SHA-256 随 Release 公布</span></li>
-            <li><span>许可证</span><span>GPL-3.0-only</span></li>
+          <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>最近更新</p>
+          <h2 id="release-title">最近更新与已修问题</h2>
+          <span class="version">v4-m1 · 更新于 2026-11-06</span>
+          <ul class="update-list">
+            <li class="update-item">
+              <div class="update-head">
+                <span class="update-version">v4-m1</span>
+                <time datetime="2026-11-06">2026-11-06</time>
+              </div>
+              <ul class="update-points">
+                <li><strong>模块安装</strong>：新增离线依赖仓库，功能型模块在断网或受限网络下也能安装。</li>
+                <li><strong>库版本冲突</strong>：模块依赖优先于内置库（如 numpy / scipy），不再被核心版本覆盖。</li>
+                <li><strong>升级安全</strong>：核心升级 Python 后自动重建模块环境，不再复用旧依赖。</li>
+                <li><strong>依赖瘦身</strong>：relay-ecg / relay-sleep 不再重复安装核心已自带的依赖。</li>
+              </ul>
+            </li>
           </ul>
-          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/releases" rel="noopener">
-            查看 Release 与校验值
+          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4/docs/V4/CHANGELOG.md" rel="noopener">
+            查看完整更新日志
           </a>
-          <p class="fine-print">安装包与 <code>.ehmod</code> 模块包安装前都会校验 SHA-256；签名模块额外校验作者公钥。</p>
+          <p class="fine-print">当前为 V4 开发版；正式安装包仍为 v0.1.0-alpha，可在 Releases 下载并核对 SHA-256。</p>
         </aside>
       </div>
     </section>
