@@ -59,7 +59,8 @@ def test_manifest_matches_schema() -> None:
     assert manifest["id"] == "org.eclipsehealth.relay-sleep"
     assert manifest["type"] == "analysis-model"
     assert manifest["permissions"] == ["records:read"]
-    assert any(dep.startswith("onnxruntime") for dep in manifest["dependencies"])
+    # numpy / onnxruntime 由核心运行时提供，模块不再声明依赖（见 docs/V4/BUGS.md BUG-001）。
+    assert manifest["dependencies"] == []
 
 
 def test_five_models_and_score_ordering() -> None:

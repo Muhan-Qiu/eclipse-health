@@ -211,6 +211,114 @@ def test_ready_marker_hash_must_match(tmp_path: Path) -> None:
     assert package.read_ready_venv(module_dir, []) is None
 
 
+def test_ready_marker_python_version_must_match(tmp_path: Path) -> None:
+    """核心升级 Python 后，旧 venv/deps 不能继续复用。"""
+    module_dir = tmp_path / "mod"
+    module_dir.mkdir()
+    _fake_install(module_dir, [_DEP])
+    marker = package.module_venv_dir(module_dir) / ".ready"
+    payload = json.loads(marker.read_text(encoding="utf-8"))
+    payload["python"] = "2.7.18"
+    marker.write_text(json.dumps(payload), encoding="utf-8")
+    assert package.read_ready_venv(module_dir, [_DEP]) is None
+
+    deps = package.module_deps_dir(module_dir)
+    deps.mkdir()
+    (deps / ".deps-ready").write_text(json.dumps(payload), encoding="utf-8")
+    assert package.read_ready_deps(module_dir, [_DEP]) is None
+
+
+# ---------------------------------------------------------------- 离线 wheelhouse
+def _wheelhouse(tmp_path: Path) -> Path:
+    directory = tmp_path / "wheelhouse"
+    directory.mkdir()
+    (directory / "demo_pkg-0.0.1-py3-none-any.whl").write_bytes(b"")
+    return directory
+
+
+def test_pip_prefers_offline_wheelhouse(tmp_path: Path, monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args, _timeout_s):
+        calls.append(list(args))
+        return subprocess.CompletedProcess(args, 0, "ok", "")
+
+    monkeypatch.setattr(package, "wheelhouse_dir", lambda: _wheelhouse(tmp_path))
+    monkeypatch.setattr(package, "_run_command", fake_run)
+    monkeypatch.setenv("EH_MODULE_DEPS_MODE", "auto")
+
+    result, mode = package._pip_install(
+        [sys.executable, "-m", "pip"], [_DEP], target=None, timeout_s=10, log=None
+    )
+    assert result.returncode == 0
+    assert mode == "offline"
+    assert len(calls) == 1
+    args = calls[0]
+    assert args[:4] == [sys.executable, "-m", "pip", "install"]
+    assert "--no-index" in args
+    assert "--find-links" in args
+    assert str(tmp_path / "wheelhouse") in args
+
+
+def test_pip_falls_back_to_online_when_offline_fails(tmp_path: Path, monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args, _timeout_s):
+        calls.append(list(args))
+        missing = "--no-index" in args
+        return subprocess.CompletedProcess(
+            args, 1 if missing else 0, "", "No matching distribution found for absent-pkg"
+        )
+
+    monkeypatch.setattr(package, "wheelhouse_dir", lambda: _wheelhouse(tmp_path))
+    monkeypatch.setattr(package, "_run_command", fake_run)
+    monkeypatch.setenv("EH_MODULE_DEPS_MODE", "auto")
+
+    result, mode = package._pip_install(
+        [sys.executable, "-m", "pip"], [_DEP], target=None, timeout_s=10, log=None
+    )
+    assert result.returncode == 0
+    assert mode == "online"
+    assert len(calls) == 2
+    assert "--no-index" not in calls[1]
+
+
+def test_offline_mode_never_touches_network(tmp_path: Path, monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args, _timeout_s):
+        calls.append(list(args))
+        return subprocess.CompletedProcess(
+            args, 1, "", "No matching distribution found for absent-pkg"
+        )
+
+    monkeypatch.setattr(package, "wheelhouse_dir", lambda: _wheelhouse(tmp_path))
+    monkeypatch.setattr(package, "_run_command", fake_run)
+    monkeypatch.setenv("EH_MODULE_DEPS_MODE", "offline")
+
+    result, mode = package._pip_install(
+        [sys.executable, "-m", "pip"], [_DEP], target=None, timeout_s=10, log=None
+    )
+    assert mode == "offline"
+    assert len(calls) == 1
+
+    with pytest.raises(ModuleError) as info:
+        package._raise_pip_failed(result, mode)
+    assert info.value.detail["reason"] == "offline-wheel-missing"
+    assert info.value.detail["missing"] == ["absent-pkg"]
+
+
+def test_offline_mode_requires_wheelhouse(monkeypatch) -> None:
+    monkeypatch.setattr(package, "wheelhouse_dir", lambda: None)
+    monkeypatch.setenv("EH_MODULE_DEPS_MODE", "offline")
+    with pytest.raises(ModuleError) as info:
+        package._pip_install(
+            [sys.executable, "-m", "pip"], [_DEP], target=None, timeout_s=10, log=None
+        )
+    assert info.value.detail["reason"] == "offline-wheel-missing"
+
+
+
 def test_real_venv_install_from_local_wheel(tmp_path: Path, monkeypatch) -> None:
     wheels = tmp_path / "wheels"
     wheels.mkdir()

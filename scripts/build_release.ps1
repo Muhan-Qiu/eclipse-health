@@ -18,7 +18,9 @@
 param(
     [ValidateSet("nsis", "msi", "all")]
     [string]$Bundles = "nsis",
-    [switch]$SkipPyInstaller
+    [switch]$SkipPyInstaller,
+    [switch]$SkipWheelhouse,
+    [switch]$WheelhouseCommunity
 )
 
 $ErrorActionPreference = "Stop"
@@ -58,6 +60,22 @@ if (-not $TargetTriple) { Fail "无法从 rustc -vV 解析 host triple" }
 Write-Host "    root      : $Root"
 Write-Host "    toolchain : $TargetTriple"
 Write-Host "    bundles   : $Bundles"
+
+# ---------------------------------------------------------------- 0. 模块包 + 离线依赖仓库
+$ModulesDist = Join-Path $Root "dist\modules"
+if (-not (Test-Path $ModulesDist)) {
+    Step "打包官方/社区模块（dist/modules 缺失）"
+    & $Python (Join-Path $Root "scripts\pack_official_modules.py")
+    if ($LASTEXITCODE -ne 0) { Fail "pack_official_modules.py 失败（exit $LASTEXITCODE）" }
+}
+
+if (-not $SkipWheelhouse) {
+    Step "构建模块离线依赖仓库（wheelhouse）"
+    $WheelArgs = @((Join-Path $Root "scripts\build_module_wheelhouse.py"))
+    if ($WheelhouseCommunity) { $WheelArgs += "--include-community" }
+    & $Python @WheelArgs
+    if ($LASTEXITCODE -ne 0) { Fail "wheelhouse 构建失败（exit $LASTEXITCODE）" }
+}
 
 # ---------------------------------------------------------------- 1. sidecar
 if (-not $SkipPyInstaller) {

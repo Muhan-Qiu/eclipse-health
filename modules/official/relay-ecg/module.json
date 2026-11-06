@@ -16,11 +16,7 @@
   "permissions": [
     "records:read"
   ],
-  "dependencies": [
-    "numpy",
-    "onnxruntime",
-    "wfdb"
-  ],
+  "dependencies": [],
   "entry": {
     "python": "src/main.py",
     "factory": "create_module"

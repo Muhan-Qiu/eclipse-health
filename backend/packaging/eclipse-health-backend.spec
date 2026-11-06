@@ -127,6 +127,17 @@ datas += [
     (str(ROOT / "dist" / "modules"), "eclipse_health_backend/marketplace/packages"),
 ]
 
+# 模块依赖离线仓库（scripts/build_module_wheelhouse.py 生成）。
+# 有它时安装版可完全离线安装功能型模块；缺失时退回联网 pip。
+_wheelhouse = BACKEND_DIR / "packaging" / "wheelhouse"
+if _wheelhouse.is_dir() and any(_wheelhouse.glob("*.whl")):
+    datas.append((str(_wheelhouse), "wheelhouse"))
+else:
+    print(
+        "[spec] wheelhouse 缺失：模块依赖将退回联网安装，"
+        "先运行 scripts/build_module_wheelhouse.py"
+    )
+
 a = Analysis(
     [str(SPEC_DIR / "serve.py")],
     pathex=[str(BACKEND_DIR / "src")],

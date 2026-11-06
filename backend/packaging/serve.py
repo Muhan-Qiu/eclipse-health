@@ -253,6 +253,25 @@ def ensure_bundled_module(data_dir: Path) -> None:
 
 
 # --------------------------------------------------------------------------- 模块 worker
+class _DepsPathFinder:
+    """让 ``EH_MODULE_DEPS`` 里的包优先于 PyInstaller 内置包。
+
+    冻结后 PyInstaller 的 ``FrozenImporter`` 排在 ``PathFinder`` 之前，仅把 deps
+    目录插入 ``sys.path`` 无法覆盖核心已内置的同名包（例如模块要求 numpy<2）。
+    这里在 ``meta_path`` 最前面放一个只查 deps 目录的 finder，命中即用文件系统版本；
+    子模块按父包的 ``__path__`` 解析。
+    """
+
+    def __init__(self, deps: str) -> None:
+        self._deps = deps
+
+    def find_spec(self, fullname, path=None, target=None):  # type: ignore[no-untyped-def]
+        from importlib.machinery import PathFinder
+
+        search = list(path) if path else [self._deps]
+        return PathFinder.find_spec(fullname, search, target)
+
+
 def maybe_run_module_worker(argv: list[str]) -> bool:
     """识别 ``sidecar <module>/src/main.py`` 形态，作为模块 worker 直接执行脚本。"""
     if len(argv) < 2:
@@ -267,6 +286,7 @@ def maybe_run_module_worker(argv: list[str]) -> bool:
     if deps and Path(deps).is_dir():
         # 冻结版模块依赖装在模块目录 deps/；优先于随包模块。
         sys.path.insert(0, deps)
+        sys.meta_path.insert(0, _DepsPathFinder(deps))
     _apply_thread_env()
     install_frozen_path_hook()
     runpy.run_path(str(candidate), run_name="__main__")

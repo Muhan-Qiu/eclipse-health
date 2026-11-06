@@ -45,6 +45,11 @@ powershell -File scripts\build_release.ps1 -Bundles all
 
 脚本按顺序执行，任一步失败即停：
 
+0. **模块包 + 离线依赖仓库**
+   - `dist/modules` 缺失时先运行 `scripts/pack_official_modules.py`；
+   - 运行 `scripts/build_module_wheelhouse.py`，把官方模块依赖解析成 wheel
+     放到 `backend/packaging/wheelhouse/`（需要构建机联网；可用
+     `-SkipWheelhouse` 跳过、`-WheelhouseCommunity` 一并收录社区模块）。
 1. **PyInstaller**（onedir）→ `backend/packaging/dist/eclipse-health-backend/`
    （`eclipse-health-backend.exe` + `_internal/`）
    - spec：`backend/packaging/eclipse-health-backend.spec`
@@ -66,6 +71,7 @@ backend/resources/models/cardia        # 模型 + preprocess/model_config
 backend/resources/samples              # MIT-BIH 100/200/208（调试/冒烟）
 modules/official/cardia                # 官方 Cardia 模块源码，启动时安装到数据目录
 eclipse_health_backend/modules/module.schema.json
+wheelhouse/                            # 官方模块依赖的离线 wheel 仓库（BUG-001）
 ```
 
 - 启动前若数据目录没有 `org.eclipsehealth.cardia`，从随包源码重新打包成 `.ehmod` 安装；

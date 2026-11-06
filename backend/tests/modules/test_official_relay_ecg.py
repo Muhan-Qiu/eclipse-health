@@ -61,7 +61,9 @@ def test_manifest_matches_schema() -> None:
     assert manifest["id"] == "org.eclipsehealth.relay-ecg"
     assert manifest["type"] == "analysis-model"
     assert manifest["permissions"] == ["records:read"]
-    assert {"numpy", "onnxruntime", "wfdb"} <= set(manifest["dependencies"])
+    # numpy / onnxruntime / wfdb 由核心运行时提供，模块不再声明依赖，
+    # 避免安装时被迫联网下载（见 docs/V4/BUGS.md BUG-001）。
+    assert manifest["dependencies"] == []
 
     models = manifest["contributes"]["models"]
     assert len(models) == 7

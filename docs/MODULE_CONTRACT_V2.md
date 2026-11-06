@@ -341,12 +341,17 @@ GET /api/v1/modules/contributions?type=widgets|pages|tools|recordTypes
 
 ### 12.1 安装与联网
 
-1. 依赖非空时，在 `<data>/modules/<id>/<version>/venv/` 用核心解释器 `python -m venv` 创建 venv；
-2. 用该 venv 的 `python -m pip install --disable-pip-version-check --no-input --no-warn-script-location <deps…>` 安装，超时 300 秒；
-3. 成功后写 `venv/.ready`（依赖 hash、列表、时间、Python 版本）；失败删除半成品 venv 并让安装失败，不留下「已安装但跑不起来」的状态；
+1. 依赖非空时，在 `<data>/modules/<id>/<version>/venv/` 用核心解释器 `python -m venv` 创建 venv
+   （冻结版没有独立解释器，改为装到同目录 `deps/`，worker 通过 `sys.path` 使用）；
+2. **离线优先**：安装包内置官方模块依赖的 wheel 仓库（`_internal/wheelhouse`），
+   先用 `pip install --no-index --find-links <wheelhouse>` 安装；离线不可用时再联网
+   （`EH_MODULE_DEPS_MODE=auto|offline|online`，默认 `auto`）。超时 300 秒；
+3. 成功后写 `venv/.ready` 或 `deps/.deps-ready`（依赖 hash、列表、时间、Python 版本、
+   实际安装模式）；失败删除半成品并让安装失败，不留下「已安装但跑不起来」的状态；
 4. 依赖为空：不创建 venv，worker 继续用核心 Python；
 5. 升级/替换：先在新版本目录装好 venv，再更新注册表；失败保留旧版本与旧 venv；
 6. 卸载：删除模块目录时一并删除各版本 venv；`keep_data` 只保留 `data/`，不保留 venv。
+7. 复用环境前校验依赖 hash **与 Python 主次版本**；核心升级 Python 后自动重建。
 
 **安装依赖属于联网行为**：即使 manifest 未声明 `network` 权限，安装阶段也会访问包索引。安装确认应展示 `dependencies`（manifest 摘要中的 `dependencies` 字段）与依赖数量；审计事件 `module.install` / `module.update` 记录依赖列表与 `dependencyHash`，不记录 pip 完整输出。
 
@@ -357,7 +362,8 @@ GET /api/v1/modules/contributions?type=widgets|pages|tools|recordTypes
 | `venv-create-failed` | `python -m venv` 非零退出 |
 | `python-venv-missing` | venv 未生成解释器 |
 | `pip-missing` | venv 内没有 pip |
-| `pip-install-failed` | 网络失败、依赖冲突或包不可用 |
+| `pip-install-failed` | 网络失败、依赖冲突或包不可用（`details.missing` 给出缺失包名） |
+| `offline-wheel-missing` | 禁用联网且离线仓库缺少依赖（`EH_MODULE_DEPS_MODE=offline`） |
 | `timeout` | 超过安装超时 |
 | `disk-full` / `io-error` | 磁盘不足或进程/文件系统错误 |
 

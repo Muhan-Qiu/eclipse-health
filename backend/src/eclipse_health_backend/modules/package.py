@@ -19,6 +19,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import NoReturn
 
 from .constants import (
     MAX_PACKAGE_BYTES,
@@ -285,6 +286,14 @@ _MAX_LOG_CHARS = 4000
 _READY_MARKER = ".ready"
 _PATH_FILE = "eclipse_health_module.pth"
 
+# 随包离线依赖仓库：构建期用 scripts/build_module_wheelhouse.py 生成。
+# 安装模块依赖时优先走本地 wheel，不再依赖用户机联网/访问 PyPI。
+MODULE_WHEELHOUSE_DIRNAME = "wheelhouse"
+_DEPS_MODE_ENV = "EH_MODULE_DEPS_MODE"  # auto | offline | online
+_PIP_RETRIES = "3"
+_PIP_TIMEOUT_S = "60"
+_MISSING_RE = re.compile(r"No matching distribution found for ([^\s(]+)")
+
 
 def dependency_digest(dependencies: Sequence[str]) -> str:
     """依赖列表的稳定 hash（与顺序无关），用于 .ready 与审计。"""
@@ -333,7 +342,7 @@ def read_ready_deps(module_dir: Path, dependencies: Sequence[str]) -> Path | Non
         return None
     if not isinstance(payload, dict):
         return None
-    if payload.get("dependencyHash") != dependency_digest(normalized):
+    if not _marker_is_current(payload, normalized):
         return None
     return directory if directory.is_dir() else None
 
@@ -350,19 +359,20 @@ def read_ready_venv(module_dir: Path, dependencies: Sequence[str]) -> Path | Non
         return None
     if not isinstance(payload, dict):
         return None
-    if payload.get("dependencyHash") != dependency_digest(normalized):
+    if not _marker_is_current(payload, normalized):
         return None
     python = venv_python_path(module_venv_dir(module_dir))
     return python if python.is_file() else None
 
 
-def _install_error(reason: str, message: str) -> ModuleError:
+def _install_error(
+    reason: str, message: str, extra: dict[str, object] | None = None
+) -> ModuleError:
     # errors.py 不在本批所有权内，无法新增顶层码；用 detail 明确标记安装失败原因。
-    return ModuleError(
-        "MODULE_ERROR",
-        message,
-        {"installError": "MODULE_INSTALL_FAILED", "reason": reason},
-    )
+    detail: dict[str, object] = {"installError": "MODULE_INSTALL_FAILED", "reason": reason}
+    if extra:
+        detail.update(extra)
+    return ModuleError("MODULE_ERROR", message, detail)
 
 
 def _creation_flags() -> int:
@@ -377,6 +387,8 @@ def _dependency_env() -> dict[str, str]:
         {
             "PIP_DISABLE_PIP_VERSION_CHECK": "1",
             "PIP_NO_INPUT": "1",
+            "PIP_RETRIES": _PIP_RETRIES,
+            "PIP_TIMEOUT": _PIP_TIMEOUT_S,
             "PYTHONUTF8": "1",
             "PYTHONIOENCODING": "utf-8",
         }
@@ -418,23 +430,148 @@ def _write_module_path(venv_dir: Path, module_dir: Path) -> None:
     (site / _PATH_FILE).write_text(relative + "\n", encoding="utf-8")
 
 
-def _write_ready_marker(venv_dir: Path, dependencies: Sequence[str]) -> None:
+def _write_ready_marker(
+    venv_dir: Path, dependencies: Sequence[str], *, pip_mode: str = "online"
+) -> None:
     marker = venv_dir / _READY_MARKER
     payload = {
         "dependencyHash": dependency_digest(dependencies),
         "dependencies": list(dependencies),
         "installedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "python": sys.version.split()[0],
+        "pipMode": pip_mode,
     }
     temp = marker.parent / (marker.name + ".tmp")
     temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     temp.replace(marker)
 
 
+def _marker_is_current(payload: dict[str, object], dependencies: Sequence[str]) -> bool:
+    """依赖 hash 与 Python 主次版本都匹配才复用；核心升级后旧环境需要重建。"""
+    if payload.get("dependencyHash") != dependency_digest(dependencies):
+        return False
+    recorded = payload.get("python")
+    current = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if isinstance(recorded, str) and recorded:
+        return recorded == current or recorded.startswith(current + ".")
+    return True
+
+
 def _bundle_root() -> Path:
     if getattr(sys, "frozen", False):
         return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
     return Path(__file__).resolve().parents[3]
+
+
+def _deps_mode() -> str:
+    """依赖安装模式：auto（离线优先、联网兜底）、offline（仅离线）、online（仅联网）。"""
+    value = os.environ.get(_DEPS_MODE_ENV, "auto").strip().lower()
+    return value if value in {"auto", "offline", "online"} else "auto"
+
+
+def wheelhouse_dir() -> Path | None:
+    """随包离线依赖仓库目录；不存在时返回 None。"""
+    if getattr(sys, "frozen", False):
+        candidates = [_bundle_root() / MODULE_WHEELHOUSE_DIRNAME]
+    else:
+        candidates = [_bundle_root() / "packaging" / MODULE_WHEELHOUSE_DIRNAME]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def _pip_install_args(
+    target: Path | None, wheelhouse: Path | None, *, offline: bool
+) -> list[str]:
+    args = [
+        "install",
+        "--disable-pip-version-check",
+        "--no-input",
+        "--no-warn-script-location",
+        "--prefer-binary",
+        "--retries",
+        _PIP_RETRIES,
+        "--timeout",
+        _PIP_TIMEOUT_S,
+    ]
+    if target is not None:
+        args += ["--target", str(target)]
+    if offline and wheelhouse is not None:
+        args += ["--no-index", "--find-links", str(wheelhouse)]
+    return args
+
+
+def _missing_requirements(result: subprocess.CompletedProcess[str]) -> list[str]:
+    text = f"{result.stdout or ''}\n{result.stderr or ''}"
+    return sorted({match.strip().rstrip(",") for match in _MISSING_RE.findall(text)})
+
+
+def _raise_pip_failed(
+    result: subprocess.CompletedProcess[str], mode_used: str
+) -> NoReturn:
+    missing = _missing_requirements(result)
+    detail: dict[str, object] = {"depsMode": mode_used}
+    if missing:
+        detail["missing"] = missing
+    if mode_used == "offline" and missing:
+        raise _install_error(
+            "offline-wheel-missing",
+            f"离线依赖仓库缺少 {', '.join(missing)}，且已禁用联网安装",
+            detail,
+        )
+    raise _install_error(
+        "pip-install-failed",
+        "依赖安装失败（网络、版本冲突或包不可用）",
+        detail,
+    )
+
+
+def _pip_install(
+    python_prefix: Sequence[str],
+    dependencies: Sequence[str],
+    *,
+    target: Path | None,
+    timeout_s: float,
+    log: Callable[[str], None] | None,
+) -> tuple[subprocess.CompletedProcess[str], str]:
+    """按 auto/offline/online 策略执行 pip install，返回最后一次结果与实际模式。"""
+    mode = _deps_mode()
+    wheelhouse = wheelhouse_dir()
+    if mode == "offline" and wheelhouse is None:
+        raise _install_error(
+            "offline-wheel-missing",
+            "未找到随包离线依赖仓库，且已禁用联网安装",
+            {"depsMode": "offline"},
+        )
+
+    attempts: list[bool] = []
+    if wheelhouse is not None and mode != "online":
+        attempts.append(True)
+    if mode != "offline":
+        attempts.append(False)
+    if not attempts:
+        attempts.append(False)
+
+    result: subprocess.CompletedProcess[str] | None = None
+    mode_used = "online"
+    for offline in attempts:
+        mode_used = "offline" if offline else "online"
+        if log is not None:
+            log(f"[deps] pip {mode_used} install for {len(dependencies)} requirement(s)")
+        args = [
+            *python_prefix,
+            *_pip_install_args(target, wheelhouse, offline=offline),
+            *dependencies,
+        ]
+        result = _run_command(args, timeout_s)
+        _log_output(log, result)
+        if result.returncode == 0:
+            return result, mode_used
+        if not offline or mode != "auto":
+            break
+    assert result is not None
+    return result, mode_used
 
 
 def _install_deps_frozen(
@@ -453,32 +590,22 @@ def _install_deps_frozen(
         raise _install_error("pip-helper-missing", "安装包缺少 pip 安装器")
     if log is not None:
         log(f"[deps] frozen install into deps/ for {len(dependencies)} requirement(s)")
-    result = _run_command(
-        [
-            sys.executable,
-            str(helper),
-            "install",
-            "--disable-pip-version-check",
-            "--no-input",
-            "--no-warn-script-location",
-            "--target",
-            str(deps_dir),
-            *dependencies,
-        ],
-        timeout_s,
+    result, mode_used = _pip_install(
+        [sys.executable, str(helper)],
+        dependencies,
+        target=deps_dir,
+        timeout_s=timeout_s,
+        log=log,
     )
-    _log_output(log, result)
     if result.returncode != 0:
         shutil.rmtree(deps_dir, ignore_errors=True)
-        raise _install_error(
-            "pip-install-failed",
-            "依赖安装失败（网络、版本冲突或包不可用）",
-        )
+        _raise_pip_failed(result, mode_used)
     payload = {
         "dependencyHash": dependency_digest(dependencies),
         "dependencies": list(dependencies),
         "installedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "python": sys.version.split()[0],
+        "pipMode": mode_used,
     }
     (deps_dir / _DEPS_MARKER).write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -526,28 +653,21 @@ def install_module_venv(
         python = venv_python_path(venv_dir)
         if not python.is_file():
             raise _install_error("python-venv-missing", "虚拟环境缺少 Python 解释器")
-        installed = _run_command(
-            [
-                str(python),
-                "-m",
-                "pip",
-                "install",
-                "--disable-pip-version-check",
-                "--no-input",
-                "--no-warn-script-location",
-                *normalized,
-            ],
-            timeout_s,
+        installed, mode_used = _pip_install(
+            [str(python), "-m", "pip"],
+            normalized,
+            target=None,
+            timeout_s=timeout_s,
+            log=log,
         )
-        _log_output(log, installed)
         if installed.returncode != 0:
             stderr = installed.stderr or ""
             if "No module named pip" in stderr:
                 raise _install_error("pip-missing", "模块虚拟环境缺少 pip，无法安装依赖")
-            raise _install_error("pip-install-failed", "依赖安装失败（网络、版本冲突或包不可用）")
+            _raise_pip_failed(installed, mode_used)
 
         _write_module_path(venv_dir, module_dir)
-        _write_ready_marker(venv_dir, normalized)
+        _write_ready_marker(venv_dir, normalized, pip_mode=mode_used)
         if log is not None:
             log(f"[deps] ready: {len(normalized)} requirement(s)")
         return venv_dir

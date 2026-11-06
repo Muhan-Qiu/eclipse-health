@@ -56,6 +56,8 @@ reports/analysis-*.json
 backend/packaging/build/
 backend/packaging/dist/
 backend/packaging/eclipse-health-backend/
+# 模块依赖离线仓库（scripts/build_module_wheelhouse.py 生成，体积大）
+backend/packaging/wheelhouse/
 src-tauri/binaries/
 src-tauri/_internal/
 .playwright-mcp/

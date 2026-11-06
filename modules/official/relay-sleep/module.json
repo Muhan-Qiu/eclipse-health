@@ -16,10 +16,7 @@
   "permissions": [
     "records:read"
   ],
-  "dependencies": [
-    "numpy>=1.26,<3",
-    "onnxruntime>=1.17,<2"
-  ],
+  "dependencies": [],
   "entry": {
     "python": "src/main.py",
     "factory": "create_module"
