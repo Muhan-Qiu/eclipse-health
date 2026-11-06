@@ -272,7 +272,8 @@ def test_live_api_turn_completes_with_tool_and_citation(
     assert done, "missing done event"
     final = done[-1]
     assert final["content"].strip()
-    assert NON_DIAGNOSTIC in final["content"]
+    # V4.1 起免责声明由界面统一展示，回答不再追加固定尾注。
+    assert not final["content"].strip().endswith(NON_DIAGNOSTIC + "。")
     assert final["toolCalls"] >= 1
     assert final["durationMs"] > 0
 

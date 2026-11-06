@@ -68,6 +68,9 @@ curl -X PUT http://127.0.0.1:8765/api/v1/assistant/providers/llm_deepseek \
 | 错误 Key | 本地代理不校验 Key，无法实测 401；错误映射由单元测试覆盖 |
 | 错误 baseUrl | 映射为可读 provider 错误，文本不含 Key |
 
+> V4.1 起，固定免责尾注已移除：免责声明由界面统一展示，回答不再每轮重复。
+> 上表为 V4 时期的实测记录，保留原样。
+
 Ollama 实测见 `reports/B4-08-report.md`。
 
 ## 6. 限制

@@ -1065,6 +1065,36 @@ main,
     opacity 240ms var(--eh-ease-standard);
 }
 
+/* 助手 Markdown：fenced code 继承 pre 的样式，流式输出在最后一段文字后显示光标。 */
+.eh-markdown pre code {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+@keyframes eh-caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.eh-markdown.eh-streaming > :last-child::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background-color: currentColor;
+  animation: eh-caret-blink 1s steps(1, end) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

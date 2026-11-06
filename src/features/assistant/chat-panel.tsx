@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/empty-state";
+import { MarkdownText } from "@/components/common/markdown";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -216,15 +217,11 @@ function MessageBubble({ message, onOpenTransparency }: MessageBubbleProps) {
             {t("assistant.chat.streaming")}
           </p>
         ) : (
-          <p className="text-sm leading-6 whitespace-pre-wrap">
-            {message.content}
-            {message.status === "streaming" ? (
-              <span
-                className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-foreground align-text-bottom"
-                aria-hidden="true"
-              />
-            ) : null}
-          </p>
+          <MarkdownText
+            content={message.content}
+            streaming={message.status === "streaming"}
+            className="text-sm leading-6"
+          />
         )}
 
         {message.status === "cancelled" ? (
