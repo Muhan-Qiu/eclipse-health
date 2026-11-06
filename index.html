@@ -78,17 +78,35 @@
           <h2 id="release-title">最近更新与已修问题</h2>
           <span class="version">v4-m1 · 更新于 2026-11-06</span>
           <ul class="update-list">
-            <li class="update-item">
-              <div class="update-head">
-                <span class="update-version">v4-m1</span>
-                <time datetime="2026-11-06">2026-11-06</time>
-              </div>
-              <ul class="update-points">
-                <li><strong>模块安装</strong>：新增离线依赖仓库，功能型模块在断网或受限网络下也能安装。</li>
-                <li><strong>库版本冲突</strong>：模块依赖优先于内置库（如 numpy / scipy），不再被核心版本覆盖。</li>
-                <li><strong>升级安全</strong>：核心升级 Python 后自动重建模块环境，不再复用旧依赖。</li>
-                <li><strong>依赖瘦身</strong>：relay-ecg / relay-sleep 不再重复安装核心已自带的依赖。</li>
-              </ul>
+            <li>
+              <details class="update-item" open>
+                <summary class="update-head">
+                  <span class="update-version">v4-m1</span>
+                  <span class="update-tag">开发中</span>
+                  <time datetime="2026-11-06">2026-11-06</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>模块安装</strong>：新增离线依赖仓库，功能型模块在断网或受限网络下也能安装。</li>
+                  <li><strong>库版本冲突</strong>：模块依赖优先于内置库（如 numpy / scipy），不再被核心版本覆盖。</li>
+                  <li><strong>升级安全</strong>：核心升级 Python 后自动重建模块环境，不再复用旧依赖。</li>
+                  <li><strong>依赖瘦身</strong>：relay-ecg / relay-sleep 不再重复安装核心已自带的依赖。</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v0.1.0-alpha</span>
+                  <span class="update-tag">已发布</span>
+                  <time datetime="2026-11-02">2026-11-02</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>首个公开版</strong>：ECG 与 Apple / 小米 / Samsung 健康数据导入，Cardia 2.0 分析、记录、趋势与报告。</li>
+                  <li><strong>模块生态</strong>：模块市场与 30+ 可选模块，权限、审计与 SHA-256 校验。</li>
+                  <li><strong>AI 助手</strong>：可选多厂商模型与本地 Ollama，Key 用 DPAPI 加密，只发送摘要与测量。</li>
+                  <li><strong>稳定性</strong>：修复长记录逐搏分析卡死（O(n²) → O(n log n)），新增取消、重试、暂停与卡死看护。</li>
+                </ul>
+              </details>
             </li>
           </ul>
           <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4/docs/V4/CHANGELOG.md" rel="noopener">
