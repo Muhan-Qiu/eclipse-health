@@ -80,17 +80,35 @@
           <h2 id="release-title">Recent updates and fixes</h2>
           <span class="version">v4-m1 · updated 2026-11-06</span>
           <ul class="update-list">
-            <li class="update-item">
-              <div class="update-head">
-                <span class="update-version">v4-m1</span>
-                <time datetime="2026-11-06">2026-11-06</time>
-              </div>
-              <ul class="update-points">
-                <li><strong>Module install</strong>: an offline dependency wheelhouse lets functional modules install without network access.</li>
-                <li><strong>Version conflicts</strong>: module dependencies now take precedence over bundled libraries such as numpy and scipy.</li>
-                <li><strong>Safer upgrades</strong>: module environments rebuild automatically after a Python upgrade.</li>
-                <li><strong>Leaner dependencies</strong>: relay-ecg / relay-sleep no longer reinstall libraries already bundled with the core.</li>
-              </ul>
+            <li>
+              <details class="update-item" open>
+                <summary class="update-head">
+                  <span class="update-version">v4-m1</span>
+                  <span class="update-tag">In development</span>
+                  <time datetime="2026-11-06">2026-11-06</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>Module install</strong>: an offline dependency wheelhouse lets functional modules install without network access.</li>
+                  <li><strong>Version conflicts</strong>: module dependencies now take precedence over bundled libraries such as numpy and scipy.</li>
+                  <li><strong>Safer upgrades</strong>: module environments rebuild automatically after a Python upgrade.</li>
+                  <li><strong>Leaner dependencies</strong>: relay-ecg / relay-sleep no longer reinstall libraries already bundled with the core.</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v0.1.0-alpha</span>
+                  <span class="update-tag">Released</span>
+                  <time datetime="2026-11-02">2026-11-02</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>First public release</strong>: ECG and Apple / Xiaomi / Samsung health-data import, Cardia 2.0 analysis, records, trends and reports.</li>
+                  <li><strong>Module ecosystem</strong>: a module marketplace with 30+ optional modules, permissions, audit log and SHA-256 verification.</li>
+                  <li><strong>AI assistant</strong>: optional multi-vendor models and local Ollama, with DPAPI-encrypted keys and summaries only.</li>
+                  <li><strong>Stability</strong>: fixed long-record beat-analysis stalls (O(n²) → O(n log n)), plus cancel, retry, pause and stall watchdog.</li>
+                </ul>
+              </details>
             </li>
           </ul>
           <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4/docs/V4/CHANGELOG.md" rel="noopener">
