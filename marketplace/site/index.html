@@ -76,10 +76,25 @@
         <aside class="release-card" aria-labelledby="release-title">
           <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>最近更新</p>
           <h2 id="release-title">最近更新与已修问题</h2>
-          <span class="version">v4.1-m1 · 更新于 2026-11-06</span>
+          <span class="version">v4.2-m1 · 更新于 2026-11-07</span>
           <ul class="update-list">
             <li>
               <details class="update-item" open>
+                <summary class="update-head">
+                  <span class="update-version">v4.2-m1</span>
+                  <span class="update-tag">开发中</span>
+                  <time datetime="2026-11-07">2026-11-07</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>其他分析引擎可以正常分析心电图</strong>：修复 relay-ecg 等非 Cardia 引擎的输入维度不匹配与「cannot reshape」错误，7 个逐搏分类模型均可完成分析。</li>
+                  <li><strong>单导联自动适配</strong>：手环/手表的单导联 ECG 会自动复制为模型要求的双导联，并重采样到 360 Hz。</li>
+                  <li><strong>错误信息可读</strong>：心搏不足、R 峰检测失败等改为中文提示，不再直接暴露 Python 异常。</li>
+                  <li><strong>睡眠模型不再误选</strong>：relay-sleep 的睡眠分期模型不再出现在心电记录的可选分析引擎中。</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
                 <summary class="update-head">
                   <span class="update-version">v4.1-m1</span>
                   <span class="update-tag">开发中</span>
@@ -123,10 +138,10 @@
               </details>
             </li>
           </ul>
-          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4.1/docs/V4.1/CHANGELOG.md" rel="noopener">
+          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4.2/docs/V4.2/CHANGELOG.md" rel="noopener">
             查看完整更新日志
           </a>
-          <p class="fine-print">当前为 V4.1 开发版；正式安装包仍为 v0.1.0-alpha，可在 Releases 下载并核对 SHA-256。</p>
+          <p class="fine-print">当前为 V4.2 开发版；正式安装包为 v0.1.2，可在 Releases 下载并核对 SHA-256。</p>
         </aside>
       </div>
     </section>

@@ -78,10 +78,25 @@
         <aside class="release-card" aria-labelledby="release-title">
           <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>Latest updates</p>
           <h2 id="release-title">Recent updates and fixes</h2>
-          <span class="version">v4.1-m1 · updated 2026-11-06</span>
+          <span class="version">v4.2-m1 · updated 2026-11-07</span>
           <ul class="update-list">
             <li>
               <details class="update-item" open>
+                <summary class="update-head">
+                  <span class="update-version">v4.2-m1</span>
+                  <span class="update-tag">In development</span>
+                  <time datetime="2026-11-07">2026-11-07</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>Other analysis engines now work on ECG</strong>: fixed input-shape mismatches and “cannot reshape” errors in relay-ecg and other non-Cardia engines; all seven beat-classification models complete.</li>
+                  <li><strong>Single-lead adaptation</strong>: single-lead watch ECGs are duplicated to the model's two leads and resampled to 360 Hz automatically.</li>
+                  <li><strong>Readable errors</strong>: insufficient beats and R-peak detection failures now show actionable messages instead of raw Python exceptions.</li>
+                  <li><strong>No more sleep models in ECG analysis</strong>: relay-sleep sleep-staging models are no longer offered as ECG analysis engines.</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
                 <summary class="update-head">
                   <span class="update-version">v4.1-m1</span>
                   <span class="update-tag">In development</span>
@@ -125,10 +140,10 @@
               </details>
             </li>
           </ul>
-          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4.1/docs/V4.1/CHANGELOG.md" rel="noopener">
+          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4.2/docs/V4.2/CHANGELOG.md" rel="noopener">
             View full changelog
           </a>
-          <p class="fine-print">V4.1 is in development; the current public installer is v0.1.0-alpha, available on Releases with SHA-256 checksums.</p>
+          <p class="fine-print">V4.2 is in development; the public installer is v0.1.2, available on Releases with SHA-256 checksums.</p>
         </aside>
       </div>
     </section>

@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 _CARDIA_NAME = "Cardia 2.0"
 _CARDIA_MODEL_RELATIVE = "models/cardia_k4_best_sim.onnx"
 
+# 不适配心电记录的模型类型：这些模型仍保留在目录里，但标记为不可用，
+# 避免用户在 ECG 记录上选中后才在推理阶段看到输入维度错误。
+_NON_ECG_TASKS = {"sleep-staging"}
+_NON_ECG_INPUT_KINDS = {"features-dt", "raw-windows"}
+_NON_ECG_REASON = "该模型用于睡眠分期，需要 EEG/特征输入，不能分析心电记录"
+
 _VERIFY_LOCK = threading.Lock()
 _VERIFY_CACHE: dict[tuple[str, int, int, str], bool] = {}
 _VERIFY_CACHE_LIMIT = 256
@@ -180,6 +186,17 @@ def _read_manifest(module_dir: Path) -> dict[str, Any] | None:
     return raw if isinstance(raw, dict) else None
 
 
+def _unsupported_reason(model: dict[str, Any]) -> str | None:
+    """返回模型与 ECG 记录不兼容的原因；兼容时返回 None。"""
+    task = str(model.get("task") or "").strip().lower()
+    inputs = model.get("input")
+    inputs = inputs if isinstance(inputs, dict) else {}
+    kind = str(inputs.get("kind") or "").strip().lower()
+    if task in _NON_ECG_TASKS or kind in _NON_ECG_INPUT_KINDS:
+        return _NON_ECG_REASON
+    return None
+
+
 def _module_entries() -> list[tuple[EngineDescriptor, ModuleModelSpec | None]]:
     try:
         manager = _module_manager()
@@ -212,6 +229,19 @@ def _module_entries() -> list[tuple[EngineDescriptor, ModuleModelSpec | None]]:
             if not model_id:
                 continue
             engine_id = f"{module_id}:{model_id}"
+            unsupported = _unsupported_reason(model)
+            if unsupported is not None:
+                descriptor = EngineDescriptor(
+                    id=engine_id,
+                    name=str(model.get("name") or model_id),
+                    module_id=module_id,
+                    model_id=model_id,
+                    model_version=version,
+                    available=False,
+                    reason=unsupported,
+                )
+                entries.append((descriptor, None))
+                continue
             reason, relative, path, sha = _verify_files(module_dir, model)
             descriptor = EngineDescriptor(
                 id=engine_id,
