@@ -64,3 +64,6 @@ src-tauri/_internal/
 
 # Internal marketing drafts and launch copy
 marketing/
+
+# 本地存档的安装包（构建产物，大文件）
+releases/
