@@ -40,11 +40,15 @@ MPLBACKEND=Agg .venv\Scripts\python.exe scripts\verify_relay_engines.py `
 
 | 项 | 值 |
 |---|---|
-| 安装包 | 构建后填写 |
-| 大小 | 构建后填写 |
-| SHA-256 | 构建后填写 |
+| 安装包 | `src-tauri/target/release/bundle/nsis/eclipse health_0.1.2_x64-setup.exe` |
+| 大小 | 320.66 MiB（336,238,442 bytes） |
+| SHA-256 | `742c7334576786b7d232b2f6e32e4d381760eaa93b6c8be3b2b9bf78854a5b7b` |
 | 版本 | 应用 / Tauri / 后端均为 `0.1.2` |
-| 冒烟 | 启动后 `GET /api/v1/health` 返回 `status=ok`、`version=0.1.2` |
+| 冒烟 | 构建产物 sidecar 与静默安装后的 sidecar 均返回 `status=ok`、`version=0.1.2`；API 发起 relay-k2 / resnet1d / relay-k8 / relay-k12 分析均 `completed` |
+
+构建注意：`scripts/build_release.ps1` 现在用 `python -m PyInstaller` 而不是
+`Scripts\pyinstaller.exe`。复制/共享 venv 时入口 exe 的路径可能仍指向旧目录，
+用 `python -m` 能保证当前 venv 与源码生效。
 
 > 构建前确认 `backend/packaging/wheelhouse` 与 `dist/modules` 存在；本机已从 V4.1 复用。
 > relay-ecg / relay-sleep 的 ONNX 权重不随 git 提交，安装包内不包含；本机验证使用

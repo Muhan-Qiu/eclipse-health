@@ -76,7 +76,8 @@
 | `relay-k8` | OK，128 搏 / 2 序列 | 7.33 s |
 | `relay-k12` | OK，128 搏 / 2 序列 | 11.53 s |
 
-- [ ] 安装包实机：在记录详情页依次选择 relay-k2 / resnet1d / relay-k12，确认不再出现维度错误且能显示分类概率。
+- [x] 构建产物 sidecar 与静默安装后的 sidecar：`GET /api/v1/health` 返回 `version=0.1.2`，引擎目录 7 个 relay 模型均 `available=true`；通过 API 发起 relay-k2 / resnet1d / relay-k8 / relay-k12 分析，全部 `completed`；
+- [ ] 安装包界面实机：在记录详情页依次选择 relay-k2 / resnet1d / relay-k12，确认不再出现维度错误且能显示分类概率。
 
 ### 回滚点
 

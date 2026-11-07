@@ -30,7 +30,6 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Backend = Join-Path $Root "backend"
 $Packaging = Join-Path $Backend "packaging"
 $Python = Join-Path $Backend ".venv\Scripts\python.exe"
-$PyInstaller = Join-Path $Backend ".venv\Scripts\pyinstaller.exe"
 $Spec = Join-Path $Packaging "eclipse-health-backend.spec"
 $DistDir = Join-Path $Packaging "dist"
 $WorkDir = Join-Path $Packaging "build"
@@ -50,7 +49,8 @@ function Step([string]$Message) {
 # ---------------------------------------------------------------- 前置检查
 Step "检查工具链"
 if (-not (Test-Path $Python)) { Fail "找不到后端 venv: $Python" }
-if (-not (Test-Path $PyInstaller)) { Fail "venv 里没有 PyInstaller: $PyInstaller（先装 dev 依赖）" }
+& $Python -c "import PyInstaller" 2>$null
+if ($LASTEXITCODE -ne 0) { Fail "venv 里没有 PyInstaller（先装 dev 依赖）" }
 if (-not (Test-Path (Join-Path $Root "node_modules"))) { Fail "缺少 node_modules，先运行 npm install" }
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { Fail "npm 不在 PATH 中" }
 if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) { Fail "cargo 不在 PATH 中（需要 Rust 工具链）" }
@@ -85,7 +85,9 @@ if (-not $SkipPyInstaller) {
     $env:MPLBACKEND = "Agg"
     $env:OPENBLAS_NUM_THREADS = "2"
     $env:OMP_NUM_THREADS = "2"
-    & $PyInstaller --noconfirm --clean --distpath $DistDir --workpath $WorkDir $Spec
+    # 用 `python -m PyInstaller` 而不是 Scripts\pyinstaller.exe：复制 venv 时
+    # 入口 exe 的 shebang 可能仍指向旧目录，直接用 python 可保证当前 venv 生效。
+    & $Python -m PyInstaller --noconfirm --clean --distpath $DistDir --workpath $WorkDir $Spec
     if ($LASTEXITCODE -ne 0) { Fail "PyInstaller 失败（exit $LASTEXITCODE），见上方输出" }
     $PyTimer.Stop()
     Write-Host ("    sidecar built in {0:N1}s" -f $PyTimer.Elapsed.TotalSeconds)
