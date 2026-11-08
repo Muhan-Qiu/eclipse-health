@@ -798,6 +798,22 @@ class OnnxEngineRunner:
                 f"模型由第三方模块提供：{self.spec.module_id}",
             ),
         ]
+        # relay 等模块模型在 MIT-BIH 医院双导联数据上训练；手表/可穿戴单导联
+        # 记录属于分布外输入，SVEB 等类别比例可能明显偏高，必须显著提示。
+        if config["kind"] == "relay" and (
+            str(lead or "").upper() != "MLII"
+            or float(fs) != float(config["fs"])
+            or np.asarray(samples).ndim == 1
+        ):
+            warnings.insert(
+                0,
+                _warning(
+                    "wearable_limited_accuracy",
+                    "该结果来自手表/可穿戴设备的单导联心电，导联位置、接触与运动伪影"
+                    "会显著影响分类；SVEB 等类别比例可能明显偏高，不能当作真实心律"
+                    "失常比例。请以医院 12 导联心电图和专业判读为准。",
+                ),
+            )
         if len(output_meta) > 1:
             warnings.append(
                 _warning(
@@ -1146,6 +1162,11 @@ class OnnxEngineRunner:
                 "lead": str(lead or "unknown"),
                 "originalFs": fs,
                 "resampled": resampled,
+                "outOfDistribution": bool(
+                    str(lead or "").upper() != "MLII"
+                    or float(fs) != target_fs
+                    or np.asarray(samples).ndim == 1
+                ),
             },
             provenance={
                 "preprocess": {

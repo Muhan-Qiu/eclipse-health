@@ -592,10 +592,36 @@ const enUS: typeof zhCN = {
       reference_annotations: "Reference R-peak annotations were used for comparison.",
       research_use_only:
         "Research and education use only; not a medical diagnosis. Trained on MIT-BIH MLII.",
+      lead_out_of_distribution:
+        "The current lead is not MLII; the model was trained mainly on MLII, so results may shift.",
+      lead_mismatch:
+        "The record lead differs from the model's expected lead; results may shift.",
+      single_lead_duplicated:
+        "The record is single-lead; it was duplicated to the two leads the model expects.",
+      non_diagnostic_model:
+        "Model-level classification, not beat-by-beat diagnosis; it cannot replace a clinician.",
+      third_party_model: "The result was provided by a third-party module.",
+      tail_beats_dropped:
+        "Trailing beats that do not fill a complete sequence were excluded from the statistics.",
+      tail_padded: "The final window was zero-padded.",
+      quality_unavailable: "Signal-quality assessment is unavailable.",
+      multiple_outputs: "The model has multiple outputs; only the first is used.",
+      wearable_limited_accuracy:
+        "Single-lead watch/wearable ECG is out-of-distribution for these models; SVEB and other class ratios may be markedly inflated and must not be read as true arrhythmia rates. Use a hospital 12-lead ECG and professional interpretation instead.",
+      short_record_padded:
+        "Fewer than one complete sequence of valid beats; zero-padded. Short-record results are for reference only.",
+      beats_dropped:
+        "Trailing beats that do not fill a complete sequence were dropped.",
+      low_confidence:
+        "Mean per-beat confidence is low; the model is uncertain about this record.",
     },
     critical: {
       title: "Values worth attention",
       body: "Heart rate or the ventricular ectopic ratio falls outside the usual resting range. Algorithmic results are not a diagnosis; seek medical advice if you feel unwell.",
+    },
+    wearable: {
+      title: "Watch / wearable results are for reference only",
+      body: "This analysis uses a single-lead watch or wearable ECG, not a hospital 12-lead ECG. Lead placement, skin contact, motion artifacts and sample-rate differences strongly affect the model; SVEB and other class ratios may be markedly inflated and must not be read as true arrhythmia rates. Use a hospital ECG and professional interpretation for any clinical decision. Seek urgent care for chest pain, fainting or breathing difficulty.",
     },
     domain: {
       lowConfidenceTitle: "Low model confidence",

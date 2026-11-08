@@ -2,6 +2,14 @@
 
 > 面向用户的行为变化。技术细节与根因见 `BUGS.md`。
 
+## [未发布] 下一次构建（随 4.3）
+
+### 修复
+
+- **Cardia 警告乱码**：`lead_out_of_distribution` 等中文警告不再显示 `U+FFFD`；Cardia 模块显式使用 UTF-8，旧安装会在启动时自动升级到 1.0.1。
+- **手表/可穿戴结果醒目提示**：relay 等非 Cardia 引擎在单导联、非 MLII 或非 360 Hz 记录上会显示「手表/可穿戴结果仅供参考」，明确说明 SVEB 等类别比例可能明显偏高、不能当作真实心律失常比例，建议以医院 12 导联心电图和专业判读为准。
+- **补充警告文案**：`short_record_padded`、`beats_dropped`、`low_confidence`、`single_lead_duplicated`、`tail_beats_dropped` 等现在都有中英文说明。
+
 ## [0.1.2] 2026-11-07
 
 ### 修复

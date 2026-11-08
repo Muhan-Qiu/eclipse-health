@@ -3,7 +3,7 @@
   "id": "org.eclipsehealth.cardia",
   "name": "Cardia 2.0 · ECG 心搏分类",
   "description": "Single-lead ECG beat classification (N/SVEB/VEB/F) with the Cardia 2.0 ONNX model, using the 104-dimensional feature pipeline.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "apiVersion": "1.0",
   "engines": { "eclipse": ">=1.0 <2.0" },
   "type": "analysis-model",

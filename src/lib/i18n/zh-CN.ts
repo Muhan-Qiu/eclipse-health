@@ -568,10 +568,29 @@ const zhCN = {
       non_standard_fs: "非 360 Hz 输入。",
       reference_annotations: "使用参考 R 峰标注作为对照。",
       research_use_only: "研究/教育用途，不构成医疗诊断；模型在 MIT-BIH MLII 上训练。",
+      lead_out_of_distribution:
+        "当前导联不是 MLII；模型主要基于 MLII 训练，结果可能偏移。",
+      lead_mismatch: "记录导联与模型期望导联不同，结果可能偏移。",
+      single_lead_duplicated: "记录为单导联，已复制为模型要求的双导联。",
+      non_diagnostic_model: "模型级分类结果，非逐搏诊断，不能替代医生判断。",
+      third_party_model: "结果由第三方模块提供。",
+      tail_beats_dropped: "末尾不足一个完整序列的心搏未参与统计。",
+      tail_padded: "末尾不足一个窗口，已零填充。",
+      quality_unavailable: "信号质量评估不可用。",
+      multiple_outputs: "模型有多个输出，仅使用第一个。",
+      wearable_limited_accuracy:
+        "手表/可穿戴单导联心电属于分布外输入，SVEB 等类别比例可能明显偏高，不能当作真实心律失常比例；请以医院 12 导联心电图和专业判读为准。",
+      short_record_padded: "有效心搏不足一个完整序列，已零填充；短记录结果仅供参考。",
+      beats_dropped: "末尾不足一个完整序列的心搏已丢弃。",
+      low_confidence: "平均逐搏置信度偏低，模型对该记录把握较低。",
     },
     critical: {
       title: "需要留意的数值",
       body: "心率或室性异位搏动比例超出常见静息范围。算法结果不构成诊断，如伴随不适请及时就医。",
+    },
+    wearable: {
+      title: "手表/可穿戴结果仅供参考",
+      body: "当前分析使用的是单导联手表/可穿戴心电，不是医院 12 导联心电图。导联位置、皮肤接触、运动伪影和采样率差异都会显著影响模型，SVEB 等类别比例可能明显偏高，不能当作真实心律失常比例。请以医院心电图和专业判读为准；如出现胸痛、晕厥、呼吸困难等症状，请立即就医。",
     },
     domain: {
       lowConfidenceTitle: "模型置信度偏低",

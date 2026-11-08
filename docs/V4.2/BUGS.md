@@ -140,6 +140,93 @@
 
 ---
 
+## BUG-203 Cardia 警告 `lead_out_of_distribution` 显示乱码
+
+- **状态**：`FIXED`（源码 + 单测；未打包，留待下一次 4.3 构建）
+- **优先级**：P2
+- **用户描述**（2026-11-08）：
+  > 最后一句「当前导联为 I；模型在 MLII 上训练……」是乱码的，实在显示不了就删掉。
+
+### 根因
+
+1. Cardia 模块 worker 的 `main()` 没有像 relay/heartpy 那样显式
+   `sys.stdin/stdout.reconfigure(encoding="utf-8")`。Windows 下管道 stdio 落到
+   GBK，模块写出的中文警告被宿主按 UTF-8 读取，变成 `U+FFFD`。
+2. 前端 `WarningRow` 只在没有 i18n 文案时回退到后端消息；
+   `lead_out_of_distribution` 没有翻译键，于是把已损坏的后端消息直接显示出来。
+3. 已有安装的 Cardia 模块版本相同，启动时不会自动覆盖，旧 worker 继续产生乱码。
+
+### 修复
+
+| 文件 | 变更 |
+|---|---|
+| `modules/official/cardia/src/main.py` | `main()` 显式把 stdin/stdout 固定为 UTF-8 |
+| `modules/official/cardia/module.json` | 模块版本 `1.0.0` → `1.0.1`，并重新生成 `checksums.json` |
+| `backend/src/eclipse_health_backend/analysis_service/bridge.py` | `ensure_installed()` 比较随包版本与已安装版本，不一致时自动升级 |
+| `src/lib/i18n/zh-CN.ts`、`en-US.ts` | 补齐 `lead_out_of_distribution` 等警告文案；即使旧结果里存了乱码，UI 也显示干净文案 |
+
+### 验收
+
+- [x] `pytest tests/analysis_service`：通过；
+- [x] `npx tsc --noEmit`：通过；
+- [ ] 下次打包后实机确认 Cardia 警告不再出现乱码。
+
+---
+
+## BUG-204 relay 在手表单导联记录上 SVEB 比例异常高，缺少醒目提示
+
+- **状态**：`FIXED`（文案 + 警告 + 单测；未打包，留待下一次 4.3 构建）
+- **优先级**：P1
+- **用户描述**（2026-11-08）：
+  > 除了 Cardia，其他模型的 SVEB 特别高，甚至高过正常心搏。必须强调这是手表算出来的，不是真实比例，仅供参考；建议用医院心电图测试。是不是哪里弄错了？
+
+### 核查结论：不是标签映射错误
+
+用 relay-ecg 模块自身的 `_analyze()`（不经过核心的新代码）对同一段 360 Hz 信号做分析，
+得到完全相同的结果：
+
+```text
+N 19.7% · SVEB 80.0% · VEB 0.0% · F 0.2% · Q 0.1%
+counts: N=8, SVEB=120, VEB=0, F=0, Q=0
+```
+
+核心的 `argmax`、类别顺序和比例汇总与模块一致，所以高 SVEB 是模型在分布外输入上的
+行为，不是类别下标或标签错位。
+
+### 根因
+
+- relay 模型在 MIT-BIH **医院双导联 MLII、360 Hz** 数据上训练；
+- 当前记录是**手表单导联 Lead I、500 Hz、约 105 秒**，属于明显的分布外输入；
+- 单导联被复制成两路以满足模型输入，模型看到的是退化双导联；
+- 运动伪影、接触噪声和导联位置差异会让 SVEB 等类别吸收大量非典型形态，
+  模型输出的逐搏类别比例不能当作真实心律失常比例。
+
+### 修复
+
+| 文件 | 变更 |
+|---|---|
+| `backend/src/eclipse_health_backend/analysis_service/onnx_engine.py` | 非 MLII / 非 360 Hz / 单导联输入时，在结果 warnings 最前面插入 `wearable_limited_accuracy`，明确说明 SVEB 可能偏高、不能当作真实比例、建议医院 12 导联心电图；参数增加 `outOfDistribution` |
+| `src/components/records/analysis-panel.tsx` | 非 Cardia 引擎的结果顶部固定显示醒目 Alert「手表/可穿戴结果仅供参考」 |
+| `src/lib/i18n/zh-CN.ts`、`en-US.ts` | 新增 `analysis.wearable.title/body` 与 `wearable_limited_accuracy` 文案 |
+
+### 行为变化
+
+- Cardia 结果不受影响；
+- relay 等模块引擎在手表/可穿戴单导联记录上会同时显示：
+  - 顶部醒目提示「手表/可穿戴结果仅供参考」；
+  - 警告列表中的 `wearable_limited_accuracy`；
+  - 原有质量警告与分类比例。
+- 文案明确建议以医院 12 导联心电图和专业判读为准，并保留红旗症状立即就医提示。
+
+### 验收
+
+- [x] 模块自身 `_analyze()` 与核心结果一致，排除标签映射错误；
+- [x] `pytest tests/analysis_service`：通过；
+- [x] `npx tsc --noEmit`：通过；
+- [ ] 下次打包后实机确认顶部提示与警告文案显示正常。
+
+---
+
 ## 待补充
 
 后续 bug 按同样格式追加：现象、复现、根因（file:line）、修复、验证、回滚点。

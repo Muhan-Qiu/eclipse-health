@@ -298,6 +298,13 @@ def _dispatch_and_reply(message: dict[str, Any]) -> bool:
 
 
 def main() -> int:
+    # Windows 下 stdin/stdout 不是控制台时默认可能落到 GBK；显式固定 UTF-8，
+    # 否则模块返回的中文警告会在宿主侧变成 U+FFFD 乱码。
+    try:
+        sys.stdin.reconfigure(encoding="utf-8")
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     for line in sys.stdin:
         stripped = line.strip()
         if not stripped:

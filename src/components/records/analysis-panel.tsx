@@ -498,6 +498,14 @@ export function AnalysisPanel({
           </span>
         </div>
 
+        {currentEngineId && currentEngineId !== "cardia" ? (
+          <Alert>
+            <AlertTriangle />
+            <AlertTitle>{t("analysis.wearable.title")}</AlertTitle>
+            <AlertDescription>{t("analysis.wearable.body")}</AlertDescription>
+          </Alert>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-2">
           <MetricTile
             label={t("analysis.metrics.heartRate")}

@@ -42,6 +42,16 @@ DEFAULT_WARM_TIMEOUT_S = 900.0
 ManagerFactory = Callable[[], Any]
 
 
+def _bundled_version() -> str | None:
+    """随包 Cardia 模块版本；用于发现旧安装并自动升级。"""
+    try:
+        raw = json.loads((CARDIA_SOURCE_DIR / "module.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    version = str(raw.get("version") or "").strip()
+    return version or None
+
+
 class CardiaBridge:
     """模块管理器之上的薄封装；管理器由 ``modules.api.get_manager`` 提供。"""
 
@@ -67,13 +77,33 @@ class CardiaBridge:
     def ensure_installed(self) -> dict[str, Any]:
         manager = self.manager
         try:
-            return manager.get_module(CARDIA_MODULE_ID)
+            installed = manager.get_module(CARDIA_MODULE_ID)
         except ModuleError as exc:
             if exc.code != "MODULE_NOT_FOUND":
                 raise
+            installed = None
+
+        bundled = _bundled_version()
+        installed_version = str((installed or {}).get("version") or "")
+        if installed is not None and (not bundled or installed_version == bundled):
+            return installed
+
         if not self.auto_install:
+            if installed is not None:
+                logger.warning(
+                    "bundled cardia module %s differs from installed %s; auto-install disabled",
+                    bundled,
+                    installed_version,
+                )
+                return installed
             raise ModuleError(
                 "MODULE_NOT_FOUND", "Cardia 模块未安装（EH_CARDIA_AUTO_INSTALL=0）"
+            )
+        if installed is not None:
+            logger.info(
+                "upgrading bundled cardia module %s -> %s",
+                installed_version,
+                bundled,
             )
         summary = self.install_from_source()
         self.installed_here = True

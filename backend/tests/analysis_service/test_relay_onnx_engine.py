@@ -155,6 +155,8 @@ def test_sequence_pipeline_feeds_4d_x_and_dt(monkeypatch: pytest.MonkeyPatch) ->
     assert result["provenance"]["preprocess"]["beatsPerWindow"] == 64
     codes = {item["code"] for item in result["warnings"]}
     assert {"single_lead_duplicated", "tail_beats_dropped"} <= codes
+    assert "wearable_limited_accuracy" in codes
+    assert result["parameters"]["outOfDistribution"] is True
     probability_measurements = [
         item
         for item in result["measurements"]
