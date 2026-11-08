@@ -38,6 +38,7 @@
         <a href="index.html" data-nav="home">Home</a>
         <a href="modules.html" data-nav="modules">Modules</a>
         <a href="developers.html" data-nav="developers">Developers</a>
+        <a href="changelog.html" data-nav="changelog">Changelog</a>
         <a class="lang-switch" href="../index.html" hreflang="zh-CN" lang="zh-CN" aria-label="切换到中文">中文</a>
         <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch light or dark theme" aria-pressed="false">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -64,13 +65,13 @@
             and third-party alike.
           </p>
           <div class="cta-row">
-            <a class="btn btn-primary" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.0-alpha/eclipse-health_0.1.0_x64-setup.exe" rel="noopener">
+            <a class="btn btn-primary" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.2/eclipse-health_0.1.2_x64-setup.exe" rel="noopener">
               Download for Windows
             </a>
             <a class="btn btn-ghost" href="modules.html">Browse modules</a>
           </div>
           <p class="fine-print">
-            The 0.1.0 installer is published on Releases.
+            The 0.1.2 installer is published on Releases.
             Windows 10/11 · Free and open source · No account required.
           </p>
         </div>
@@ -78,13 +79,59 @@
         <aside class="release-card" aria-labelledby="release-title">
           <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>Latest updates</p>
           <h2 id="release-title">Recent updates and fixes</h2>
-          <span class="version">v4-m1 · updated 2026-11-06</span>
+          <span class="version">v4.3 · updated 2026-11-08</span>
           <ul class="update-list">
             <li>
               <details class="update-item" open>
                 <summary class="update-head">
-                  <span class="update-version">v4-m1</span>
-                  <span class="update-tag">In development</span>
+                  <span class="update-version">v4.3 · 0.1.3</span>
+                  <span class="update-tag">Latest</span>
+                  <time datetime="2026-11-08">2026-11-08</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>Every module gets its own workbench</strong>: after install, open a module from the sidebar or the module center's “Open” button to see status, declarative pages, dashboard cards, tool runner, model card, permissions and audit at <code>/modules/:id</code>.</li>
+                  <li><strong>Modules without declared pages are usable too</strong>: Cardia, relay and import/tool modules get the same workbench instead of stopping at the module list.</li>
+                  <li><strong>Assistant “+” module picker</strong>: choose priority modules for the turn; their tools are sorted first and listed in the system prompt, while other installed and enabled module tools remain available.</li>
+                  <li><strong>Session remembers module selection</strong>: switching conversations restores the last selection, and user messages plus the transparency panel show the modules used for the turn.</li>
+                  <li><strong>Module encoding and package checks</strong>: new Node scripts validate <code>module.json</code> BOM / mojibake / structure and <code>.ehmod</code> ZIP contents plus SHA-256.</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v4.2 · 0.1.2</span>
+                  <span class="update-tag">Released</span>
+                  <time datetime="2026-11-07">2026-11-07</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>Other analysis engines now work on ECG</strong>: fixed input-shape mismatches and “cannot reshape” errors in relay-ecg and other non-Cardia engines; all seven beat-classification models complete.</li>
+                  <li><strong>Single-lead adaptation</strong>: single-lead watch ECGs are duplicated to the model's two leads and resampled to 360 Hz automatically.</li>
+                  <li><strong>Readable errors</strong>: insufficient beats and R-peak detection failures now show actionable messages instead of raw Python exceptions.</li>
+                  <li><strong>No more sleep models in ECG analysis</strong>: relay-sleep sleep-staging models are no longer offered as ECG analysis engines.</li>
+                  <li><strong>Heart-rate and quality metrics</strong>: relay analyses now also report mean/min/max heart rate, SDNN, RMSSD, pNN50, N/SVEB/VEB/F ratios and a signal-quality score.</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v4.1 · 0.1.1</span>
+                  <span class="update-tag">Released</span>
+                  <time datetime="2026-11-06">2026-11-06</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>Markdown replies</strong>: headings, lists, tables, code blocks and links now render properly instead of showing raw symbols.</li>
+                  <li><strong>Less defensive answers</strong>: replies lead with conclusions and actionable advice; the fixed per-answer disclaimer is gone and shown once by the UI.</li>
+                  <li><strong>Advice despite missing data</strong>: the assistant says which data is missing and how to fill it in, instead of answering “I don't know”; red-flag symptoms still trigger an immediate seek-care recommendation.</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v4 · 0.1.0</span>
+                  <span class="update-tag">Released</span>
                   <time datetime="2026-11-06">2026-11-06</time>
                 </summary>
                 <ul class="update-points">
@@ -111,10 +158,10 @@
               </details>
             </li>
           </ul>
-          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4/docs/V4/CHANGELOG.md" rel="noopener">
+          <a class="btn btn-ghost" href="changelog.html">
             View full changelog
           </a>
-          <p class="fine-print">V4 is in development; the current public installer is v0.1.0-alpha, available on Releases with SHA-256 checksums.</p>
+          <p class="fine-print">V4.3 is in development; the v0.1.2 installer is published on Releases and the V4.3 installer will follow after the build. Build notes are in the <a href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4.3/docs/V4.3/README.md" rel="noopener">build record</a>.</p>
         </aside>
       </div>
     </section>
@@ -173,7 +220,7 @@
               <li>Signal quality and heart-rate / interval measurements</li>
               <li>Switch engines and re-analyse in the app</li>
             </ul>
-            <a class="pillar-link" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.0-alpha/eclipse-health_0.1.0_x64-setup.exe" rel="noopener">Download the app →</a>
+            <a class="pillar-link" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.2/eclipse-health_0.1.2_x64-setup.exe" rel="noopener">Download the app →</a>
           </article>
 
           <article class="spotlight-card">
@@ -331,6 +378,7 @@
           <a href="index.html">Home</a>
           <a href="modules.html">Modules</a>
           <a href="developers.html">Developers</a>
+          <a href="changelog.html">Changelog</a>
           <a href="../index.html" hreflang="zh-CN" lang="zh-CN">中文</a>
           <a href="https://github.com/Muhan-Qiu/eclipse-health" rel="noopener">GitHub</a>
         </div>

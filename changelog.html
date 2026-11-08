@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>更新日志 · eclipse health</title>
+  <meta name="description" content="eclipse health 全部版本的更新日志：V4、V4.1、V4.2、V4.3 的新增、修复与已知限制。">
+  <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/changelog.html">
+  <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/changelog.html">
+  <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/changelog.html">
+  <link rel="icon" href="brand/favicon.svg?v=2">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="changelog" data-depth="1">
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health 首页">
+        <img class="brand-mark" src="brand/favicon.svg?v=2" alt="" aria-hidden="true" />
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="index.html" data-nav="home">首页</a>
+        <a href="modules.html" data-nav="modules">模块市场</a>
+        <a href="developers.html" data-nav="developers">开发者</a>
+        <a href="changelog.html" data-nav="changelog">更新日志</a>
+        <a class="lang-switch" href="en/changelog.html" hreflang="en" lang="en" aria-label="Switch to English">EN</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="切换亮色或暗色主题" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section">
+      <div class="container">
+        <div class="page-head">
+          <p class="eyebrow">更新日志</p>
+          <h1>每个版本改了什么</h1>
+          <p>
+            按时间倒序，包含 V4、V4.1、V4.2、V4.3 的全部更新记录。
+            更细的根因与验证记录在 GitHub 仓库的 <code>docs/V4.x/</code> 下。
+          </p>
+        </div>
+
+        <ul class="update-list">
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.3 · 0.1.3</span>
+                <span class="update-tag">最新</span>
+                <time datetime="2026-11-08">2026-11-08</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>每个模块都有独立工作台</strong>：安装后在侧栏点击模块，或从模块中心点「打开」，即可进入 <code>/modules/:id</code>。工作台集中展示状态、版本、作者、许可证、资源限制、声明式页面、仪表盘卡片、工具试运行、模型卡、记录类型、权限与最近审计。</li>
+                <li><strong>没有声明页面的模块也能用</strong>：Cardia、relay 等分析模型，以及数据导入/工具类模块，都有工作台；没有 <code>ui.pages</code> 时显示状态、模型卡、工具、权限和审计，不再只能停留在模块列表。</li>
+                <li><strong>侧栏直达模块</strong>：侧栏直接列出已安装模块，点击进入工作台；模块中心每个模块增加「打开」按钮，模块详情面板增加「打开工作台」。</li>
+                <li><strong>助手「+」选择模块</strong>：对话输入区新增「+」，可勾选本轮优先使用的模块。所选模块以 chips 显示，随消息发送 <code>moduleIds</code>；切换会话会恢复上次选择，用户消息和透明面板都会回显本轮模块。</li>
+                <li><strong>Agent 优先所选模块</strong>：所选模块的工具排在工具目录前面，并在系统提示词中列出模块名称、工具与页面；其他已安装且启用的模块工具仍然可用，不是白名单。</li>
+                <li><strong>模块编码与安装校验</strong>：新增 Node 校验脚本，检查 <code>module.json</code> 的 BOM / 乱码 / 结构，以及 <code>.ehmod</code> 的 ZIP 内容与 SHA-256；发布前可运行 <code>npm run check:modules</code> 与 <code>npm run check:packages</code>。</li>
+                <li><strong>声明式页面返回工作台</strong>：从模块页面点「返回模块」现在回到该模块工作台，而不是模块列表。</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.2 · 0.1.2</span>
+                <span class="update-tag">已发布</span>
+                <time datetime="2026-11-07">2026-11-07</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>其他分析引擎可以正常分析心电图</strong>：修复 relay-ecg 等非 Cardia 引擎的输入维度不匹配与「cannot reshape」错误，7 个逐搏分类模型均可完成分析。</li>
+                <li><strong>单导联自动适配</strong>：手环/手表的单导联 ECG 会自动复制为模型要求的双导联，并重采样到 360 Hz。</li>
+                <li><strong>错误信息可读</strong>：心搏不足、R 峰检测失败等改为中文提示，不再直接暴露 Python 异常。</li>
+                <li><strong>睡眠模型不再误选</strong>：relay-sleep 的睡眠分期模型不再出现在心电记录的可选分析引擎中。</li>
+                <li><strong>补全心率与质量指标</strong>：relay 分析现在同时给出平均/最小/最大心率、SDNN、RMSSD、pNN50、N/SVEB/VEB/F 比例与信号质量分。</li>
+                <li><strong>手表结果提示</strong>：单导联/非 MLII/非 360 Hz 记录会显示「手表/可穿戴结果仅供参考」，说明 SVEB 等比例可能偏高。</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.1 · 0.1.1</span>
+                <span class="update-tag">已发布</span>
+                <time datetime="2026-11-06">2026-11-06</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>助手回复按 Markdown 显示</strong>：标题、加粗、列表、表格、代码块、链接不再以原始符号出现；流式输出保留末尾光标，站内链接可直接跳转，外链新窗口打开。</li>
+                <li><strong>助手不再过度免责</strong>：回复优先给结论和可执行建议，不再每轮追加「以上为数据解读，不构成医学诊断」；免责声明由界面统一展示一次。仅在涉及诊断、用药、剂量或急症症状时提示就医。</li>
+                <li><strong>缺少数据时也能给建议</strong>：说明缺哪项数据、如何补齐，并在现有信息范围内给出判断，不再用「我不知道 / 无法判断」代替回答。教练模式同样优先给出 1–3 个可执行步骤。</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4 · 0.1.0</span>
+                <span class="update-tag">已发布</span>
+                <time datetime="2026-11-06">2026-11-06</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>模块安装不再依赖用户机网络</strong>：安装包内置官方模块依赖的离线 wheel 仓库，安装功能型模块时优先离线安装，失败才联网兜底。</li>
+                <li><strong>依赖安装错误可诊断</strong>：失败时返回实际模式、缺失包名，并新增 <code>offline-wheel-missing</code> 原因。</li>
+                <li><strong>核心 Python 升级后自动重建模块环境</strong>：不再复用旧版本 venv / deps。</li>
+                <li><strong>依赖瘦身</strong>：relay-ecg / relay-sleep 不再重复安装核心已内置的 numpy / onnxruntime / wfdb。</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v0.1.0-alpha</span>
+                <span class="update-tag">已发布</span>
+                <time datetime="2026-11-02">2026-11-02</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>首个公开版</strong>：ECG 与 Apple / 小米 / Samsung 健康数据导入，Cardia 2.0 分析、记录、趋势与报告。</li>
+                <li><strong>模块生态</strong>：模块市场与 30+ 可选模块，权限、审计与 SHA-256 校验。</li>
+                <li><strong>AI 助手</strong>：可选多厂商模型与本地 Ollama，Key 用 DPAPI 加密，只发送摘要与测量。</li>
+                <li><strong>稳定性</strong>：修复长记录逐搏分析卡死（O(n²) → O(n log n)），新增取消、重试、暂停与卡死看护。</li>
+              </ul>
+            </details>
+          </li>
+        </ul>
+
+        <p class="fine-print" style="margin-top:1.2rem">
+          所有模块输出与助手回答均不构成医疗建议，不是医疗器械，不用于诊断、治疗或替代专业医疗判断。
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · 被忽视的健康。核心以 GPL-3.0-only 开源。</p>
+        <p>本软件与所有模块输出均不构成医疗建议，不是医疗器械，不用于诊断、治疗或替代专业医疗判断。</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">首页</a>
+          <a href="modules.html">模块市场</a>
+          <a href="developers.html">开发者</a>
+          <a href="changelog.html">更新日志</a>
+          <a href="en/changelog.html" hreflang="en" lang="en">English</a>
+          <a href="https://github.com/Muhan-Qiu/eclipse-health" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

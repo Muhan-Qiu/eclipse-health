@@ -38,6 +38,7 @@
         <a href="index.html" data-nav="home">首页</a>
         <a href="modules.html" data-nav="modules">模块市场</a>
         <a href="developers.html" data-nav="developers">开发者</a>
+        <a href="changelog.html" data-nav="changelog">更新日志</a>
         <a class="lang-switch" href="en/index.html" hreflang="en" lang="en" aria-label="Switch to English">EN</a>
         <button class="theme-toggle" type="button" id="theme-toggle" aria-label="切换亮色或暗色主题" aria-pressed="false">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -63,7 +64,7 @@
             设备适配、分析算法与界面都以模块扩展，官方与第三方使用同一套契约。
           </p>
           <div class="cta-row">
-            <a class="btn btn-primary" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.0-alpha/eclipse-health_0.1.0_x64-setup.exe" rel="noopener">
+            <a class="btn btn-primary" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.2/eclipse-health_0.1.2_x64-setup.exe" rel="noopener">
               直接下载 Windows 安装包
             </a>
             <a class="btn btn-ghost" href="modules.html">浏览模块市场</a>
@@ -76,13 +77,59 @@
         <aside class="release-card" aria-labelledby="release-title">
           <p class="eyebrow" style="margin-bottom:.4rem"><span class="dot" aria-hidden="true"></span>最近更新</p>
           <h2 id="release-title">最近更新与已修问题</h2>
-          <span class="version">v4-m1 · 更新于 2026-11-06</span>
+          <span class="version">v4.3 · 更新于 2026-11-08</span>
           <ul class="update-list">
             <li>
               <details class="update-item" open>
                 <summary class="update-head">
-                  <span class="update-version">v4-m1</span>
-                  <span class="update-tag">开发中</span>
+                  <span class="update-version">v4.3 · 0.1.3</span>
+                  <span class="update-tag">最新</span>
+                  <time datetime="2026-11-08">2026-11-08</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>每个模块都有独立工作台</strong>：安装后在侧栏点击模块，或从模块中心点「打开」，即可进入 <code>/modules/:id</code>，查看状态、声明式页面、仪表盘卡片、工具试运行、模型卡、权限与审计。</li>
+                  <li><strong>没有声明页面的模块也能用</strong>：Cardia、relay 等分析模型和导入/工具类模块同样有工作台，不再只能停留在模块列表。</li>
+                  <li><strong>助手「+」选择模块</strong>：对话输入区可勾选本轮优先模块，所选模块的工具排在工具目录前面并写入系统提示词；其他已安装且启用的模块工具仍然可用。</li>
+                  <li><strong>会话记住模块选择</strong>：切换会话会恢复上次选择，用户消息与透明面板都会回显本轮模块。</li>
+                  <li><strong>模块编码与安装校验</strong>：新增 Node 校验脚本，检查 <code>module.json</code> 的 BOM / 乱码 / 结构，以及 <code>.ehmod</code> 的 ZIP 内容与 SHA-256。</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v4.2 · 0.1.2</span>
+                  <span class="update-tag">已发布</span>
+                  <time datetime="2026-11-07">2026-11-07</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>其他分析引擎可以正常分析心电图</strong>：修复 relay-ecg 等非 Cardia 引擎的输入维度不匹配与「cannot reshape」错误，7 个逐搏分类模型均可完成分析。</li>
+                  <li><strong>单导联自动适配</strong>：手环/手表的单导联 ECG 会自动复制为模型要求的双导联，并重采样到 360 Hz。</li>
+                  <li><strong>错误信息可读</strong>：心搏不足、R 峰检测失败等改为中文提示，不再直接暴露 Python 异常。</li>
+                  <li><strong>睡眠模型不再误选</strong>：relay-sleep 的睡眠分期模型不再出现在心电记录的可选分析引擎中。</li>
+                  <li><strong>补全心率与质量指标</strong>：relay 分析现在同时给出平均/最小/最大心率、SDNN、RMSSD、pNN50、N/SVEB/VEB/F 比例与信号质量分。</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v4.1 · 0.1.1</span>
+                  <span class="update-tag">已发布</span>
+                  <time datetime="2026-11-06">2026-11-06</time>
+                </summary>
+                <ul class="update-points">
+                  <li><strong>助手 Markdown 显示</strong>：标题、列表、表格、代码块与链接按格式渲染，不再露出原始符号。</li>
+                  <li><strong>不再过度免责</strong>：回复先给结论与可执行建议，取消每轮固定免责尾注，改由界面统一展示一次。</li>
+                  <li><strong>缺少数据也能给建议</strong>：说明缺哪项数据、如何补齐，不再用「我不知道」代替回答；红旗症状仍立即建议就医。</li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details class="update-item">
+                <summary class="update-head">
+                  <span class="update-version">v4 · 0.1.0</span>
+                  <span class="update-tag">已发布</span>
                   <time datetime="2026-11-06">2026-11-06</time>
                 </summary>
                 <ul class="update-points">
@@ -109,10 +156,10 @@
               </details>
             </li>
           </ul>
-          <a class="btn btn-ghost" href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4/docs/V4/CHANGELOG.md" rel="noopener">
+          <a class="btn btn-ghost" href="changelog.html">
             查看完整更新日志
           </a>
-          <p class="fine-print">当前为 V4 开发版；正式安装包仍为 v0.1.0-alpha，可在 Releases 下载并核对 SHA-256。</p>
+          <p class="fine-print">当前为 V4.3 开发版；v0.1.2 安装包已发布到 Releases，V4.3 安装包将在构建后发布。SHA-256 见 <a href="https://github.com/Muhan-Qiu/eclipse-health/blob/v4.3/docs/V4.3/README.md" rel="noopener">构建记录</a>。</p>
         </aside>
       </div>
     </section>
@@ -171,7 +218,7 @@
               <li>信号质量与心率 / 间期测量</li>
               <li>可在应用内切换引擎重新分析</li>
             </ul>
-            <a class="pillar-link" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.0-alpha/eclipse-health_0.1.0_x64-setup.exe" rel="noopener">直接下载应用 →</a>
+            <a class="pillar-link" href="https://github.com/Muhan-Qiu/eclipse-health/releases/download/v0.1.2/eclipse-health_0.1.2_x64-setup.exe" rel="noopener">直接下载应用 →</a>
           </article>
 
           <article class="spotlight-card">
@@ -329,6 +376,7 @@
           <a href="index.html">首页</a>
           <a href="modules.html">模块市场</a>
           <a href="developers.html">开发者</a>
+          <a href="changelog.html">更新日志</a>
           <a href="en/index.html" hreflang="en" lang="en">English</a>
           <a href="https://github.com/Muhan-Qiu/eclipse-health" rel="noopener">GitHub</a>
         </div>
