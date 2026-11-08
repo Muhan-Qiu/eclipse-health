@@ -87,6 +87,59 @@
 
 ---
 
+## BUG-202 relay 引擎缺少心率 / HRV / 质量 / 异常占比
+
+- **状态**：`FIXED`（单测 + 真实 relay-k2 记录验证通过；待安装包实机验收）
+- **优先级**：P1
+- **用户描述**（2026-11-07）：
+  > 现在可以分析概率了，但是信号质量、异常波动占比、心率这些完全没有了。R 间期既然都算出来了，这些肯定很好算的呀。
+
+### 根因
+
+`onnx_engine.py` 的 relay 分支只把模型输出映射成 `class_probability.*` 测量值，并固定 `quality: None`、`beats: []`：
+
+- 没有把逐搏 `argmax` 结果汇总成 N/SVEB/VEB/F 比例；
+- 没有用 R 峰位置计算 RR，因此没有心率、SDNN、RMSSD、pNN50；
+- 没有调用核心已有的 `assess_quality()`，所以信号质量分与质量警告为空；
+- 前端 `analysis-panel.tsx` 的心率/HRV/异常占比/质量四个指标都从 measurements 和 `quality` 读取，读不到就显示 `—`。
+
+### 修复
+
+| 文件 | 变更 |
+|---|---|
+| `backend/src/eclipse_health_backend/analysis_service/onnx_engine.py` | relay 分支对逐搏概率做 `argmax`，得到 `class_counts`；复用 `analysis.measurements.compute_measurements()` 生成 `heart_rate_mean/min/max`、`rr_mean`、`sdnn`、`rmssd`、`pnn50`、`n_ratio`、`svb_ratio`、`veb_ratio`、`f_ratio`；复用 `analysis.quality.assess_quality()` 生成 `quality.score/level/warnings/metrics`；摘要改为「平均心率 + N/SVEB/VEB/F 比例」 |
+| `backend/src/eclipse_health_backend/analysis_service/onnx_engine.py` | `_build_result()` 支持 `quality`、`extra_measurements`、`summary` 覆盖；relay 参数补充 `heartRate`、`classCounts`、`meanConfidence`、`qualityMetrics`、`lead`、`originalFs` |
+| `backend/tests/analysis_service/test_relay_onnx_engine.py` | 新增断言：心率/HRV/比例/质量字段存在，质量分为 0–1，序列模型 `nBeatsDetected=80`、`nBeatsClassified=64` |
+
+### 行为变化
+
+- relay 引擎的分析结果现在和 Cardia 使用同一套测量口径：
+  - 心率：平均 / 最小 / 最大；
+  - HRV：RR 均值、SDNN、RMSSD、pNN50；
+  - 逐搏比例：N / SVEB / VEB / F；
+  - 信号质量：score、level、质量警告、质量指标。
+- 序列模型只统计完整 64 搏序列；丢弃的尾部心搏不计入比例和 RR 统计，`parameters.beatsDropped` 保留说明。
+- 质量评估失败不会让分析失败，会以 `quality_unavailable` 信息警告降级。
+
+### 验收
+
+- [x] `pytest tests/analysis_service/test_relay_onnx_engine.py`：5 passed；
+- [x] `ruff check`：通过；
+- [x] 真实 relay-k2 + 真实记录（单导联 I、500 Hz、104.966 s）：
+  - 平均心率 105.43 bpm；
+  - RR 均值 569.07 ms、SDNN 160.65 ms、RMSSD 164.89 ms、pNN50 4.76%；
+  - 质量分 0.85（good）；
+  - N 6.25% / SVEB 93.75% / VEB 0% / F 0%；
+  - `nBeatsDetected=187`、`nBeatsClassified=128`；
+- [ ] 安装包界面实机：确认四个指标卡片、质量警告和类别比例条正常显示。
+
+### 回滚点
+
+- 修复前基线：`9d7f3bb`（V4.2 分支）
+- 本次修复提交：见后续 `git log --oneline v4.2`
+
+---
+
 ## 待补充
 
 后续 bug 按同样格式追加：现象、复现、根因（file:line）、修复、验证、回滚点。

@@ -116,8 +116,8 @@ class _FakeSession:
 
 
 def _samples(length: int = 2400) -> np.ndarray:
-    # 平直基线即可；R 峰位置在测试中直接注入。
-    return np.zeros(length, dtype=np.float32)
+    # 非恒定波形，便于质量评估；R 峰位置在测试中直接注入。
+    return np.sin(np.linspace(0, 40 * np.pi, length)).astype(np.float32)
 
 
 def _positions(count: int) -> np.ndarray:
@@ -155,10 +155,38 @@ def test_sequence_pipeline_feeds_4d_x_and_dt(monkeypatch: pytest.MonkeyPatch) ->
     assert result["provenance"]["preprocess"]["beatsPerWindow"] == 64
     codes = {item["code"] for item in result["warnings"]}
     assert {"single_lead_duplicated", "tail_beats_dropped"} <= codes
-    assert len(result["measurements"]) == len(CLASSES)
-    total = sum(float(item["value"]) for item in result["measurements"])
+    probability_measurements = [
+        item
+        for item in result["measurements"]
+        if ".class_probability." in str(item["code"])
+    ]
+    assert len(probability_measurements) == len(CLASSES)
+    total = sum(float(item["value"]) for item in probability_measurements)
     assert abs(total - 100.0) < 0.01
-    assert max(result["measurements"], key=lambda item: item["value"])["label"] == "Q 概率"
+    assert (
+        max(probability_measurements, key=lambda item: item["value"])["label"]
+        == "Q 概率"
+    )
+    # 心率 / HRV / 质量 / 异常占比与 Cardia 使用同一套测量口径。
+    codes = {item["code"] for item in result["measurements"]}
+    assert {
+        "heart_rate_mean",
+        "heart_rate_min",
+        "heart_rate_max",
+        "rr_mean",
+        "sdnn",
+        "rmssd",
+        "pnn50",
+        "n_ratio",
+        "svb_ratio",
+        "veb_ratio",
+        "f_ratio",
+    } <= codes
+    assert result["quality"] is not None
+    assert 0.0 <= result["quality"]["score"] <= 1.0
+    assert result["parameters"]["nBeatsClassified"] == 64
+    assert result["parameters"]["nBeatsDetected"] == 80
+    assert result["summary"].startswith("平均心率")
 
 
 def test_beat_pipeline_feeds_3d_single_beat(monkeypatch: pytest.MonkeyPatch) -> None:

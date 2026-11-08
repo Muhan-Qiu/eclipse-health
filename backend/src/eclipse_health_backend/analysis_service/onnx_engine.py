@@ -34,6 +34,8 @@ from typing import Any
 import numpy as np
 
 from ..analysis.ids import new_id, rfc3339
+from ..analysis.measurements import compute_measurements
+from ..analysis.quality import assess_quality
 from ..analysis.types import SCHEMA_ANALYSIS, SCHEMA_MEASUREMENT, EcgSignal
 from .engines import ModuleModelSpec
 
@@ -635,6 +637,19 @@ def _aggregate(probs: np.ndarray, mode: str) -> np.ndarray:
     return probs.mean(axis=0)
 
 
+def _relay_summary(
+    heart_rate: float | None, class_counts: dict[str, int], n_beats: int
+) -> str:
+    total = max(int(n_beats), 1)
+    parts = [
+        f"{name} {class_counts.get(name, 0) / total * 100:.1f}%"
+        for name in ("N", "SVEB", "VEB", "F")
+    ]
+    if heart_rate is None:
+        return "平均心率不可用 · " + " · ".join(parts)
+    return f"平均心率 {heart_rate:.0f} bpm · " + " · ".join(parts)
+
+
 def _slug(value: str) -> str:
     cleaned = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value)
     return cleaned[:48] or "class"
@@ -666,11 +681,15 @@ def _build_result(
     provenance: dict[str, Any],
     scored: int,
     window_seconds: float,
+    quality: dict[str, Any] | None = None,
+    extra_measurements: list[dict[str, Any]] | None = None,
+    summary: str | None = None,
 ) -> dict[str, Any]:
-    summary = "模型级分类（非逐搏诊断）· " + " · ".join(
-        f"{name} {float(value) * 100:.1f}%"
-        for name, value in zip(classes, final, strict=True)
-    )
+    if summary is None:
+        summary = "模型级分类（非逐搏诊断）· " + " · ".join(
+            f"{name} {float(value) * 100:.1f}%"
+            for name, value in zip(classes, final, strict=True)
+        )
     measurements = [
         {
             "schema": SCHEMA_MEASUREMENT,
@@ -688,6 +707,7 @@ def _build_result(
         }
         for name, value in zip(classes, final, strict=True)
     ]
+    measurements.extend(extra_measurements or [])
     return {
         "schema": SCHEMA_ANALYSIS,
         "id": analysis_id,
@@ -702,7 +722,7 @@ def _build_result(
         "completedAt": rfc3339(completed_at),
         "durationMs": duration_ms,
         "summary": summary,
-        "quality": None,
+        "quality": quality,
         "measurements": measurements,
         "beats": [],
         "beatsRef": None,
@@ -1031,6 +1051,66 @@ class OnnxEngineRunner:
         probabilities = np.concatenate(probabilities_list, axis=0)
         final = _aggregate(probabilities, output["aggregation"])
 
+        # 逐搏类别 → 心率 / HRV / 异常占比。序列模型只统计完整序列，
+        # 被丢弃的尾部心搏不参与比例与 RR 统计，与 beatsDropped 保持一致。
+        scored_positions = positions[:scored]
+        labels = probabilities.argmax(axis=1)
+        class_counts = {
+            name: int(np.sum(labels == index))
+            for index, name in enumerate(classes)
+        }
+        n_used = int(labels.size)
+        mean_confidence = (
+            float(probabilities.max(axis=1).mean()) if n_used else 0.0
+        )
+        rr_ms = (
+            np.diff(scored_positions) / target_fs * 1000.0
+            if n_used > 1
+            else np.asarray([], dtype=np.float64)
+        )
+        heart_rate = (
+            float(60000.0 / float(np.mean(rr_ms))) if rr_ms.size else None
+        )
+
+        quality: Any = None
+        quality_dict: dict[str, Any] | None = None
+        try:
+            quality = assess_quality(
+                EcgSignal(
+                    samples=np.ascontiguousarray(channels[:, 0], dtype=np.float32),
+                    fs=target_fs,
+                    lead=str(lead or "unknown"),
+                    source="record",
+                ),
+                rpeaks,
+            )
+            quality_dict = quality.to_dict()
+            warnings.extend(quality.warnings)
+        except Exception as exc:  # noqa: BLE001 - 质量评估失败不应让分析失败
+            warnings.append(
+                _warning(
+                    "quality_unavailable",
+                    f"信号质量评估失败：{type(exc).__name__}",
+                    severity="info",
+                )
+            )
+
+        extra_measurements = compute_measurements(
+            r_positions=scored_positions,
+            fs=target_fs,
+            class_counts=class_counts,
+            n_beats=n_used,
+            duration_sec=float(channels.shape[0]) / target_fs,
+            quality_score=quality.score if quality is not None else 0.0,
+            record_id=record_id,
+            analysis_id=analysis_id,
+            id_factory=new_id,
+        )
+        ratio_codes = {"n_ratio", "svb_ratio", "veb_ratio", "f_ratio"}
+        for item in extra_measurements:
+            if item.get("code") in ratio_codes:
+                item["method"] = f"{self.spec.module_id}:{self.spec.model_id}"
+
         completed_at = datetime.now(UTC)
         duration_ms = round((time.perf_counter() - started_perf) * 1000)
         return _build_result(
@@ -1044,15 +1124,28 @@ class OnnxEngineRunner:
             duration_ms=duration_ms,
             started=started,
             completed_at=completed_at,
+            quality=quality_dict,
+            extra_measurements=extra_measurements,
+            summary=_relay_summary(heart_rate, class_counts, n_used),
             parameters={
                 "tailMode": tail_mode,
                 "mode": config["mode"],
                 "leads": int(config["leads"]),
                 "windowSamples": int(config["windowSamples"]),
                 "beatsPerWindow": int(config["beatsPerWindow"]),
+                "sequenceLength": int(config["beatsPerWindow"]),
                 "beatsScored": scored,
                 "beatsDropped": dropped,
                 "sequences": sequences,
+                "nBeatsDetected": int(beats.shape[0]),
+                "nBeatsClassified": n_used,
+                "classCounts": class_counts,
+                "meanConfidence": round(mean_confidence, 4),
+                "heartRate": round(heart_rate, 1) if heart_rate is not None else None,
+                "qualityMetrics": quality.metrics if quality is not None else None,
+                "lead": str(lead or "unknown"),
+                "originalFs": fs,
+                "resampled": resampled,
             },
             provenance={
                 "preprocess": {
@@ -1076,6 +1169,7 @@ class OnnxEngineRunner:
                 "aggregation": output["aggregation"],
                 "tailMode": tail_mode,
                 "resampled": resampled,
+                "qualityAssessed": quality is not None,
             },
             scored=scored,
             window_seconds=signal.size / target_fs if target_fs else 0.0,

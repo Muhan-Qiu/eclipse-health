@@ -9,6 +9,7 @@ V4.2 是 V4.1 的修复版本。本版只修一个问题：**除 Cardia 外，�
 | 编号 | 问题 | 状态 |
 |---|---|---|
 | BUG-201 | 非 Cardia 分析引擎（relay-ecg 的 7 个模型）在 ECG 记录上全部失败：`仅支持 2/3 维输入，模型输入维度为 4` / `ValueError: cannot reshape array of size 37908 into shape (162,2,234)` | `FIXED` |
+| BUG-202 | relay 引擎只显示分类概率，缺少心率、HRV、信号质量、异常心搏占比 | `FIXED` |
 
 ## 目录
 
