@@ -48,3 +48,15 @@ powershell -File scripts\build_release.ps1
 ```
 
 安装包产物在 `src-tauri\target\release\bundle\nsis\`。
+
+## 发布产物（2026-11-17）
+
+| 文件 | 大小 | SHA-256 |
+|---|---|---|
+| `eclipse health_0.2.0_x64-setup.exe` | 480,346,969 字节（458.1 MiB） | `1128E6B6E81A023100BB64B733E92B7C9C34806C02361C9A780B75DA4815A428` |
+
+- GitHub Release：https://github.com/Muhan-Qiu/eclipse-health/releases/tag/v0.2.0
+- 官网：https://eclipse-health.fit/
+- 桌面副本：`C:\Users\qiumuhan\Desktop\eclipse health_0.2.0_x64-setup.exe`
+- 源码备份：`C:\Users\qiumuhan\Desktop\eclipse-health-backup\eclipse-health-V4.5-source-2026-11-17.zip`
+
