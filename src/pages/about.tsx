@@ -23,7 +23,7 @@ export function AboutPage() {
           <Card key={section} className="desk:col-span-4 xl:col-span-6">
             <CardContent className="space-y-2">
               <h2 className="eh-h3">{t(`about.sections.${section}.title`)}</h2>
-              <p className="eh-small max-w-[72ch] text-muted-foreground">
+              <p className="eh-small max-w-[72ch] text-pretty text-muted-foreground">
                 {t(`about.sections.${section}.body`)}
               </p>
             </CardContent>
@@ -31,8 +31,11 @@ export function AboutPage() {
         ))}
       </div>
 
-      <p className="eh-caption mt-6 text-muted-foreground">
-        {t("common.version", { version: APP_VERSION })} · {APP_LICENSE} ·{" "}
+      <p className="eh-caption mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-4 text-muted-foreground">
+        {t("common.version", { version: APP_VERSION })}
+        <span aria-hidden="true">·</span>
+        {APP_LICENSE}
+        <span aria-hidden="true">·</span>
         {t("common.localOnly")}
       </p>
     </>

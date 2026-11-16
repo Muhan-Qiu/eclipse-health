@@ -49,6 +49,7 @@ import {
   isFirstPartyModule,
   moduleDisplayName,
   moduleDocsUrl,
+  moduleSummary,
 } from "./copy";
 import { moduleErrorMessage } from "./errors";
 import { ManifestFacts, ModuleIdentity } from "./manifest-summary";
@@ -171,12 +172,19 @@ export function ModuleDetail({
               ) : null}
             </SheetTitle>
             <SheetDescription>
-              {module
-                ? t("moduleUi.detail.subtitle", {
+              {module ? (
+                <>
+                  {t("moduleUi.detail.subtitle", {
                     id: module.id,
                     version: module.version,
-                  })
-                : t("moduleUi.detail.description")}
+                  })}
+                  {copy?.tagline ? (
+                    <span className="mt-1 block">{copy.tagline}</span>
+                  ) : null}
+                </>
+              ) : (
+                t("moduleUi.detail.description")
+              )}
             </SheetDescription>
           </SheetHeader>
 
@@ -205,7 +213,11 @@ export function ModuleDetail({
                   id={manifest.id}
                   version={manifest.version}
                   type={manifest.type}
-                  description={copy?.summary || manifest.description}
+                  description={moduleSummary(
+                    i18n.language,
+                    manifest.id,
+                    manifest.description,
+                  )}
                   author={manifest.author}
                   license={manifest.license}
                   showCredits={false}

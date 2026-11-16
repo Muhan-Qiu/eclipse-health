@@ -519,7 +519,7 @@ export const WaveformViewer = forwardRef<WaveformViewerHandle, WaveformViewerPro
             view={view}
             quality={analysis?.quality ?? null}
             onViewChange={([start, end]) => applyView(start, end)}
-            height={40}
+            height={60}
             className="mb-2"
             hint={`${t("waveform.overview.label")} · ${t("waveform.overview.hint")}`}
             ariaLabel={t("waveform.overview.aria", {

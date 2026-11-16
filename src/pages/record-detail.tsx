@@ -301,6 +301,7 @@ export function RecordDetailPage() {
       <PageHeader
         eyebrow={t("recordDetail.eyebrow")}
         title={formatDate(record.capturedAt, locale)}
+        className="mb-5"
         description={[
           summary.device.model || t("records.localFile"),
           formatDateTime(record.capturedAt, locale),
@@ -344,13 +345,19 @@ export function RecordDetailPage() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {summary.isDemo ? <DemoBadge /> : null}
-        {record.leads.map((lead) => (
-          <Badge key={lead} variant="outline" className="font-normal">
-            {lead}
-          </Badge>
-        ))}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {record.leads.map((lead) => (
+            <Badge
+              key={lead}
+              variant="outline"
+              className="eh-num font-normal tracking-wide"
+            >
+              {lead}
+            </Badge>
+          ))}
+        </div>
+        <span className="hidden h-4 w-px bg-border sm:block" aria-hidden="true" />
         <Badge variant="secondary" className="font-normal">
           {formatNumber(record.samplingRate ?? 0, locale)} Hz
         </Badge>
@@ -363,7 +370,9 @@ export function RecordDetailPage() {
           </Badge>
         ))}
         {record.notes ? (
-          <span className="eh-small text-muted-foreground">{record.notes}</span>
+          <span className="eh-small min-w-0 max-w-full truncate text-muted-foreground">
+            {record.notes}
+          </span>
         ) : null}
       </div>
 
@@ -374,14 +383,13 @@ export function RecordDetailPage() {
               <CardTitle className="eh-h3">{t("waveform.title")}</CardTitle>
               <CardDescription>
                 {record.leads.join(" / ")} ·{" "}
-                {formatNumber(record.samplingRate ?? 0, locale)} Hz ·{" "}
-                {formatDuration(summary.durationSec, locale)}
+                {formatNumber(record.samplingRate ?? 0, locale)} Hz
               </CardDescription>
               <CardAction>
                 {summary.isDemo ? <DemoBadge /> : null}
               </CardAction>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <WaveformViewer
                 ref={waveformRef}
                 recordId={record.id}
@@ -393,10 +401,22 @@ export function RecordDetailPage() {
                 recordDate={formatDateTime(record.capturedAt, locale)}
                 className="eh-reveal"
               />
-              <p className="eh-caption flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
-                <span>{t("waveform.legend.rPeak")}</span>
-                <span>{t("waveform.legend.abnormal")}</span>
-                <span>{t("waveform.legend.quality")}</span>
+              <p className="eh-caption flex flex-wrap items-center gap-x-4 gap-y-1.5 text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3 w-px bg-signal/70" aria-hidden="true" />
+                  {t("waveform.legend.rPeak")}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
+                  {t("waveform.legend.abnormal")}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="size-2.5 rounded-[2px] border border-warning/30 bg-warning/15"
+                    aria-hidden="true"
+                  />
+                  {t("waveform.legend.quality")}
+                </span>
               </p>
               {selectedBeat ? (
                 <BeatDetails
@@ -413,7 +433,7 @@ export function RecordDetailPage() {
                 </p>
               )}
 
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
                 <BeatList
                   beats={completedAnalysis?.beats ?? []}
                   fs={record.samplingRate ?? 360}
@@ -429,7 +449,7 @@ export function RecordDetailPage() {
               </div>
             </CardContent>
             {/* 隐私说明留在卡片内部，左侧卡片才能与右侧分析栏底边对齐。 */}
-            <p className="eh-caption mt-3 flex items-start gap-1.5 px-4 text-muted-foreground">
+            <p className="eh-caption mt-4 flex items-start gap-1.5 px-4 pb-1 text-muted-foreground">
               <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
               {t("recordDetail.privacyNote")}
             </p>

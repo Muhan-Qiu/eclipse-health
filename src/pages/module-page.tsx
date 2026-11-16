@@ -19,6 +19,7 @@ import {
   MODULE_QUERY_KEY,
   listModules,
 } from "@/features/modules/api";
+import { moduleDisplayName } from "@/features/modules/copy";
 import type { ModuleSummary } from "@/features/modules/types";
 import {
   PAGE_CONTRIBUTIONS_KEY,
@@ -83,7 +84,7 @@ export function ModulePage() {
     moduleId: string;
     pageId: string;
   }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
 
   const pagesQuery = useQuery({
@@ -170,7 +171,11 @@ export function ModulePage() {
   return (
     <>
       <PageHeader
-        eyebrow={page.moduleName}
+        eyebrow={
+          moduleInfo
+            ? moduleDisplayName(i18n.language, moduleId, moduleInfo.name)
+            : page.moduleName
+        }
         title={page.title}
         actions={
           <>

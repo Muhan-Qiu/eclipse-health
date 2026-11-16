@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BookOpen,
   FilePlus2,
+  FileText,
   FlaskConical,
   LayoutGrid as LayoutGridIcon,
   LoaderCircle,
@@ -201,7 +202,8 @@ function RecentRecords() {
         icon={RefreshCw}
         title={t("common.loadError")}
         description={t("dashboard.recent.errorDesc")}
-        className="border-0 bg-transparent py-6"
+        compact
+        className="border-0 bg-transparent px-5 py-4"
       >
         <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
           <RefreshCw data-icon="inline-start" />
@@ -213,18 +215,17 @@ function RecentRecords() {
   const records = query.data?.items ?? [];
   if (records.length === 0) {
     return (
-      <div className="px-5 py-6">
-        <EmptyState
-          icon={FilePlus2}
-          title={t("dashboard.recent.emptyTitle")}
-          description={t("dashboard.recent.emptyDesc")}
-          className="border-0 bg-transparent py-6"
-        >
-          <Button size="sm" onClick={openPicker}>
-            {t("dashboard.recent.emptyAction")}
-          </Button>
-        </EmptyState>
-      </div>
+      <EmptyState
+        icon={FilePlus2}
+        title={t("dashboard.recent.emptyTitle")}
+        description={t("dashboard.recent.emptyDesc")}
+        compact
+        className="border-0 bg-transparent px-5 py-4"
+      >
+        <Button size="sm" onClick={openPicker}>
+          {t("dashboard.recent.emptyAction")}
+        </Button>
+      </EmptyState>
     );
   }
 
@@ -290,7 +291,7 @@ function MetricsCard({
   }, [candidates]);
 
   return (
-    <Card className="eh-lift">
+    <Card className="eh-lift eh-metrics-card">
       <CardHeader>
         <CardTitle className="eh-h3">{t("dashboard.metrics.title")}</CardTitle>
         <CardDescription>
@@ -324,7 +325,8 @@ function MetricsCard({
                 ? t("dashboard.metrics.emptyDesc")
                 : t("dashboard.metrics.emptyNoRecords")
             }
-            className="border-0 bg-transparent px-2 py-4"
+            compact
+            className="border-0 bg-transparent px-0 py-1"
           >
             {hasRecords && latestRecord ? (
               <Button size="sm" asChild>
@@ -413,6 +415,8 @@ export function DashboardPage() {
   const recent = recentQuery.data?.items ?? [];
   const analysesQueries = useRecentAnalyses(recent);
   const sampleRecord = recent.find((record) => record.isSample);
+  /** 空库时把快捷操作前置并突出显示；有记录后收成一条工具条。 */
+  const libraryEmpty = !recentQuery.isLoading && recent.length === 0;
 
   const loadSample = () => {
     if (sampleRecord) {
@@ -625,7 +629,7 @@ export function DashboardPage() {
   };
 
   const renderRecentCard = () => (
-    <Card className="eh-lift">
+    <Card className="eh-lift eh-recent-card">
       <CardHeader>
         <CardTitle className="eh-h3">{t("dashboard.recent.title")}</CardTitle>
         <CardDescription>{t("dashboard.recent.description")}</CardDescription>
@@ -645,7 +649,7 @@ export function DashboardPage() {
   );
 
   const renderWaveformCard = () => (
-    <Card className="eh-lift">
+    <Card className="eh-lift eh-waveform-card">
       <CardHeader>
         <CardTitle className="eh-h3">{t("dashboard.waveform.title")}</CardTitle>
         <CardDescription>
@@ -684,7 +688,8 @@ export function DashboardPage() {
             icon={FilePlus2}
             title={t("dashboard.waveform.emptyTitle")}
             description={t("dashboard.waveform.emptyDesc")}
-            className="border-0 bg-transparent py-4"
+            compact
+            className="border-0 bg-transparent px-2 py-2"
           >
             <Button size="sm" onClick={openPicker}>
               {t("dashboard.recent.emptyAction")}
@@ -724,6 +729,7 @@ export function DashboardPage() {
             scores={scoresQuery.data}
             loading={scoresQuery.isLoading}
             error={scoresQuery.isError}
+            className="eh-score-card"
           />
         );
       case "suggestions":
@@ -732,10 +738,11 @@ export function DashboardPage() {
             suggestions={suggestionsQuery.data}
             loading={suggestionsQuery.isLoading}
             error={suggestionsQuery.isError}
+            className="eh-suggestion-card"
           />
         );
       case "health-summary":
-        return <HealthSummaryCard />;
+        return <HealthSummaryCard className="eh-health-summary" />;
       case "recent":
         return renderRecentCard();
       case "metrics":
@@ -758,14 +765,14 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
+      <header className="flex flex-col gap-4 desk:flex-row desk:items-end desk:justify-between desk:gap-8">
+        <div className="min-w-0 flex-1">
           <p className="eh-caption tracking-[0.14em] text-muted-foreground uppercase">
             {t("dashboard.eyebrow")}
           </p>
-          <h1 className="eh-h1 mt-1">{t(greetingKey(now))}</h1>
+          <h1 className="eh-h1 mt-1.5 text-balance">{t(greetingKey(now))}</h1>
           <figure className="mt-2 max-w-[72ch]">
-            <blockquote className="eh-small text-foreground">
+            <blockquote className="eh-small text-pretty text-foreground">
               “{quoteText}”
             </blockquote>
             <figcaption className="eh-caption mt-1 text-muted-foreground">
@@ -776,8 +783,8 @@ export function DashboardPage() {
             {t("dashboard.description")}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <p className="eh-caption text-muted-foreground">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 desk:justify-end">
+          <p className="eh-caption mr-1 text-muted-foreground">
             {formatFullDate(now, locale)}
           </p>
           <Button
@@ -803,6 +810,69 @@ export function DashboardPage() {
           </Button>
         </div>
       </header>
+
+      {libraryEmpty ? (
+        <section className="mt-6" aria-label={t("dashboard.guide.importTitle")}>
+          <div className="grid gap-3 sm:grid-cols-2 desk:grid-cols-3">
+            <GuideCard
+              icon={FilePlus2}
+              title={t("dashboard.guide.importTitle")}
+              description={t("dashboard.guide.importDesc")}
+            >
+              <Button size="sm" onClick={openPicker}>
+                {t("dashboard.guide.importAction")}
+                <ArrowRight data-icon="inline-end" />
+              </Button>
+            </GuideCard>
+
+            <GuideCard
+              icon={BookOpen}
+              title={t("dashboard.guide.sampleTitle")}
+              description={t("dashboard.guide.sampleDesc")}
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={loadSample}
+                disabled={importSample.isPending}
+              >
+                {importSample.isPending ? (
+                  <LoaderCircle data-icon="inline-start" className="animate-spin" />
+                ) : (
+                  <FlaskConical data-icon="inline-start" />
+                )}
+                {importSample.isPending
+                  ? t("dashboard.guide.sampleLoading")
+                  : t("dashboard.guide.sampleAction")}
+                <ArrowRight data-icon="inline-end" />
+              </Button>
+            </GuideCard>
+
+            <GuideCard
+              icon={FileText}
+              title={t("dashboard.guide.exampleTitle")}
+              description={t("dashboard.guide.exampleDesc")}
+            >
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/records">
+                  {t("dashboard.guide.exampleAction")}
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            </GuideCard>
+          </div>
+          <div className="mt-2 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFormatsOpen(true)}
+            >
+              {t("dashboard.guide.formatsAction")}
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       {draftsQuery.drafts.length > 0 && !editing ? (
         <section
@@ -850,16 +920,18 @@ export function DashboardPage() {
       ) : null}
 
       {/* 评分/建议/指标/波形、模块卡片与自定义卡片统一进 12 列布局。 */}
-      <section aria-label={t("dashboard.layout.aria")} className="mt-6">
+      <section aria-label={t("dashboard.layout.aria")} className="eh-dashboard mt-6">
         {editing ? (
-          <LayoutToolbar
-            onSave={saveDraft}
-            onCancel={cancelEditing}
-            onReset={resetDraft}
-            onExport={exportDraft}
-            onImport={importDraft}
-            error={layoutError}
-          />
+          <div className="eh-dashboard-toolbar">
+            <LayoutToolbar
+              onSave={saveDraft}
+              onCancel={cancelEditing}
+              onReset={resetDraft}
+              onExport={exportDraft}
+              onImport={importDraft}
+              error={layoutError}
+            />
+          </div>
         ) : null}
         <LayoutGrid
           items={editing ? draft : layout}
@@ -900,30 +972,18 @@ export function DashboardPage() {
         ) : null}
       </section>
 
-      <section
-        className="eh-stagger mt-6 grid gap-4 md:grid-cols-3"
-        aria-label={t("dashboard.guide.importTitle")}
-      >
-        <GuideCard
-          icon={FilePlus2}
-          title={t("dashboard.guide.importTitle")}
-          description={t("dashboard.guide.importDesc")}
+      {!libraryEmpty ? (
+        <section
+          className="mt-6 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-subtle/30 px-3 py-2"
+          aria-label={t("dashboard.guide.importTitle")}
         >
-          <Button size="sm" onClick={openPicker}>
+          <Button variant="outline" size="sm" onClick={openPicker}>
             {t("dashboard.guide.importAction")}
-            <ArrowRight data-icon="inline-end" />
           </Button>
-        </GuideCard>
-
-        <GuideCard
-          icon={BookOpen}
-          title={t("dashboard.guide.sampleTitle")}
-          description={t("dashboard.guide.sampleDesc")}
-        >
           <Button
             variant={sampleRecord ? "ghost" : "secondary"}
             size="sm"
-            className={sampleRecord ? "-ml-2.5" : undefined}
+            className={sampleRecord ? "-ml-2" : undefined}
             onClick={loadSample}
             disabled={importSample.isPending}
           >
@@ -939,24 +999,23 @@ export function DashboardPage() {
                 : t("dashboard.guide.sampleAction")}
             <ArrowRight data-icon="inline-end" />
           </Button>
-        </GuideCard>
-
-        <GuideCard
-          icon={FlaskConical}
-          title={t("dashboard.guide.formatsTitle")}
-          description={t("dashboard.guide.formatsDesc")}
-        >
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/records">
+              {t("dashboard.guide.exampleAction")}
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="-ml-2.5"
+            className="sm:ml-auto"
             onClick={() => setFormatsOpen(true)}
           >
             {t("dashboard.guide.formatsAction")}
             <ArrowRight data-icon="inline-end" />
           </Button>
-        </GuideCard>
-      </section>
+        </section>
+      ) : null}
 
       <Dialog open={formatsOpen} onOpenChange={setFormatsOpen}>
         <DialogContent className="sm:max-w-md">

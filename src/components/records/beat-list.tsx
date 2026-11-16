@@ -10,7 +10,10 @@ import { formatClock } from "@/lib/waveform";
 
 const CLASS_ORDER = ["N", "SVEB", "VEB", "F"] as const;
 const MAX_ROWS = 5_000;
-const ROW_HEIGHT = 30;
+/** 行高与波形主视图的刻度节奏对齐：32px 一行，列表更松弛。 */
+const ROW_HEIGHT = 32;
+const ROW_GRID =
+  "grid grid-cols-[30px_60px_minmax(52px,1fr)_56px_56px] items-center gap-1";
 
 export interface BeatListProps {
   beats: Beat[];
@@ -129,18 +132,18 @@ export function BeatList({
       className={cn("rounded-lg border border-border bg-surface", className)}
       aria-label={t("beatList.title")}
     >
-      <header className="flex flex-wrap items-center gap-2 border-b border-border px-2.5 py-2">
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-border px-3 py-2">
         <h4 className="eh-caption text-foreground">{t("beatList.title")}</h4>
         <span className="eh-caption eh-num text-muted-foreground">
           {t("beatList.count", { shown: filtered.length, total: beats.length })}
         </span>
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+          <label className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
             {t("beatList.classFilter")}
             <select
               value={classFilter}
               onChange={(event) => setClassFilter(event.target.value)}
-              className="h-6 rounded-md border border-border bg-surface px-1 text-[11px] text-foreground"
+              className="h-6 max-w-28 rounded-md border border-border bg-surface px-1 text-[11px] text-foreground"
               aria-label={t("beatList.classFilter")}
             >
               <option value="all">{t("beatList.allClasses")}</option>
@@ -174,7 +177,7 @@ export function BeatList({
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-border px-3 py-2 text-[11px] text-muted-foreground">
         <span>{t("beatList.timeRange")}</span>
         <input
           type="number"
@@ -196,15 +199,20 @@ export function BeatList({
           className="h-6 w-16 rounded-md border border-border bg-surface px-1.5 text-[11px] text-foreground"
         />
         {truncated ? (
-          <span className="ml-auto flex items-center gap-1 text-warning">
-            <AlertTriangle className="size-3" aria-hidden="true" />
-            {t("beatList.truncated", { limit: MAX_ROWS, total: beats.length })}
+          <span className="ml-auto flex min-w-0 items-center gap-1 text-warning">
+            <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+            <span className="truncate">
+              {t("beatList.truncated", { limit: MAX_ROWS, total: beats.length })}
+            </span>
           </span>
         ) : null}
       </div>
 
       <div
-        className="grid grid-cols-[36px_64px_minmax(64px,1fr)_64px_64px] items-center gap-1 border-y border-border bg-subtle/60 px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground"
+        className={cn(
+          ROW_GRID,
+          "border-b border-border bg-subtle/60 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground",
+        )}
         aria-hidden="true"
       >
         <span>{t("beatList.columns.index")}</span>
@@ -251,10 +259,11 @@ export function BeatList({
                   aria-label={t("beatList.select", { index: beat.index + 1 })}
                   onClick={() => onSelect(beat)}
                   className={cn(
-                    "absolute inset-x-0 grid grid-cols-[36px_64px_minmax(64px,1fr)_64px_64px] items-center gap-1 border-l-2 px-2 text-left text-[11px] eh-num tabular-nums transition-colors duration-[120ms]",
+                    ROW_GRID,
+                    "absolute inset-x-0 border-l-2 px-3 text-left text-[11px] eh-num tabular-nums transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none",
                     selected
                       ? "border-l-[var(--eh-accent)] bg-accent-soft"
-                      : "border-l-transparent hover:bg-subtle",
+                      : "border-l-transparent hover:bg-subtle/80 focus-visible:bg-subtle/80",
                   )}
                   style={{ top: position * ROW_HEIGHT, height: ROW_HEIGHT }}
                 >

@@ -24,6 +24,8 @@ export interface ModuleCopyEntry {
   goodFor?: string;
   limits?: string[];
   techNote?: string;
+  /** 模块贡献的卡片标题覆盖：widget id → 当前语言标题。 */
+  widgets?: Record<string, string>;
 }
 
 interface ModuleCopyBundle {
@@ -66,10 +68,30 @@ export function moduleDisplayName(
   return getModuleCopy(language, moduleId)?.name || fallback;
 }
 
-/** 与网站一致的官方自研排序：ECG 在前，睡眠在后。 */
+/** 模块简介：优先本地化 summary，其次 tagline，最后回退 manifest / 索引描述。 */
+export function moduleSummary(
+  language: string | undefined,
+  moduleId: string,
+  fallback: string,
+): string {
+  const copy = getModuleCopy(language, moduleId);
+  return copy?.summary || copy?.tagline || fallback;
+}
+
+/** 模块短标语：优先本地化 tagline，找不到时回退 manifest / 索引描述。 */
+export function moduleTagline(
+  language: string | undefined,
+  moduleId: string,
+  fallback: string,
+): string {
+  return getModuleCopy(language, moduleId)?.tagline || fallback;
+}
+
+/** 与网站一致的官方自研排序：Cardia 在前，ECG 其次，睡眠在后。 */
 const FIRST_PARTY_ORDER: Record<string, number> = {
-  "org.eclipsehealth.relay-ecg": 0,
-  "org.eclipsehealth.relay-sleep": 1,
+  "org.eclipsehealth.cardia": 0,
+  "org.eclipsehealth.relay-ecg": 1,
+  "org.eclipsehealth.relay-sleep": 2,
 };
 
 export interface SortableMarketplaceModule {

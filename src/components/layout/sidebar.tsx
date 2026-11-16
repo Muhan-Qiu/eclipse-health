@@ -18,6 +18,9 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+const moduleNavItems = secondaryNav.filter((item) => item.path === "/modules");
+const utilityNavItems = secondaryNav.filter((item) => item.path !== "/modules");
+
 function NavEntry({
   item,
   collapsed,
@@ -34,9 +37,9 @@ function NavEntry({
       to={item.path}
       end={item.end ?? item.path === "/modules"}
       className={cn(
-        "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-[background-color,color] duration-200",
+        "relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200",
         "hover:bg-accent hover:text-foreground",
-        "aria-[current=page]:bg-subtle aria-[current=page]:font-medium aria-[current=page]:text-foreground aria-[current=page]:[&_svg]:text-primary",
+        "aria-[current=page]:bg-surface aria-[current=page]:font-medium aria-[current=page]:text-foreground aria-[current=page]:shadow-[inset_0_0_0_1px_var(--eh-border)] aria-[current=page]:[&_svg]:text-primary",
         collapsed && "justify-center px-0",
       )}
     >
@@ -57,14 +60,19 @@ function NavEntry({
   );
 }
 
+function NavGroupLabel({ children }: { children: string }) {
+  return <p className="eh-sidebar-label">{children}</p>;
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { t } = useTranslation();
 
   return (
     <aside
       aria-label={t("nav.primary")}
+      data-collapsed={collapsed ? "true" : "false"}
       className={cn(
-        "flex h-full shrink-0 flex-col border-r border-border bg-sidebar transition-[width,background-color,border-color] duration-200",
+        "eh-sidebar flex h-full shrink-0 flex-col border-r border-border bg-sidebar transition-[width,background-color,border-color] duration-200",
         collapsed ? "w-16" : "w-[232px]",
       )}
     >
@@ -82,55 +90,80 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-2">
-        <ul className="flex flex-col gap-0.5">
-          {primaryNav.map((item) => (
-            <li key={item.path}>
-              <NavEntry item={item} collapsed={collapsed} />
-            </li>
-          ))}
-        </ul>
-        <Separator className="my-2" />
-        <ul className="flex flex-col gap-0.5">
-          {secondaryNav.map((item) => (
-            <li key={item.path}>
-              <NavEntry item={item} collapsed={collapsed} />
-            </li>
-          ))}
-        </ul>
-        <ModuleNav collapsed={collapsed} />
+      <nav className="flex min-h-0 flex-1 flex-col p-2">
+        <div className="shrink-0">
+          {collapsed ? null : (
+            <NavGroupLabel>{t("nav.primary")}</NavGroupLabel>
+          )}
+          <ul className="flex flex-col gap-1">
+            {primaryNav.map((item) => (
+              <li key={item.path}>
+                <NavEntry item={item} collapsed={collapsed} />
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <Separator className="my-2 shrink-0" />
+
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ul className="flex shrink-0 flex-col gap-1">
+            {moduleNavItems.map((item) => (
+              <li key={item.path}>
+                <NavEntry item={item} collapsed={collapsed} />
+              </li>
+            ))}
+          </ul>
+          <div
+            className={cn(
+              "eh-sidebar-module-list mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain",
+              collapsed ? "pr-0" : "pr-0.5",
+            )}
+          >
+            <ModuleNav collapsed={collapsed} />
+          </div>
+        </div>
       </nav>
 
-      <div className={cn("border-t border-border p-2", collapsed && "px-2")}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size={collapsed ? "icon-sm" : "sm"}
-              onClick={onToggle}
-              aria-label={
-                collapsed ? t("a11y.expandNav") : t("a11y.collapseNav")
-              }
-              aria-expanded={!collapsed}
-              className={cn(
-                "w-full justify-start gap-2 text-muted-foreground",
-                collapsed && "justify-center",
-              )}
-            >
-              {collapsed ? (
-                <PanelLeftOpen aria-hidden="true" />
-              ) : (
-                <>
-                  <PanelLeftClose aria-hidden="true" />
-                  <span>{t("nav.collapse")}</span>
-                </>
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {collapsed ? t("a11y.expandNav") : t("a11y.collapseNav")}
-          </TooltipContent>
-        </Tooltip>
+      <div className="shrink-0 border-t border-border p-2">
+        <ul className="flex flex-col gap-1">
+          {utilityNavItems.map((item) => (
+            <li key={item.path}>
+              <NavEntry item={item} collapsed={collapsed} />
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size={collapsed ? "icon-sm" : "sm"}
+                onClick={onToggle}
+                aria-label={
+                  collapsed ? t("a11y.expandNav") : t("a11y.collapseNav")
+                }
+                aria-expanded={!collapsed}
+                className={cn(
+                  "w-full justify-start gap-2 text-muted-foreground",
+                  collapsed && "justify-center",
+                )}
+              >
+                {collapsed ? (
+                  <PanelLeftOpen aria-hidden="true" />
+                ) : (
+                  <>
+                    <PanelLeftClose aria-hidden="true" />
+                    <span>{t("nav.collapse")}</span>
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {collapsed ? t("a11y.expandNav") : t("a11y.collapseNav")}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </aside>
   );

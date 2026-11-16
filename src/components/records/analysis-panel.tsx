@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { cn } from "cn";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -151,28 +152,29 @@ function WarningRow({ warning }: { warning: QualityWarning }) {
   const Icon = warning.severity === "error" ? ShieldAlert : AlertTriangle;
 
   return (
-    <li className="flex items-start gap-2 py-1.5">
+    <li className="flex items-start gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-subtle/70">
       <Icon
-        className={
+        className={cn(
+          "mt-0.5 size-3.5 shrink-0",
           warning.severity === "error"
-            ? "mt-0.5 size-4 shrink-0 text-danger"
+            ? "text-danger"
             : warning.severity === "warning"
-              ? "mt-0.5 size-4 shrink-0 text-warning"
-              : "mt-0.5 size-4 shrink-0 text-info"
-        }
+              ? "text-warning"
+              : "text-info",
+        )}
         aria-hidden="true"
       />
-      <div className="min-w-0">
-        <p className="eh-small">{label}</p>
+      <p className="min-w-0 flex-1 truncate" title={label}>
+        <span className="eh-small">{label}</span>
         {hasRange ? (
-          <p className="eh-caption text-muted-foreground">
+          <span className="eh-caption eh-num ml-1.5 text-muted-foreground">
             {t("analysis.warnings.range", {
               start: warning.startSec?.toFixed(1),
               end: warning.endSec?.toFixed(1),
             })}
-          </p>
+          </span>
         ) : null}
-      </div>
+      </p>
     </li>
   );
 }
@@ -181,18 +183,55 @@ function MetricTile({
   label,
   value,
   unit,
+  progress,
+  tone = "default",
 }: {
   label: string;
   value: string;
   unit: string;
+  /** 0–100；给出时在卡片底部画一条细进度条（用于信号质量）。 */
+  progress?: number;
+  tone?: "default" | "warn" | "danger";
 }) {
+  const progressClass =
+    progress === undefined
+      ? ""
+      : progress >= 82
+        ? "bg-success"
+        : progress >= 70
+          ? "bg-warning"
+          : "bg-danger";
   return (
-    <div className="rounded-lg border border-border bg-subtle/40 px-3 py-2.5">
+    <div
+      className={cn(
+        "flex flex-col rounded-lg border px-3 py-2.5",
+        tone === "danger"
+          ? "border-danger/30 bg-danger/5"
+          : tone === "warn"
+            ? "border-warning/30 bg-warning/5"
+            : "border-border/70 bg-subtle/40",
+      )}
+    >
       <p className="eh-caption text-muted-foreground">{label}</p>
-      <p className="mt-1 flex items-baseline gap-1">
-        <span className="eh-num text-2xl leading-7 font-medium">{value}</span>
+      <p className="mt-0.5 flex items-baseline gap-1">
+        <span className="eh-num text-[26px] leading-8 font-medium tracking-tight">
+          {value}
+        </span>
         <span className="eh-caption text-muted-foreground">{unit}</span>
       </p>
+      {progress === undefined ? null : (
+        <div className="mt-auto pt-1.5">
+          <div className="h-1 overflow-hidden rounded-full bg-border/60">
+            <div
+              className={cn(
+                "h-full rounded-full transition-[width] duration-300",
+                progressClass,
+              )}
+              style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -482,10 +521,10 @@ export function AnalysisPanel({
     const critical =
       (heartRate !== null && (heartRate > 100 || heartRate < 50)) ||
       veb >= 10 ||
-      (quality !== null && quality < 0.6);
+      quality < 0.6;
 
     body = (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <p className="eh-small">{summaryLine}</p>
           <span className="eh-caption text-muted-foreground">
@@ -499,14 +538,16 @@ export function AnalysisPanel({
         </div>
 
         {currentEngineId && currentEngineId !== "cardia" ? (
-          <Alert>
+          <Alert className="border-warning/40 bg-warning/5 text-warning">
             <AlertTriangle />
-            <AlertTitle>{t("analysis.wearable.title")}</AlertTitle>
-            <AlertDescription>{t("analysis.wearable.body")}</AlertDescription>
+            <AlertTitle className="eh-small">{t("analysis.wearable.title")}</AlertTitle>
+            <AlertDescription className="eh-caption text-muted-foreground">
+              {t("analysis.wearable.body")}
+            </AlertDescription>
           </Alert>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <MetricTile
             label={t("analysis.metrics.heartRate")}
             value={heartRate === null ? "—" : formatNumber(heartRate, locale, { maximumFractionDigits: 0 })}
@@ -521,27 +562,34 @@ export function AnalysisPanel({
             label={t("analysis.metrics.abnormal")}
             value={formatNumber(abnormal, locale, { maximumFractionDigits: 1 })}
             unit={t("analysis.metrics.percent")}
+            tone={abnormal >= 10 ? "warn" : "default"}
           />
           <MetricTile
             label={t("analysis.metrics.quality")}
-            value={quality === null ? "—" : formatNumber(quality * 100, locale, { maximumFractionDigits: 0 })}
+            value={formatNumber(quality * 100, locale, { maximumFractionDigits: 0 })}
             unit={t("analysis.metrics.percent")}
+            progress={quality * 100}
+            tone={quality < 0.7 ? "danger" : quality < 0.82 ? "warn" : "default"}
           />
         </div>
 
         {critical ? (
-          <Alert>
+          <Alert className="border-danger/40 bg-danger/5 text-danger">
             <AlertTriangle />
-            <AlertTitle>{t("analysis.critical.title")}</AlertTitle>
-            <AlertDescription>{t("analysis.critical.body")}</AlertDescription>
+            <AlertTitle className="eh-small">{t("analysis.critical.title")}</AlertTitle>
+            <AlertDescription className="eh-caption text-muted-foreground">
+              {t("analysis.critical.body")}
+            </AlertDescription>
           </Alert>
         ) : null}
 
         {meanConfidence !== null && meanConfidence < 0.8 ? (
           <Alert>
             <AlertTriangle />
-            <AlertTitle>{t("analysis.domain.lowConfidenceTitle")}</AlertTitle>
-            <AlertDescription>
+            <AlertTitle className="eh-small">
+              {t("analysis.domain.lowConfidenceTitle")}
+            </AlertTitle>
+            <AlertDescription className="eh-caption text-muted-foreground">
               {t("analysis.domain.lowConfidence", {
                 value: `${Math.round(meanConfidence * 100)}%`,
               })}
@@ -565,18 +613,23 @@ export function AnalysisPanel({
 
         <ClassRatioBars measurements={measurements} />
 
-        <section>
-          <h4 className="eh-caption mb-1.5 text-muted-foreground">
-            {t("analysis.warnings.title")}
-          </h4>
+        <section className="rounded-lg border border-border/70">
+          <header className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+            <h4 className="eh-caption text-muted-foreground">
+              {t("analysis.warnings.title")}
+            </h4>
+            <span className="eh-caption eh-num text-muted-foreground">
+              {warnings.length}
+            </span>
+          </header>
           {warnings.length ? (
-            <ul className="divide-y divide-border">
+            <ul className="max-h-44 overflow-y-auto overscroll-contain border-t border-border/70 px-1 py-1">
               {warnings.map((warning, index) => (
                 <WarningRow key={`${warning.code}-${index}`} warning={warning} />
               ))}
             </ul>
           ) : (
-            <p className="eh-small text-muted-foreground">
+            <p className="eh-small border-t border-border/70 px-2.5 py-2 text-muted-foreground">
               {t("analysis.warnings.empty")}
             </p>
           )}
@@ -606,8 +659,8 @@ export function AnalysisPanel({
         : null;
 
   return (
-    <Card className="h-fit">
-      <CardHeader>
+    <Card className="min-h-0">
+      <CardHeader className="gap-2">
         <CardTitle className="eh-h3">{t("analysis.title")}</CardTitle>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <EngineBadge engine={engine} loading={engineLoading} error={engineError} />
@@ -656,94 +709,96 @@ export function AnalysisPanel({
           </Alert>
         ) : null}
 
-        <div className="space-y-1.5">
-          <p className="eh-caption text-muted-foreground">
-            {t("analysis.engine.selectLabel")}
-          </p>
-          {engineCatalogLoading ? (
-            <p className="eh-small inline-flex items-center gap-1 text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-              {t("analysis.engine.loading")}
+        <div className="space-y-2.5 rounded-lg border border-border/70 bg-subtle/30 p-2.5">
+          <div className="space-y-1.5">
+            <p className="eh-caption text-muted-foreground">
+              {t("analysis.engine.selectLabel")}
             </p>
-          ) : engineCatalogError ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="eh-small text-warning">
-                {t("analysis.engine.catalogError")}
+            {engineCatalogLoading ? (
+              <p className="eh-small inline-flex items-center gap-1 text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                {t("analysis.engine.loading")}
               </p>
-              <Button variant="ghost" size="xs" onClick={onRetryEngineCatalog}>
-                <RefreshCw data-icon="inline-start" />
-                {t("common.retry")}
-              </Button>
-            </div>
-          ) : availableEngines.length > 1 && selectedEngine ? (
-            <Select value={selectedEngine.id} onValueChange={onSelectEngine}>
-              <SelectTrigger
-                className="w-full"
-                aria-label={t("analysis.engine.selectLabel")}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {availableEngines.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {t("analysis.engine.option", {
-                      name: item.name,
-                      version: `${item.modelId} ${item.modelVersion}`.trim(),
-                    })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : selectedEngine ? (
-            <div>
-              <p className="eh-small">
-                {t("analysis.engine.single", {
-                  name: selectedEngine.name,
-                  version: `${selectedEngine.modelId} ${selectedEngine.modelVersion}`.trim(),
-                })}
-              </p>
-              <p className="eh-caption mt-0.5 text-muted-foreground">
-                {t("analysis.engine.moreHint")}
-              </p>
-            </div>
-          ) : (
-            <p className="eh-small text-warning">
-              {t("analysis.engine.noAvailable")}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            onClick={onStart}
-            disabled={startDisabled}
-            title={
-              engine?.status === "warming"
-                ? t("analysis.engine.warmingMessage")
-                : undefined
-            }
-          >
-            {startPending ? (
-              <Loader2 className="animate-spin" data-icon="inline-start" />
-            ) : current ? (
-              <RefreshCw data-icon="inline-start" />
+            ) : engineCatalogError ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="eh-small text-warning">
+                  {t("analysis.engine.catalogError")}
+                </p>
+                <Button variant="ghost" size="xs" onClick={onRetryEngineCatalog}>
+                  <RefreshCw data-icon="inline-start" />
+                  {t("common.retry")}
+                </Button>
+              </div>
+            ) : availableEngines.length > 1 && selectedEngine ? (
+              <Select value={selectedEngine.id} onValueChange={onSelectEngine}>
+                <SelectTrigger
+                  className="w-full"
+                  aria-label={t("analysis.engine.selectLabel")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableEngines.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {t("analysis.engine.option", {
+                        name: item.name,
+                        version: `${item.modelId} ${item.modelVersion}`.trim(),
+                      })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : selectedEngine ? (
+              <div>
+                <p className="eh-small">
+                  {t("analysis.engine.single", {
+                    name: selectedEngine.name,
+                    version: `${selectedEngine.modelId} ${selectedEngine.modelVersion}`.trim(),
+                  })}
+                </p>
+                <p className="eh-caption mt-0.5 text-muted-foreground">
+                  {t("analysis.engine.moreHint")}
+                </p>
+              </div>
             ) : (
-              <Play data-icon="inline-start" />
+              <p className="eh-small text-warning">
+                {t("analysis.engine.noAvailable")}
+              </p>
             )}
-            {startPending ? t("analysis.starting") : startLabel}
-          </Button>
-          {current?.status === "completed" ? (
-            <Badge variant="secondary">{t("analysis.completed")}</Badge>
-          ) : null}
-          {running ? <Badge variant="outline">{t("analysis.inProgress")}</Badge> : null}
-        </div>
+          </div>
 
-        {canReanalyze ? (
-          <p className="eh-caption text-muted-foreground">
-            {t("recordDetail.reanalyzeHint")}
-          </p>
-        ) : null}
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2.5">
+            <Button
+              size="sm"
+              onClick={onStart}
+              disabled={startDisabled}
+              title={
+                engine?.status === "warming"
+                  ? t("analysis.engine.warmingMessage")
+                  : undefined
+              }
+            >
+              {startPending ? (
+                <Loader2 className="animate-spin" data-icon="inline-start" />
+              ) : current ? (
+                <RefreshCw data-icon="inline-start" />
+              ) : (
+                <Play data-icon="inline-start" />
+              )}
+              {startPending ? t("analysis.starting") : startLabel}
+            </Button>
+            {current?.status === "completed" ? (
+              <Badge variant="secondary">{t("analysis.completed")}</Badge>
+            ) : null}
+            {running ? <Badge variant="outline">{t("analysis.inProgress")}</Badge> : null}
+          </div>
+
+          {canReanalyze ? (
+            <p className="eh-caption text-muted-foreground">
+              {t("recordDetail.reanalyzeHint")}
+            </p>
+          ) : null}
+        </div>
 
         {startErrorMessage ? (
           <Alert variant="destructive">

@@ -21,32 +21,35 @@ export function Topbar({ onOpenCommand }: TopbarProps) {
   const { resolved, toggleMode } = useAppTheme();
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4 transition-colors duration-200">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4 transition-colors duration-200 desk:px-8">
       <nav
         aria-label={t("nav.primary")}
         className="flex min-w-0 items-center gap-2 text-sm"
       >
-        <span className="hidden text-muted-foreground md:inline">
-          {t("app.name")}
-        </span>
+        <Link
+          to="/"
+          className="hidden min-w-0 items-center rounded-md text-muted-foreground transition-colors duration-150 hover:text-foreground md:flex"
+        >
+          <span className="truncate">{t("app.name")}</span>
+        </Link>
         <ChevronRight
-          className="hidden size-3.5 text-muted-foreground md:inline"
+          className="hidden size-3.5 shrink-0 text-muted-foreground/70 md:inline"
           aria-hidden="true"
         />
-        <span className="truncate font-medium">
+        <span className="truncate font-medium" aria-current="page">
           {navItem ? t(navItem.labelKey) : t("notFound.title")}
         </span>
       </nav>
 
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <button
           type="button"
           onClick={onOpenCommand}
           aria-label={t("a11y.openCommand")}
-          className="flex h-8 items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-sm text-muted-foreground transition-[background-color,color,transform] duration-[120ms] hover:bg-accent hover:text-foreground active:translate-y-px"
+          className="flex h-8 min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground transition-[background-color,color,transform] duration-[120ms] hover:bg-accent hover:text-foreground active:translate-y-px"
         >
-          <Search className="size-4" aria-hidden="true" />
-          <span className="hidden md:inline">{t("topbar.search")}</span>
+          <Search className="size-4 shrink-0" aria-hidden="true" />
+          <span className="hidden truncate md:inline">{t("topbar.search")}</span>
           <kbd className="eh-num hidden rounded border border-border px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground lg:inline">
             {t("a11y.searchShortcut")}
           </kbd>
@@ -56,7 +59,7 @@ export function Topbar({ onOpenCommand }: TopbarProps) {
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               onClick={toggleMode}
               aria-label={t("topbar.themeToggle")}
             >
@@ -72,7 +75,7 @@ export function Topbar({ onOpenCommand }: TopbarProps) {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-sm" asChild>
+            <Button variant="ghost" size="icon" asChild>
               <Link to="/settings" aria-label={t("topbar.settings")}>
                 <Settings aria-hidden="true" />
               </Link>

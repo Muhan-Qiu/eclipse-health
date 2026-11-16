@@ -9,7 +9,9 @@
  * eclipse health · 设计令牌
  * 组件只允许使用语义令牌（--eh-* 或其 Tailwind 映射），不得写死颜色。
  * 主题：亮色（默认，暖白）/ 暗色（近黑）
- * 配色：data-palette="a|b|c"（A 睡莲 / B 日出·印象 / C 日本桥）
+ * 配色：data-palette="a|b|c|starry|sunflower|wave|mist|glaze"
+ * （莫奈三套：睡莲 / 日出·印象 / 日本桥；主题五套：星夜 / 向日葵 /
+ *   神奈川冲浪里 / 晨雾 / 琉璃）
  * ------------------------------------------------------------------ */
 
 :root {
@@ -81,6 +83,28 @@
     0 8px 24px rgba(20, 24, 28, 0.06);
   --eh-grid-line: rgba(20, 24, 28, 0.08);
 
+  /* 空间氛围：.eh-brand-app 背景画布使用，各配色覆盖为专属光晕。
+     全部为 ≤12% 的低透明度渐变，只是空气感，不参与正文。 */
+  --eh-atmo: radial-gradient(
+      58% 42% at 12% 0%,
+      color-mix(in srgb, var(--eh-accent) 9%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      48% 38% at 92% 8%,
+      color-mix(in srgb, var(--eh-signal) 7%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 58%,
+      color-mix(in srgb, var(--eh-bg-subtle) 42%, transparent) 100%
+    );
+
+  /* 玻璃质感令牌（仅 mist / glaze 覆盖为更具体的值） */
+  --eh-glass-border: rgba(255, 255, 255, 0.5);
+  --eh-glass-highlight: rgba(255, 255, 255, 0.62);
+
   /* 品牌标识（日食：深墨圆盘 + 暖色光环） */
   --eh-logo-disk: #14181c;
   --eh-logo-ring: var(--eh-accent);
@@ -151,91 +175,311 @@
 
   --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
   --eh-grid-line: rgba(255, 255, 255, 0.06);
+
+  --eh-atmo: radial-gradient(
+      56% 40% at 12% 0%,
+      color-mix(in srgb, var(--eh-accent) 8%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      46% 34% at 92% 6%,
+      color-mix(in srgb, var(--eh-signal) 6%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 60%,
+      color-mix(in srgb, var(--eh-bg-subtle) 55%, transparent) 100%
+    );
+
+  --eh-glass-border: rgba(255, 255, 255, 0.14);
+  --eh-glass-highlight: rgba(255, 255, 255, 0.08);
 }
 
-/* A · 睡莲（默认） */
+/* A · 睡莲（默认）：暖纸 + 鼠尾草青，莫奈的低饱和水面 */
 html:not(.dark)[data-palette="a"] {
-  --eh-accent: #4f6b6b;
-  --eh-accent-contrast: #ffffff;
-  --eh-signal: #2f6a63;
   --eh-bg: #f7f5f1;
   --eh-bg-subtle: #efebe4;
+  --eh-surface: #fffefb;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #1c2422 6%, transparent);
+  --eh-border: rgba(35, 45, 42, 0.12);
+  --eh-border-strong: rgba(35, 45, 42, 0.22);
+  --eh-text: #19201f;
+  --eh-text-muted: #566460;
+  --eh-accent: #4f6b6b;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #4f6b6b 12%, transparent);
+  --eh-signal: #2f6a63;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
   --eh-chart-1: #4f6b6b;
-  --eh-chart-4: #9c7c78;
-  --eh-chart-5: #6f8368;
+  --eh-chart-2: #2c5aa0;
+  --eh-chart-3: #8a5a00;
+  --eh-chart-4: #9c6f6a;
+  --eh-chart-5: #5f7357;
+  --eh-grid-line: rgba(25, 35, 32, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(52, 46, 35, 0.06),
+    0 10px 28px rgba(52, 46, 35, 0.07);
+  --eh-atmo: radial-gradient(
+      55% 40% at 10% -4%,
+      color-mix(in srgb, #4f6b6b 10%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 34% at 94% 4%,
+      color-mix(in srgb, #9c7c78 7%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      70% 44% at 50% 108%,
+      color-mix(in srgb, #efebe4 55%, transparent),
+      transparent 76%
+    );
 }
 
-/* B · 日出·印象 */
+/* B · 日出·印象：奶油暖纸 + 雾蓝，右上一点晨光桃色 */
 html:not(.dark)[data-palette="b"] {
-  --eh-accent: #3e5a6b;
-  --eh-accent-contrast: #ffffff;
-  --eh-signal: #2f6e7a;
   --eh-bg: #f5f1e9;
   --eh-bg-subtle: #ece6da;
+  --eh-surface: #fffdf8;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #3e4a52 6%, transparent);
+  --eh-border: rgba(62, 74, 82, 0.13);
+  --eh-border-strong: rgba(62, 74, 82, 0.24);
+  --eh-text: #1d262c;
+  --eh-text-muted: #5a6670;
+  --eh-accent: #3e5a6b;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #3e5a6b 12%, transparent);
+  --eh-signal: #2f6e7a;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
   --eh-chart-1: #3e5a6b;
+  --eh-chart-2: #b0721a;
+  --eh-chart-3: #2f6e7a;
   --eh-chart-4: #a8817c;
   --eh-chart-5: #7e97a8;
+  --eh-grid-line: rgba(62, 74, 82, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(70, 58, 40, 0.06),
+    0 10px 28px rgba(70, 58, 40, 0.07);
+  --eh-atmo: radial-gradient(
+      52% 40% at 88% -2%,
+      color-mix(in srgb, #d08a63 10%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      55% 38% at 8% 2%,
+      color-mix(in srgb, #3e5a6b 8%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      62% 40% at 50% 106%,
+      color-mix(in srgb, #e6c9a8 10%, transparent),
+      transparent 78%
+    );
 }
 
-/* C · 日本桥 */
+/* C · 日本桥：赭石纸 + 深松绿，桥身的橄榄与暮色 */
 html:not(.dark)[data-palette="c"] {
-  --eh-accent: #3f5f55;
-  --eh-accent-contrast: #ffffff;
-  --eh-signal: #35604c;
   --eh-bg: #f3eee3;
   --eh-bg-subtle: #eae2d3;
+  --eh-surface: #fdfbf4;
+  --eh-surface-raised: #ffffff;
+  --eh-hover: color-mix(in srgb, #33402f 6%, transparent);
+  --eh-border: rgba(60, 70, 58, 0.13);
+  --eh-border-strong: rgba(60, 70, 58, 0.24);
+  --eh-text: #1d241f;
+  --eh-text-muted: #5c6355;
+  --eh-accent: #3f5f55;
+  --eh-accent-contrast: #ffffff;
+  --eh-accent-soft: color-mix(in srgb, #3f5f55 12%, transparent);
+  --eh-signal: #35604c;
+  --eh-danger: #b4363f;
+  --eh-warning: #8a5a00;
+  --eh-success: #2f7d32;
+  --eh-info: #2c5aa0;
   --eh-chart-1: #3f5f55;
-  --eh-chart-4: #a3827c;
-  --eh-chart-5: #7c8b6b;
+  --eh-chart-2: #2c5aa0;
+  --eh-chart-3: #a3827c;
+  --eh-chart-4: #7c8b6b;
+  --eh-chart-5: #b08232;
+  --eh-grid-line: rgba(60, 70, 58, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(64, 56, 36, 0.06),
+    0 10px 28px rgba(64, 56, 36, 0.07);
+  --eh-atmo: radial-gradient(
+      50% 38% at 12% 0%,
+      color-mix(in srgb, #3f5f55 9%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 34% at 90% 8%,
+      color-mix(in srgb, #a3827c 8%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      60% 38% at 50% 106%,
+      color-mix(in srgb, #b09a63 8%, transparent),
+      transparent 78%
+    );
 }
 
-/* 暗色下的配色：只换品牌色与波形色，保持近黑底 */
+/* 暗色下的前三套：保留近黑底，只换品牌色、波形色与暖/冷阴影 */
 .dark[data-palette="a"] {
-  --eh-accent: #c9b27c;
+  --eh-bg: #0b0d10;
+  --eh-bg-subtle: #10151a;
+  --eh-surface: #141a20;
+  --eh-surface-raised: #1a2129;
+  --eh-hover: rgba(255, 255, 255, 0.06);
+  --eh-border: rgba(214, 224, 218, 0.1);
+  --eh-border-strong: rgba(214, 224, 218, 0.2);
+  --eh-text: #f0f4f5;
+  --eh-text-muted: #9aa8b1;
+  --eh-accent: #d2b97e;
   --eh-accent-contrast: #1a1206;
+  --eh-accent-soft: color-mix(in srgb, #d2b97e 16%, transparent);
   --eh-signal: #8fa6b2;
+  --eh-danger: #e06c75;
+  --eh-warning: #e5c07b;
+  --eh-success: #98c379;
+  --eh-info: #7aa2f7;
   --eh-chart-1: #8fa6b2;
+  --eh-chart-2: #7aa2f7;
+  --eh-chart-3: #cbb07a;
+  --eh-chart-4: #c79a92;
   --eh-chart-5: #93a68f;
+  --eh-grid-line: rgba(214, 224, 218, 0.07);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.45),
+    0 12px 32px rgba(3, 8, 7, 0.34);
+  --eh-atmo: radial-gradient(
+      54% 38% at 12% 0%,
+      color-mix(in srgb, #d2b97e 8%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      44% 32% at 92% 6%,
+      color-mix(in srgb, #8fa6b2 6%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, #10151a 60%, transparent) 100%
+    );
 }
 
 .dark[data-palette="b"] {
+  --eh-bg: #0b0d11;
+  --eh-bg-subtle: #11151b;
+  --eh-surface: #161b22;
+  --eh-surface-raised: #1c222b;
+  --eh-hover: rgba(255, 255, 255, 0.06);
+  --eh-border: rgba(218, 224, 230, 0.1);
+  --eh-border-strong: rgba(218, 224, 230, 0.2);
+  --eh-text: #eef3f6;
+  --eh-text-muted: #a0adb8;
   --eh-accent: #d9b36c;
   --eh-accent-contrast: #1a1206;
+  --eh-accent-soft: color-mix(in srgb, #d9b36c 16%, transparent);
   --eh-signal: #7e97a8;
+  --eh-danger: #e06c75;
+  --eh-warning: #e5c07b;
+  --eh-success: #98c379;
+  --eh-info: #7aa2f7;
   --eh-chart-1: #7e97a8;
+  --eh-chart-2: #d9b36c;
+  --eh-chart-3: #9fc3cf;
+  --eh-chart-4: #dda08c;
   --eh-chart-5: #a49bb0;
+  --eh-grid-line: rgba(218, 224, 230, 0.07);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.45),
+    0 12px 32px rgba(6, 8, 12, 0.34);
+  --eh-atmo: radial-gradient(
+      52% 38% at 88% -2%,
+      color-mix(in srgb, #d9b36c 8%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      50% 34% at 8% 4%,
+      color-mix(in srgb, #7e97a8 6%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, #11151b 60%, transparent) 100%
+    );
 }
 
 .dark[data-palette="c"] {
-  --eh-accent: #b7a77a;
+  --eh-bg: #0a0d0b;
+  --eh-bg-subtle: #101511;
+  --eh-surface: #151b16;
+  --eh-surface-raised: #1b231c;
+  --eh-hover: rgba(255, 255, 255, 0.06);
+  --eh-border: rgba(214, 224, 210, 0.1);
+  --eh-border-strong: rgba(214, 224, 210, 0.2);
+  --eh-text: #eef4ee;
+  --eh-text-muted: #a3aea0;
+  --eh-accent: #c9b98a;
   --eh-accent-contrast: #14160f;
+  --eh-accent-soft: color-mix(in srgb, #c9b98a 16%, transparent);
   --eh-signal: #8aa3a8;
+  --eh-danger: #e06c75;
+  --eh-warning: #e5c07b;
+  --eh-success: #98c379;
+  --eh-info: #7aa2f7;
   --eh-chart-1: #8aa3a8;
-  --eh-chart-5: #7c8b6b;
+  --eh-chart-2: #7c9ec7;
+  --eh-chart-3: #c9b98a;
+  --eh-chart-4: #c79a92;
+  --eh-chart-5: #9bb087;
+  --eh-grid-line: rgba(214, 224, 210, 0.07);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.45),
+    0 12px 32px rgba(4, 8, 4, 0.34);
+  --eh-atmo: radial-gradient(
+      50% 36% at 12% 0%,
+      color-mix(in srgb, #8aa3a8 7%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      44% 32% at 90% 8%,
+      color-mix(in srgb, #c9b98a 7%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, #101511 60%, transparent) 100%
+    );
 }
 
 /* ------------------------------------------------------------------
- * 新增配色 5 套：高饱和（星夜 / 向日葵 / 神奈川冲浪里）
+ * 主题配色 5 套：高饱和（星夜 / 向日葵 / 神奈川冲浪里）
  *              玻璃（晨雾 / 琉璃）
  * 每套都给出完整亮/暗变量；高饱和但压低明度，正文与背景保持 WCAG AA。
  * ------------------------------------------------------------------ */
 
-/* 星夜 · The Starry Night */
+/* 星夜 · The Starry Night：靛蓝夜空 + 钴蓝主体，金黄星光作强调 */
 html:not(.dark)[data-palette="starry"] {
-  --eh-bg: #eef3fb;
-  --eh-bg-subtle: #e2e9f6;
-  --eh-surface: #ffffff;
+  --eh-bg: #edf2fb;
+  --eh-bg-subtle: #e0e8f6;
+  --eh-surface: #fbfcff;
   --eh-surface-raised: #ffffff;
   --eh-hover: color-mix(in srgb, #14213d 6%, transparent);
-  --eh-border: rgba(20, 33, 61, 0.12);
-  --eh-border-strong: rgba(20, 33, 61, 0.22);
-  --eh-text: #101a2e;
-  --eh-text-muted: #4c5f80;
+  --eh-border: rgba(20, 33, 61, 0.13);
+  --eh-border-strong: rgba(20, 33, 61, 0.24);
+  --eh-text: #0f1a2e;
+  --eh-text-muted: #4a5d80;
   --eh-accent: #1f4fa8;
   --eh-accent-contrast: #ffffff;
   --eh-accent-soft: color-mix(in srgb, #1f4fa8 12%, transparent);
   --eh-signal: #0b6fa4;
-  --eh-danger: #b4363f;
+  --eh-danger: #a8323d;
   --eh-warning: #8a5a00;
   --eh-success: #2f7d32;
   --eh-info: #2c5aa0;
@@ -244,21 +488,76 @@ html:not(.dark)[data-palette="starry"] {
   --eh-chart-3: #0b6fa4;
   --eh-chart-4: #6b4fa8;
   --eh-chart-5: #2f8f6b;
-  --eh-grid-line: rgba(20, 33, 61, 0.08);
+  --eh-grid-line: rgba(20, 33, 61, 0.09);
   --eh-shadow-card: 0 1px 2px rgba(16, 26, 46, 0.06),
-    0 8px 24px rgba(16, 26, 46, 0.06);
+    0 10px 28px rgba(16, 26, 46, 0.08);
+  --eh-atmo: radial-gradient(
+      50% 38% at 12% -4%,
+      color-mix(in srgb, #1f4fa8 9%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      46% 34% at 92% 4%,
+      color-mix(in srgb, #6b4fa8 7%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      38% 30% at 72% 64%,
+      color-mix(in srgb, #0b6fa4 5%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      1.4px 1.4px at 16% 22%,
+      rgba(184, 134, 11, 0.1),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.2px 1.2px at 34% 11%,
+      rgba(184, 134, 11, 0.08),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.6px 1.6px at 58% 29%,
+      rgba(184, 134, 11, 0.07),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.1px 1.1px at 72% 15%,
+      rgba(184, 134, 11, 0.09),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 86% 37%,
+      rgba(184, 134, 11, 0.07),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.2px 1.2px at 24% 63%,
+      rgba(184, 134, 11, 0.06),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.4px 1.4px at 64% 78%,
+      rgba(184, 134, 11, 0.06),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.1px 1.1px at 92% 69%,
+      rgba(184, 134, 11, 0.08),
+      transparent 100%
+    );
 }
 
 .dark[data-palette="starry"] {
-  --eh-bg: #070b18;
-  --eh-bg-subtle: #0c1226;
+  --eh-bg: #060a16;
+  --eh-bg-subtle: #0a1122;
   --eh-surface: #101a33;
   --eh-surface-raised: #16223f;
   --eh-hover: rgba(255, 255, 255, 0.07);
   --eh-border: rgba(150, 180, 255, 0.16);
-  --eh-border-strong: rgba(150, 180, 255, 0.28);
+  --eh-border-strong: rgba(150, 180, 255, 0.3);
   --eh-text: #eef3ff;
-  --eh-text-muted: #a3b4d6;
+  --eh-text-muted: #a8bade;
   --eh-accent: #f2c14e;
   --eh-accent-contrast: #1a1305;
   --eh-accent-soft: color-mix(in srgb, #f2c14e 16%, transparent);
@@ -273,48 +572,122 @@ html:not(.dark)[data-palette="starry"] {
   --eh-chart-4: #67e8b9;
   --eh-chart-5: #ff9db1;
   --eh-grid-line: rgba(150, 180, 255, 0.1);
-  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 12px 32px rgba(2, 5, 16, 0.42);
+  --eh-atmo: radial-gradient(
+      46% 36% at 12% 0%,
+      color-mix(in srgb, #f2c14e 9%, transparent),
+      transparent 68%
+    ),
+    radial-gradient(
+      50% 38% at 92% 4%,
+      color-mix(in srgb, #6fd3ff 7%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      40% 32% at 68% 72%,
+      color-mix(in srgb, #6b4fa8 6%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 16% 22%,
+      rgba(214, 226, 255, 0.12),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.2px 1.2px at 34% 11%,
+      rgba(242, 193, 78, 0.1),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.6px 1.6px at 58% 29%,
+      rgba(214, 226, 255, 0.09),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.1px 1.1px at 72% 15%,
+      rgba(214, 226, 255, 0.11),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 86% 37%,
+      rgba(111, 211, 255, 0.1),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.2px 1.2px at 24% 63%,
+      rgba(214, 226, 255, 0.08),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.4px 1.4px at 64% 78%,
+      rgba(214, 226, 255, 0.08),
+      transparent 100%
+    ),
+    radial-gradient(
+      1.1px 1.1px at 92% 69%,
+      rgba(242, 193, 78, 0.09),
+      transparent 100%
+    );
 }
 
-/* 向日葵 · Sunflowers */
+/* 向日葵 · Sunflowers：奶油底 + 赭金主体，橄榄绿平衡暖黄 */
 html:not(.dark)[data-palette="sunflower"] {
-  --eh-bg: #fbf6e9;
-  --eh-bg-subtle: #f3ead3;
-  --eh-surface: #fffdf7;
-  --eh-surface-raised: #fffefb;
+  --eh-bg: #fbf5e6;
+  --eh-bg-subtle: #f3e9cf;
+  --eh-surface: #fffdf6;
+  --eh-surface-raised: #ffffff;
   --eh-hover: color-mix(in srgb, #3a2c10 6%, transparent);
   --eh-border: rgba(90, 70, 20, 0.14);
-  --eh-border-strong: rgba(90, 70, 20, 0.24);
+  --eh-border-strong: rgba(90, 70, 20, 0.26);
   --eh-text: #2a210f;
-  --eh-text-muted: #6a5a3a;
-  --eh-accent: #a05f00;
+  --eh-text-muted: #6b5a38;
+  --eh-accent: #9a5b00;
   --eh-accent-contrast: #ffffff;
-  --eh-accent-soft: color-mix(in srgb, #a05f00 12%, transparent);
+  --eh-accent-soft: color-mix(in srgb, #9a5b00 12%, transparent);
   --eh-signal: #6a6f1a;
   --eh-danger: #b4363f;
   --eh-warning: #8a5a00;
   --eh-success: #2f7d32;
   --eh-info: #2c5aa0;
-  --eh-chart-1: #a05f00;
+  --eh-chart-1: #9a5b00;
   --eh-chart-2: #6a7f2a;
   --eh-chart-3: #b8860b;
   --eh-chart-4: #4f6b6b;
   --eh-chart-5: #8a5a00;
-  --eh-grid-line: rgba(90, 70, 20, 0.08);
-  --eh-shadow-card: 0 1px 2px rgba(42, 33, 15, 0.06),
-    0 8px 24px rgba(42, 33, 15, 0.06);
+  --eh-grid-line: rgba(90, 70, 20, 0.09);
+  --eh-shadow-card: 0 1px 2px rgba(60, 46, 20, 0.07),
+    0 10px 28px rgba(60, 46, 20, 0.08);
+  --eh-atmo: radial-gradient(
+      55% 45% at 92% -6%,
+      color-mix(in srgb, #e0a11f 10%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      42% 34% at 6% 18%,
+      color-mix(in srgb, #6a7f2a 7%, transparent),
+      transparent 70%
+    ),
+    conic-gradient(
+      from 210deg at 100% 0%,
+      transparent 0deg,
+      color-mix(in srgb, #ffcf4a 5%, transparent) 24deg,
+      transparent 52deg,
+      color-mix(in srgb, #ffcf4a 4%, transparent) 82deg,
+      transparent 112deg
+    );
 }
 
 .dark[data-palette="sunflower"] {
-  --eh-bg: #120e06;
-  --eh-bg-subtle: #1a1409;
-  --eh-surface: #20190d;
-  --eh-surface-raised: #2a210f;
+  --eh-bg: #120d05;
+  --eh-bg-subtle: #1a1308;
+  --eh-surface: #21190b;
+  --eh-surface-raised: #2b2110;
   --eh-hover: rgba(255, 255, 255, 0.07);
   --eh-border: rgba(255, 220, 140, 0.16);
-  --eh-border-strong: rgba(255, 220, 140, 0.28);
+  --eh-border-strong: rgba(255, 220, 140, 0.3);
   --eh-text: #fff6e0;
-  --eh-text-muted: #c9b78a;
+  --eh-text-muted: #cbb884;
   --eh-accent: #ffcf4a;
   --eh-accent-contrast: #241a00;
   --eh-accent-soft: color-mix(in srgb, #ffcf4a 16%, transparent);
@@ -329,20 +702,39 @@ html:not(.dark)[data-palette="sunflower"] {
   --eh-chart-4: #7fd4c1;
   --eh-chart-5: #e8a0ff;
   --eh-grid-line: rgba(255, 220, 140, 0.09);
-  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 12px 32px rgba(12, 7, 0, 0.42);
+  --eh-atmo: radial-gradient(
+      52% 42% at 92% -4%,
+      color-mix(in srgb, #ffcf4a 10%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      42% 34% at 6% 20%,
+      color-mix(in srgb, #b8d46a 5%, transparent),
+      transparent 72%
+    ),
+    conic-gradient(
+      from 210deg at 100% 0%,
+      transparent 0deg,
+      color-mix(in srgb, #ff9d4a 6%, transparent) 24deg,
+      transparent 54deg,
+      color-mix(in srgb, #ffcf4a 5%, transparent) 84deg,
+      transparent 114deg
+    );
 }
 
-/* 神奈川冲浪里 · The Great Wave off Kanagawa */
+/* 神奈川冲浪里 · The Great Wave：海雾青底 + 普鲁士蓝，浪峰一点金 */
 html:not(.dark)[data-palette="wave"] {
-  --eh-bg: #eef6f8;
-  --eh-bg-subtle: #e0eef2;
-  --eh-surface: #ffffff;
+  --eh-bg: #ecf4f6;
+  --eh-bg-subtle: #deebef;
+  --eh-surface: #fbfdfd;
   --eh-surface-raised: #ffffff;
   --eh-hover: color-mix(in srgb, #0c2430 6%, transparent);
   --eh-border: rgba(10, 50, 70, 0.14);
-  --eh-border-strong: rgba(10, 50, 70, 0.24);
+  --eh-border-strong: rgba(10, 50, 70, 0.26);
   --eh-text: #0c2430;
-  --eh-text-muted: #476875;
+  --eh-text-muted: #446573;
   --eh-accent: #0b5d8a;
   --eh-accent-contrast: #ffffff;
   --eh-accent-soft: color-mix(in srgb, #0b5d8a 12%, transparent);
@@ -356,9 +748,27 @@ html:not(.dark)[data-palette="wave"] {
   --eh-chart-3: #0f766e;
   --eh-chart-4: #5b6b8a;
   --eh-chart-5: #2a8fa8;
-  --eh-grid-line: rgba(10, 50, 70, 0.08);
-  --eh-shadow-card: 0 1px 2px rgba(12, 36, 48, 0.06),
-    0 8px 24px rgba(12, 36, 48, 0.06);
+  --eh-grid-line: rgba(10, 50, 70, 0.09);
+  --eh-shadow-card: 0 1px 2px rgba(10, 36, 48, 0.07),
+    0 10px 28px rgba(10, 36, 48, 0.08);
+  --eh-atmo: radial-gradient(
+      85% 46% at 50% 112%,
+      color-mix(in srgb, #2a8fa8 11%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      60% 34% at 88% 6%,
+      color-mix(in srgb, #0b5d8a 7%, transparent),
+      transparent 72%
+    ),
+    linear-gradient(
+      176deg,
+      transparent 0 56%,
+      color-mix(in srgb, #7fc9d8 6%, transparent) 56.4%,
+      transparent 58.5%,
+      color-mix(in srgb, #7fc9d8 5%, transparent) 71%,
+      transparent 73%
+    );
 }
 
 .dark[data-palette="wave"] {
@@ -368,9 +778,9 @@ html:not(.dark)[data-palette="wave"] {
   --eh-surface-raised: #0e3145;
   --eh-hover: rgba(255, 255, 255, 0.07);
   --eh-border: rgba(150, 220, 255, 0.16);
-  --eh-border-strong: rgba(150, 220, 255, 0.28);
+  --eh-border-strong: rgba(150, 220, 255, 0.3);
   --eh-text: #eaf7ff;
-  --eh-text-muted: #9cc2d4;
+  --eh-text-muted: #a0c6d8;
   --eh-accent: #4fc3f7;
   --eh-accent-contrast: #05202e;
   --eh-accent-soft: color-mix(in srgb, #4fc3f7 16%, transparent);
@@ -385,37 +795,78 @@ html:not(.dark)[data-palette="wave"] {
   --eh-chart-4: #a8b8ff;
   --eh-chart-5: #ff9f7a;
   --eh-grid-line: rgba(150, 220, 255, 0.1);
-  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 12px 32px rgba(0, 8, 14, 0.42);
+  --eh-atmo: radial-gradient(
+      90% 48% at 50% 114%,
+      color-mix(in srgb, #4fc3f7 10%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      58% 34% at 88% 4%,
+      color-mix(in srgb, #64e0d0 6%, transparent),
+      transparent 72%
+    ),
+    linear-gradient(
+      176deg,
+      transparent 0 56%,
+      color-mix(in srgb, #9fe3f5 5%, transparent) 56.4%,
+      transparent 58.5%,
+      color-mix(in srgb, #9fe3f5 4%, transparent) 71%,
+      transparent 73%
+    );
 }
 
-/* 晨雾（玻璃）· Morning Mist */
+/* 晨雾（玻璃）· Morning Mist：冷雾蓝 + 珍珠灰，表面半透明如磨砂玻璃 */
 html:not(.dark)[data-palette="mist"] {
-  --eh-bg: #eef1f4;
-  --eh-bg-subtle: #e3e9ee;
-  --eh-surface: #fbfcfd;
+  --eh-bg: #e9eef2;
+  --eh-bg-subtle: #dbe4ea;
+  --eh-surface: #fbfdff;
   --eh-surface-raised: #ffffff;
   --eh-hover: color-mix(in srgb, #1e3246 5%, transparent);
-  --eh-border: rgba(30, 50, 70, 0.12);
-  --eh-border-strong: rgba(30, 50, 70, 0.22);
-  --eh-text: #16232e;
-  --eh-text-muted: #536573;
-  --eh-accent: #3d6b80;
+  --eh-border: rgba(30, 50, 70, 0.14);
+  --eh-border-strong: rgba(30, 50, 70, 0.26);
+  --eh-text: #15232e;
+  --eh-text-muted: #4e6270;
+  --eh-accent: #35637a;
   --eh-accent-contrast: #ffffff;
-  --eh-accent-soft: color-mix(in srgb, #3d6b80 12%, transparent);
+  --eh-accent-soft: color-mix(in srgb, #35637a 12%, transparent);
   --eh-signal: #2f7d7a;
   --eh-danger: #b4363f;
   --eh-warning: #8a5a00;
   --eh-success: #2f7d32;
   --eh-info: #2c5aa0;
-  --eh-chart-1: #3d6b80;
+  --eh-chart-1: #35637a;
   --eh-chart-2: #6d8ea0;
   --eh-chart-3: #7f9a8a;
   --eh-chart-4: #a08c9e;
   --eh-chart-5: #4f7f9a;
-  --eh-grid-line: rgba(30, 50, 70, 0.07);
-  --eh-shadow-card: 0 1px 2px rgba(22, 35, 46, 0.06),
-    0 8px 24px rgba(22, 35, 46, 0.06);
-  --eh-glass-border: rgba(30, 50, 70, 0.18);
+  --eh-grid-line: rgba(30, 50, 70, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(22, 35, 46, 0.05),
+    0 14px 34px rgba(22, 35, 46, 0.08);
+  --eh-glass-border: rgba(30, 50, 70, 0.17);
+  --eh-glass-highlight: rgba(255, 255, 255, 0.72);
+  --eh-atmo: radial-gradient(
+      70% 50% at 14% 0%,
+      color-mix(in srgb, #8fb8c9 11%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      60% 46% at 96% 10%,
+      color-mix(in srgb, #b8c8d8 9%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      90% 60% at 50% 110%,
+      color-mix(in srgb, #cfdae2 12%, transparent),
+      transparent 76%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 30%,
+      color-mix(in srgb, #ffffff 8%, transparent) 48%,
+      transparent 66%
+    );
 }
 
 .dark[data-palette="mist"] {
@@ -425,9 +876,9 @@ html:not(.dark)[data-palette="mist"] {
   --eh-surface-raised: #1a2934;
   --eh-hover: rgba(255, 255, 255, 0.07);
   --eh-border: rgba(200, 225, 240, 0.14);
-  --eh-border-strong: rgba(200, 225, 240, 0.26);
+  --eh-border-strong: rgba(200, 225, 240, 0.28);
   --eh-text: #eef4f7;
-  --eh-text-muted: #a8bac5;
+  --eh-text-muted: #aabcc7;
   --eh-accent: #8fc7db;
   --eh-accent-contrast: #0b1a22;
   --eh-accent-soft: color-mix(in srgb, #8fc7db 16%, transparent);
@@ -441,25 +892,48 @@ html:not(.dark)[data-palette="mist"] {
   --eh-chart-3: #9fd8c8;
   --eh-chart-4: #d8b8c8;
   --eh-chart-5: #7fa8c8;
-  --eh-grid-line: rgba(200, 225, 240, 0.08);
-  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-grid-line: rgba(200, 225, 240, 0.09);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 14px 34px rgba(2, 8, 12, 0.40);
   --eh-glass-border: rgba(200, 225, 240, 0.22);
+  --eh-glass-highlight: rgba(255, 255, 255, 0.1);
+  --eh-atmo: radial-gradient(
+      68% 48% at 14% 0%,
+      color-mix(in srgb, #8fc7db 9%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      58% 44% at 96% 10%,
+      color-mix(in srgb, #a8b8d8 7%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      90% 58% at 50% 112%,
+      color-mix(in srgb, #7fd8cf 6%, transparent),
+      transparent 76%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 32%,
+      color-mix(in srgb, #dfeef5 5%, transparent) 50%,
+      transparent 68%
+    );
 }
 
-/* 琉璃（玻璃）· Glaze */
+/* 琉璃（玻璃）· Glaze：青玉底 + 琥珀折光，像上釉的瓷器表面 */
 html:not(.dark)[data-palette="glaze"] {
-  --eh-bg: #eef4f2;
-  --eh-bg-subtle: #e2ece9;
-  --eh-surface: #f8fcfb;
+  --eh-bg: #e9f2ee;
+  --eh-bg-subtle: #dbeae4;
+  --eh-surface: #f9fdfb;
   --eh-surface-raised: #ffffff;
   --eh-hover: color-mix(in srgb, #10302a 5%, transparent);
-  --eh-border: rgba(20, 70, 60, 0.12);
-  --eh-border-strong: rgba(20, 70, 60, 0.22);
-  --eh-text: #10241f;
-  --eh-text-muted: #4b6a61;
-  --eh-accent: #176b5c;
+  --eh-border: rgba(20, 70, 60, 0.14);
+  --eh-border-strong: rgba(20, 70, 60, 0.26);
+  --eh-text: #0f241f;
+  --eh-text-muted: #43645a;
+  --eh-accent: #146b58;
   --eh-accent-contrast: #ffffff;
-  --eh-accent-soft: color-mix(in srgb, #176b5c 12%, transparent);
+  --eh-accent-soft: color-mix(in srgb, #146b58 12%, transparent);
   --eh-signal: #0f7c8a;
   --eh-danger: #b4363f;
   --eh-warning: #8a5a00;
@@ -470,10 +944,32 @@ html:not(.dark)[data-palette="glaze"] {
   --eh-chart-3: #c08a3e;
   --eh-chart-4: #5c6f9a;
   --eh-chart-5: #6a8a4a;
-  --eh-grid-line: rgba(20, 70, 60, 0.07);
-  --eh-shadow-card: 0 1px 2px rgba(16, 36, 31, 0.06),
-    0 8px 24px rgba(16, 36, 31, 0.06);
+  --eh-grid-line: rgba(20, 70, 60, 0.08);
+  --eh-shadow-card: 0 1px 2px rgba(14, 40, 34, 0.05),
+    0 14px 34px rgba(14, 40, 34, 0.08);
   --eh-glass-border: rgba(20, 70, 60, 0.18);
+  --eh-glass-highlight: rgba(255, 255, 255, 0.72);
+  --eh-atmo: radial-gradient(
+      55% 42% at 8% 0%,
+      color-mix(in srgb, #176b5c 11%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 36% at 94% 12%,
+      color-mix(in srgb, #c08a3e 7%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      50% 40% at 70% 100%,
+      color-mix(in srgb, #2f8f9a 7%, transparent),
+      transparent 72%
+    ),
+    conic-gradient(
+      from 140deg at 82% 8%,
+      transparent 0deg,
+      color-mix(in srgb, #ffffff 6%, transparent) 30deg,
+      transparent 80deg
+    );
 }
 
 .dark[data-palette="glaze"] {
@@ -483,9 +979,9 @@ html:not(.dark)[data-palette="glaze"] {
   --eh-surface-raised: #14302a;
   --eh-hover: rgba(255, 255, 255, 0.07);
   --eh-border: rgba(170, 240, 220, 0.14);
-  --eh-border-strong: rgba(170, 240, 220, 0.26);
+  --eh-border-strong: rgba(170, 240, 220, 0.28);
   --eh-text: #eafaf5;
-  --eh-text-muted: #a2c4b9;
+  --eh-text-muted: #a4c6bb;
   --eh-accent: #5fe0c0;
   --eh-accent-contrast: #04201a;
   --eh-accent-soft: color-mix(in srgb, #5fe0c0 16%, transparent);
@@ -499,37 +995,59 @@ html:not(.dark)[data-palette="glaze"] {
   --eh-chart-3: #ffd27f;
   --eh-chart-4: #b8a8ff;
   --eh-chart-5: #a8e07f;
-  --eh-grid-line: rgba(170, 240, 220, 0.08);
-  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --eh-grid-line: rgba(170, 240, 220, 0.09);
+  --eh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 14px 34px rgba(1, 10, 7, 0.40);
   --eh-glass-border: rgba(170, 240, 220, 0.22);
+  --eh-glass-highlight: rgba(255, 255, 255, 0.1);
+  --eh-atmo: radial-gradient(
+      55% 42% at 8% 0%,
+      color-mix(in srgb, #5fe0c0 9%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      46% 36% at 94% 12%,
+      color-mix(in srgb, #ffd27f 5%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      50% 40% at 70% 100%,
+      color-mix(in srgb, #7fd8ff 6%, transparent),
+      transparent 72%
+    ),
+    conic-gradient(
+      from 140deg at 82% 8%,
+      transparent 0deg,
+      color-mix(in srgb, #d9fff4 4%, transparent) 30deg,
+      transparent 80deg
+    );
+}
+
+/* ------------------------------------------------------------------
+ * 空间氛围层：SplashScreen 的包裹根，整页唯一的背景画布。
+ * 每套配色通过 --eh-atmo 提供多层 radial / linear / conic 渐变
+ * （星点、暖光、海浪、雾气、青玉高光），不透明度均 ≤12%。
+ * 背景固定在画布上，主内容区滚动、路由交叉淡入都不会让它闪动。
+ * ------------------------------------------------------------------ */
+
+.eh-brand-app {
+  background-color: var(--eh-bg);
+  background-image: var(--eh-atmo, none);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* AppShell 自带 bg-background；这里让出画布，让氛围透上来。 */
+.eh-brand-app > div {
+  background-color: transparent;
 }
 
 /* ------------------------------------------------------------------
  * 玻璃层：只在 html[data-glass="true"]（mist / glaze）下启用。
- * 侧栏、顶栏、卡片、弹窗使用半透明表面 + Gaussian blur；
+ * 侧栏、顶栏、卡片、弹窗使用半透明表面 + Gaussian blur，
+ * 叠加 1px 内高光与极淡的折射渐变，接近真实磨砂玻璃而非霓虹。
  * 不支持 backdrop-filter 时退回不透明表面，保证低端机可读。
  * ------------------------------------------------------------------ */
-
-/* 给模糊层一点可感知的底色；颜色全部来自当前配色令牌。 */
-html[data-glass="true"] .eh-brand-app > div {
-  background-image:
-    radial-gradient(
-      circle at 12% 8%,
-      color-mix(in srgb, var(--eh-accent) 20%, transparent),
-      transparent 42%
-    ),
-    radial-gradient(
-      circle at 88% 0%,
-      color-mix(in srgb, var(--eh-signal) 15%, transparent),
-      transparent 38%
-    ),
-    radial-gradient(
-      circle at 70% 92%,
-      color-mix(in srgb, var(--eh-chart-3) 12%, transparent),
-      transparent 45%
-    );
-  background-attachment: fixed;
-}
 
 html[data-glass="true"] aside,
 html[data-glass="true"] .eh-brand-app > div > div > header,
@@ -538,22 +1056,31 @@ html[data-glass="true"] [data-slot="dialog-content"],
 html[data-glass="true"] [data-slot="alert-dialog-content"],
 html[data-glass="true"] [data-slot="popover-content"],
 html[data-glass="true"] [data-slot="dropdown-menu-content"] {
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
-  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  backdrop-filter: blur(22px) saturate(1.25);
   border-color: var(--eh-glass-border);
+  background-image: linear-gradient(
+    150deg,
+    color-mix(in srgb, #ffffff 9%, transparent) 0%,
+    transparent 38%,
+    color-mix(in srgb, var(--eh-accent) 4%, transparent) 100%
+  );
 }
 
 html[data-glass="true"] aside {
-  background-color: color-mix(in srgb, var(--eh-surface) 62%, transparent);
+  background-color: color-mix(in srgb, var(--eh-surface) 56%, transparent);
+  box-shadow: inset -1px 0 0 var(--eh-glass-border);
 }
 
 html[data-glass="true"] .eh-brand-app > div > div > header {
-  background-color: color-mix(in srgb, var(--eh-bg) 70%, transparent);
+  background-color: color-mix(in srgb, var(--eh-bg) 55%, transparent);
+  box-shadow: inset 0 -1px 0 var(--eh-glass-border);
 }
 
 html[data-glass="true"] [data-slot="card"] {
-  background-color: color-mix(in srgb, var(--eh-surface) 66%, transparent);
+  background-color: color-mix(in srgb, var(--eh-surface) 58%, transparent);
   --tw-ring-color: var(--eh-glass-border);
+  box-shadow: inset 0 1px 0 var(--eh-glass-highlight), var(--eh-shadow-card);
 }
 
 html[data-glass="true"] [data-slot="dialog-content"],
@@ -562,16 +1089,27 @@ html[data-glass="true"] [data-slot="popover-content"],
 html[data-glass="true"] [data-slot="dropdown-menu-content"] {
   background-color: color-mix(
     in srgb,
-    var(--eh-surface-raised) 72%,
+    var(--eh-surface-raised) 70%,
     transparent
   );
   --tw-ring-color: var(--eh-glass-border);
+  box-shadow: inset 0 1px 0 var(--eh-glass-highlight),
+    0 18px 48px rgba(8, 18, 26, 0.28);
 }
 
 /* 无 backdrop-filter（旧 WebView / 低端机）：退回不透明表面。 */
 @supports not (
   (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
 ) {
+  html[data-glass="true"] aside,
+  html[data-glass="true"] [data-slot="card"],
+  html[data-glass="true"] [data-slot="dialog-content"],
+  html[data-glass="true"] [data-slot="alert-dialog-content"],
+  html[data-glass="true"] [data-slot="popover-content"],
+  html[data-glass="true"] [data-slot="dropdown-menu-content"],
+  html[data-glass="true"] .eh-brand-app > div > div > header {
+    background-image: none;
+  }
   html[data-glass="true"] aside,
   html[data-glass="true"] [data-slot="card"] {
     background-color: var(--eh-surface);

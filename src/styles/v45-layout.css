@@ -1,0 +1,146 @@
+/* ------------------------------------------------------------------
+ * V4.5 · 应用外壳与仪表盘排版
+ * 只补充布局/间距/层级；颜色全部取自 index.css 的设计令牌。
+ * ------------------------------------------------------------------ */
+
+/* 侧栏：分组标签（11px 小标题，8px 节奏） */
+.eh-sidebar-label {
+  padding: 0 10px 4px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--eh-text-muted);
+}
+
+/* 侧栏续接：模块列表独立滚动，底部工具区始终可见 */
+.eh-sidebar-module-list {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+/* 折叠态隐藏滚动条占位，保证图标与主导航严格居中对齐。 */
+.eh-sidebar[data-collapsed="true"] .eh-sidebar-module-list {
+  scrollbar-width: none;
+  scrollbar-gutter: auto;
+}
+.eh-sidebar[data-collapsed="true"] .eh-sidebar-module-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ModuleNav 自带分组标题与分隔线，滚动容器只负责高度与滚动。 */
+
+/* active 导航项：左侧细指示条 + 明确底色。
+ * 侧栏底色与 bg-subtle 相同，仅换字色不足以区分。 */
+.eh-sidebar nav a[aria-current="page"] {
+  position: relative;
+  background-color: var(--eh-surface);
+  color: var(--eh-text);
+}
+.eh-sidebar nav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2px;
+  height: 18px;
+  border-radius: 9999px;
+  background-color: var(--eh-accent);
+  transform: translateY(-50%);
+}
+.eh-sidebar nav a[aria-current="page"] svg {
+  color: var(--eh-accent);
+}
+
+/* 仪表盘：卡片内容允许收缩/拉伸，避免长内容撑破栅格 */
+.eh-dashboard,
+.eh-dashboard .eh-grid,
+.eh-dashboard-toolbar {
+  min-width: 0;
+}
+
+/* 评分卡：整体作为纵向 flex，类别网格在卡片剩余高度内拉伸；
+ * 列数用 auto-fit，类别少于 5 项时也不会在右侧留下空列。 */
+.eh-dashboard .eh-score-card > [data-slot="card-content"] {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.eh-dashboard .eh-score-card [data-slot="card-content"] .grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+}
+.eh-dashboard .eh-score-card [data-slot="card-content"] > .space-y-4 {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.eh-dashboard .eh-score-card [data-slot="card-content"] > .space-y-4 > .grid {
+  flex: 1 1 auto;
+  align-items: stretch;
+}
+
+/* 健康数据：指标瓦片同样自适应铺满；空状态改为紧凑横排。 */
+.eh-dashboard .eh-health-summary [data-slot="card-content"] .grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
+}
+.eh-dashboard .eh-health-summary [data-empty-state] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--eh-space-3) var(--eh-space-4);
+  padding-block: var(--eh-space-2);
+  padding-inline: 0;
+  text-align: left;
+}
+.eh-dashboard .eh-health-summary [data-empty-state] [data-empty-icon] {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 0;
+}
+.eh-dashboard .eh-health-summary [data-empty-state] [data-empty-body] {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+.eh-dashboard .eh-health-summary [data-empty-state] [data-empty-body] p {
+  margin-top: 2px;
+  max-width: none;
+}
+.eh-dashboard .eh-health-summary [data-empty-state] [data-empty-actions] {
+  margin-top: 0;
+}
+
+/* 布局编辑：说明单独占一行，操作按钮与宽度控件统一 8px 间距。 */
+.eh-dashboard-toolbar > div {
+  max-width: 100%;
+}
+.eh-dashboard-toolbar > div > div {
+  row-gap: var(--eh-space-2);
+}
+.eh-dashboard-toolbar > div > div > p {
+  flex: 1 1 100%;
+}
+.eh-dashboard-toolbar [data-slot="button"] {
+  flex: 0 0 auto;
+}
+
+/* 宽度选择做成一个紧凑分段控件，与隐藏/上移/下移按钮对齐。 */
+.eh-dashboard .eh-layout-cell [role="group"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--eh-border);
+  border-radius: var(--eh-radius-sm);
+  background-color: var(--eh-surface);
+}
+
+@media (max-width: 639px) {
+  .eh-dashboard .eh-health-summary [data-empty-state] {
+    align-items: flex-start;
+  }
+  .eh-dashboard .eh-health-summary [data-empty-state] [data-empty-actions] {
+    flex: 1 1 100%;
+  }
+}

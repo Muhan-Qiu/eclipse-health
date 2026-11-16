@@ -25,6 +25,7 @@ const zh = {
     actions: {
       open: "打开",
       openWorkbench: "打开工作台",
+      more: "更多操作",
       start: "启动",
       stop: "停止",
       enable: "启用",
@@ -51,6 +52,14 @@ const zh = {
       theme: "主题",
       locale: "语言包",
       "data-source": "数据源",
+    },
+    list: {
+      searchPlaceholder: "搜索模块名称、ID 或简介",
+      resultCount: "{{shown}} / {{total}} 个模块",
+      searchEmptyTitle: "没有找到匹配的模块",
+      searchEmptyDesc: "试试其他关键词，或清空搜索。",
+      clearSearch: "清空搜索",
+      community: "社区",
     },
     widgets: {
       sectionTitle: "模块卡片",
@@ -373,6 +382,7 @@ const en = {
     actions: {
       open: "Open",
       openWorkbench: "Open workbench",
+      more: "More actions",
       start: "Start",
       stop: "Stop",
       enable: "Enable",
@@ -399,6 +409,14 @@ const en = {
       theme: "Theme",
       locale: "Locale",
       "data-source": "Data source",
+    },
+    list: {
+      searchPlaceholder: "Search name, ID or description",
+      resultCount: "{{shown}} / {{total}} modules",
+      searchEmptyTitle: "No matching modules",
+      searchEmptyDesc: "Try another keyword, or clear the search.",
+      clearSearch: "Clear search",
+      community: "Community",
     },
     widgets: {
       sectionTitle: "Module cards",

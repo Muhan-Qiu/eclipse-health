@@ -1055,6 +1055,44 @@ const enUS: typeof zhCN = {
       xiaomi_invalid_rows: "Some Xiaomi rows could not be parsed and were skipped.",
       large_import:
         "There are many records; committing may take a few minutes. Keep this window open.",
+      channel_invalid_bounds: "A channel has invalid bounds and was skipped.",
+      channel_rate_mismatch:
+        "Channels report different sample rates; the primary lead was used.",
+      experimental_format:
+        "This vendor adapter has not been validated with a real device export; fields follow public documentation. Check the rate, unit and lead.",
+      multiple_voltage_columns:
+        "Multiple voltage columns found; the first one was used.",
+      pointer_mismatch:
+        "SCP-ECG pointers do not match the file length; available data was read.",
+      pointer_out_of_range:
+        "An SCP-ECG pointer is outside the file; that segment was skipped.",
+      record_count_missing:
+        "The file does not declare a record count; imported records were counted from parsed data.",
+      sampling_rate_mismatch:
+        "The sample rate in the file disagrees with the parameters; the file value was used.",
+      samsung_health_imported:
+        "Samsung Health export detected; the record counts below will be imported.",
+      samsung_unmapped_files: "Some unmapped Samsung files were skipped.",
+      scp_difference_encoding:
+        "SCP-ECG difference encoding was decoded to the original waveform.",
+      scp_huffman: "SCP-ECG Huffman compression was decoded.",
+      scp_start_sample_offset:
+        "SCP-ECG starts at a non-zero sample; the offset was applied.",
+      start_time_invalid:
+        "The start time could not be parsed; import time was used.",
+      time_not_monotonic:
+        "The time column is not strictly increasing; the sample rate could not be derived.",
+      trailing_bytes: "Unparsed trailing bytes were ignored.",
+      truncated_file:
+        "The file appears truncated; the available part was read.",
+      truncated_records: "Some records were incomplete and were skipped.",
+      unit_ambiguous: "The unit is ambiguous; confirm it before committing.",
+      unit_assumed: "The file does not declare a unit; mV was assumed.",
+      unit_inconsistent:
+        "The unit column has several values; confirm it before committing.",
+      unit_inferred:
+        "The unit was inferred from voltage magnitude; verify it (HealthKit uses V, community exports often mV).",
+      unsupported_unit: "Unsupported unit; mV was assumed.",
     },
   },
   trends: {

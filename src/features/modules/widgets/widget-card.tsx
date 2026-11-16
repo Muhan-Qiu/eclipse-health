@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { intlLocale } from "@/lib/i18n";
 import { callModuleRpc } from "../api";
+import { getModuleCopy, moduleDisplayName } from "../copy";
 import { moduleErrorMessage } from "../errors";
 import type { ModuleWidget } from "../types";
 import { WidgetView } from "./widget-view";
@@ -40,6 +41,13 @@ export function WidgetCard({ widget, className, animate = true }: WidgetCardProp
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
   const navigate = useNavigate();
+  const moduleCopy = getModuleCopy(i18n.language, widget.moduleId);
+  const title = moduleCopy?.widgets?.[widget.id] ?? widget.title;
+  const moduleName = moduleDisplayName(
+    i18n.language,
+    widget.moduleId,
+    widget.moduleName,
+  );
 
   const source = widget.dataSource;
   const method = typeof source?.method === "string" ? source.method : "";
@@ -74,7 +82,7 @@ export function WidgetCard({ widget, className, animate = true }: WidgetCardProp
         link && "cursor-pointer transition-shadow hover:ring-primary/30",
         className,
       )}
-      title={widget.description || undefined}
+      title={moduleCopy?.tagline || widget.description || undefined}
       role={link ? "link" : undefined}
       tabIndex={link ? 0 : undefined}
       onClick={link ? open : undefined}
@@ -90,14 +98,14 @@ export function WidgetCard({ widget, className, animate = true }: WidgetCardProp
       }
     >
       <CardHeader>
-        <CardTitle className="truncate">{widget.title}</CardTitle>
-        <CardDescription className="truncate">{widget.moduleName}</CardDescription>
+        <CardTitle className="truncate">{title}</CardTitle>
+        <CardDescription className="truncate">{moduleName}</CardDescription>
         <CardAction>
           <Button
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label={t("moduleUi.widgets.refresh", { title: widget.title })}
+            aria-label={t("moduleUi.widgets.refresh", { title })}
             disabled={query.isFetching || method.length === 0}
             onClick={(event) => {
               event.stopPropagation();
@@ -162,7 +170,11 @@ export function WidgetCard({ widget, className, animate = true }: WidgetCardProp
               </Button>
             </div>
           ) : (
-            <WidgetView widget={widget} data={query.data} locale={locale} />
+            <WidgetView
+              widget={{ ...widget, title }}
+              data={query.data}
+              locale={locale}
+            />
           )}
         </div>
       </CardContent>

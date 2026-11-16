@@ -156,6 +156,10 @@ export function LeadStrip({
           };
 
           ctx.save();
+          // 所有标注都裁剪在绘图区内，标签不会压到坐标轴或卡片边框。
+          ctx.beginPath();
+          ctx.rect(bbox.left, bbox.top, bbox.width, bbox.height);
+          ctx.clip();
           if (current) {
             for (const segment of current.quality.segments ?? []) {
               if (segment.endSec <= xMin || segment.startSec >= xMax) continue;
@@ -184,18 +188,36 @@ export function LeadStrip({
             }
 
             const [from, to] = beatRange(current.beats, fs, xMin, xMax);
+            const left = bbox.left;
+            const right = bbox.left + bbox.width;
+            const labelCandidates: { x: number; label: string }[] = [];
             for (let index = from; index < to; index += 1) {
               const beat = current.beats[index];
               const x = plot.valToPos(beat.rPeakSample / fs, "x", true);
+              if (!Number.isFinite(x) || x < left - 1 || x > right + 1) continue;
               const isSelected = selectedRef.current === index;
-              const isHovered = hoverRamp("beat", `b:${index}`) > 0;
-              const enter =
-                !reduced && pulse?.index === index ? pulseT : 1;
+              const hoverAmount = hoverRamp("beat", `b:${index}`);
+              const isHovered = hoverAmount > 0;
+              const enter = !reduced && pulse?.index === index ? pulseT : 1;
               const abnormal = beat.label !== "N";
-              const hoverLift = hoverRamp("beat", `b:${index}`) * 0.22;
+
+              // 选中搏动：常驻 accent 色带 + 上下端点，缩放后仍能一眼找到。
+              if (isSelected) {
+                ctx.globalAlpha = 0.12 + 0.08 * hoverAmount;
+                ctx.fillStyle = colors.accent;
+                ctx.fillRect(x - 5, bbox.top, 10, bbox.height);
+                ctx.globalAlpha = 0.95;
+                ctx.fillRect(x - 6, bbox.top, 12, 2);
+                ctx.fillRect(x - 6, bbox.top + bbox.height - 2, 12, 2);
+              } else if (isHovered) {
+                ctx.globalAlpha = 0.07 * hoverAmount;
+                ctx.fillStyle = abnormal ? colors.warning : colors.signal;
+                ctx.fillRect(x - 4, bbox.top, 8, bbox.height);
+              }
+
               ctx.globalAlpha = isSelected
-                ? 0.55 + 0.4 * enter
-                : Math.min(1, (abnormal ? 0.42 : 0.32) + hoverLift);
+                ? 0.6 + 0.3 * enter
+                : Math.min(0.9, (abnormal ? 0.5 : 0.24) + hoverAmount * 0.25);
               ctx.strokeStyle = isSelected
                 ? colors.accent
                 : abnormal
@@ -234,12 +256,57 @@ export function LeadStrip({
                   }
                 }
               }
+
               if (abnormal && isPrimary) {
-                ctx.globalAlpha = Math.min(1, 0.9 + hoverRamp("beat", `b:${index}`));
-                ctx.fillStyle = colors.warning;
-                ctx.font = "10px ui-monospace, monospace";
-                ctx.fillText(beat.label.slice(0, 4), x + 2, bbox.top + 10);
+                labelCandidates.push({ x, label: beat.label.slice(0, 4) });
               }
+            }
+
+            // 标签防重叠：均匀抽样 + 最小像素间距 + 两行错位。
+            if (isPrimary && labelCandidates.length) {
+              const MAX_LABELS = 20;
+              let labels = labelCandidates;
+              if (labels.length > MAX_LABELS) {
+                const step = labels.length / MAX_LABELS;
+                labels = Array.from({ length: MAX_LABELS }, (_, position) =>
+                  labelCandidates[
+                    Math.min(
+                      labelCandidates.length - 1,
+                      Math.floor(position * step),
+                    )
+                  ],
+                );
+              }
+              const minGap = 30;
+              const lastX = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+              const rows = [bbox.top + 2, bbox.top + 13];
+              ctx.save();
+              ctx.globalAlpha = 0.95;
+              ctx.fillStyle = colors.warning;
+              ctx.font = "600 9px ui-monospace, SFMono-Regular, monospace";
+              ctx.textBaseline = "top";
+              for (const candidate of labels) {
+                let row: number;
+                const fitsTop = lastX[0] <= candidate.x - minGap;
+                const fitsBottom = lastX[1] <= candidate.x - minGap;
+                if (fitsTop && fitsBottom) {
+                  row = lastX[0] <= lastX[1] ? 0 : 1;
+                } else if (fitsTop) {
+                  row = 0;
+                } else if (fitsBottom) {
+                  row = 1;
+                } else {
+                  continue;
+                }
+                const textWidth = ctx.measureText(candidate.label).width;
+                let textX = candidate.x + 2;
+                if (textX + textWidth > right - 1) {
+                  textX = candidate.x - textWidth - 2;
+                }
+                ctx.fillText(candidate.label, Math.max(left, textX), rows[row]);
+                lastX[row] = candidate.x;
+              }
+              ctx.restore();
             }
           }
 

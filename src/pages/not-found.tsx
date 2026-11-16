@@ -10,15 +10,18 @@ export function NotFoundPage() {
   return (
     <>
       <PageHeader eyebrow="404" title={t("notFound.title")} />
-      <EmptyState
-        icon={Compass}
-        title={t("notFound.title")}
-        description={t("notFound.description")}
-      >
-        <Button asChild size="sm">
-          <Link to="/">{t("notFound.action")}</Link>
-        </Button>
-      </EmptyState>
+      <div className="mx-auto w-full max-w-2xl">
+        <EmptyState
+          icon={Compass}
+          title={t("notFound.title")}
+          description={t("notFound.description")}
+          className="py-14"
+        >
+          <Button asChild size="sm">
+            <Link to="/">{t("notFound.action")}</Link>
+          </Button>
+        </EmptyState>
+      </div>
     </>
   );
 }

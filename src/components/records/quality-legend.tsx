@@ -62,14 +62,14 @@ export function QualityLegend({
       className={cn("rounded-lg border border-border bg-surface", className)}
       aria-label={t("qualityLegend.title")}
     >
-      <header className="flex flex-wrap items-center gap-2 border-b border-border px-2.5 py-2">
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-3 py-2">
         <h4 className="eh-caption text-foreground">{t("qualityLegend.title")}</h4>
         <span className="eh-caption eh-num text-muted-foreground">
           {t("qualityLegend.count", { count: segments.length })}
         </span>
       </header>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2.5 py-2 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-[11px] text-muted-foreground">
         {(["good", "fair", "poor"] as QualityLevel[]).map((level) => (
           <span key={level} className="flex items-center gap-1">
             <span
@@ -83,7 +83,7 @@ export function QualityLegend({
       </div>
 
       {segments.length === 0 ? (
-        <p className="px-2.5 pb-3 text-xs text-muted-foreground">
+        <p className="px-3 pb-3 text-xs text-muted-foreground">
           {t("qualityLegend.empty")}
         </p>
       ) : (
@@ -137,7 +137,7 @@ export function QualityLegend({
         </div>
       )}
 
-      <p className="border-t border-border px-2.5 py-1.5 text-[10px] text-muted-foreground">
+      <p className="border-t border-border px-3 py-1.5 text-[10px] text-muted-foreground">
         {t("qualityLegend.footer")}
       </p>
     </section>

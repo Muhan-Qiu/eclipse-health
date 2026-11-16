@@ -63,7 +63,12 @@ export function ReportsWorkspace() {
       return;
     }
     if (!selectedId || !records.some((record) => record.id === selectedId)) {
-      setSelectedId(records[0].id);
+      // 默认选中最近一条“已完成分析”的记录；失败/未分析的记录可以手动选择，
+      // 但不应该让用户一打开页面就点到一个生成不了报告的状态。
+      const preferred =
+        records.find((record) => record.analysisStatus === "completed") ??
+        records[0];
+      setSelectedId(preferred.id);
     }
   }, [records, selectedId]);
 

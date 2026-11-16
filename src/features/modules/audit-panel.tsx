@@ -21,6 +21,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { listAudit } from "./api";
 import { AuditEventRow } from "./audit-row";
+import { moduleDisplayName } from "./copy";
 import { moduleErrorMessage } from "./errors";
 import { actionKey } from "./permission-utils";
 import type { ModuleSummary } from "./types";
@@ -61,7 +62,7 @@ export function AuditPanel({
   onActionChange,
   refreshToken,
 }: AuditPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [limit, setLimit] = useState(20);
 
   useEffect(() => {
@@ -91,19 +92,23 @@ export function AuditPanel({
         <CardDescription>{t("moduleUi.audit.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
             value={moduleId || ALL}
             onValueChange={(value) => onModuleChange(value === ALL ? "" : value)}
           >
-            <SelectTrigger size="sm" aria-label={t("moduleUi.audit.module")}>
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0 sm:w-56"
+              aria-label={t("moduleUi.audit.module")}
+            >
               <SelectValue placeholder={t("moduleUi.audit.allModules")} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>{t("moduleUi.audit.allModules")}</SelectItem>
               {modules.map((module) => (
                 <SelectItem key={module.id} value={module.id}>
-                  {module.name}
+                  {moduleDisplayName(i18n.language, module.id, module.name)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -113,7 +118,11 @@ export function AuditPanel({
             value={action || ALL}
             onValueChange={(value) => onActionChange(value === ALL ? "" : value)}
           >
-            <SelectTrigger size="sm" aria-label={t("moduleUi.audit.action")}>
+            <SelectTrigger
+              size="sm"
+              className="w-full min-w-0 sm:w-44"
+              aria-label={t("moduleUi.audit.action")}
+            >
               <SelectValue placeholder={t("moduleUi.audit.allActions")} />
             </SelectTrigger>
             <SelectContent>
@@ -167,6 +176,15 @@ export function AuditPanel({
                 key={event.id}
                 event={event}
                 showModule={!moduleId}
+                moduleName={
+                  event.moduleId
+                    ? moduleDisplayName(
+                        i18n.language,
+                        event.moduleId,
+                        event.moduleId,
+                      )
+                    : undefined
+                }
               />
             ))}
           </ul>

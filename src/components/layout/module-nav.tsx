@@ -65,10 +65,12 @@ function ModuleNavEntry({
         </span>
       ) : (
         <>
-          <span className="min-w-0 flex-1 truncate">{name}</span>
+          <span className="min-w-0 flex-1 truncate" title={name}>
+            {name}
+          </span>
           <span
             className={cn(
-              "size-1.5 shrink-0 rounded-full",
+              "size-1.5 shrink-0 rounded-full ring-2 ring-sidebar",
               stateDotClass(module.state),
             )}
             title={stateLabel}
@@ -95,7 +97,7 @@ function ModuleNavEntry({
  * 侧栏中的已安装模块列表。
  *
  * 模块列表来自本地后端；后端不可用或列表为空时直接不渲染，避免把侧栏撑高
- * 或反复重试。最多展示 12 个，其余引导到模块中心。
+ * 或反复重试。最多展示 64 个，其余引导到模块中心。
  */
 export function ModuleNav({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
@@ -111,6 +113,7 @@ export function ModuleNav({ collapsed }: { collapsed: boolean }) {
 
   const visible = modules.slice(0, MAX_VISIBLE_MODULES);
   const hasMore = modules.length > visible.length;
+  const remaining = modules.length - visible.length;
 
   return (
     <div className="mt-1">
@@ -133,13 +136,15 @@ export function ModuleNav({ collapsed }: { collapsed: boolean }) {
             <TooltipTrigger asChild>
               <Link
                 to="/modules"
-                aria-label={t("nav.viewAllModules")}
+                aria-label={`${t("nav.viewAllModules")} (+${remaining})`}
                 className="mt-0.5 flex h-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <ChevronRight className="size-4" aria-hidden="true" />
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="right">{t("nav.viewAllModules")}</TooltipContent>
+            <TooltipContent side="right">
+              {t("nav.viewAllModules")} · +{remaining}
+            </TooltipContent>
           </Tooltip>
         ) : (
           <Link
@@ -147,6 +152,9 @@ export function ModuleNav({ collapsed }: { collapsed: boolean }) {
             className="mt-0.5 flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             {t("nav.viewAllModules")}
+            <span className="eh-caption tabular-nums opacity-70">
+              +{remaining}
+            </span>
             <ChevronRight className="size-3" aria-hidden="true" />
           </Link>
         )

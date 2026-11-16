@@ -29,6 +29,7 @@ import {
   uninstallModule,
 } from "./api";
 import { AuditPanel } from "./audit-panel";
+import { moduleDisplayName } from "./copy";
 import { moduleErrorMessage } from "./errors";
 import { InstallDialog } from "./install-dialog";
 import {
@@ -62,7 +63,7 @@ function runAction(moduleId: string, action: ModuleAction): Promise<ModuleSummar
 }
 
 export function ModulesWorkspace() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -109,7 +110,15 @@ export function ModulesWorkspace() {
     mutationFn: ({ module, action }: { module: ModuleSummary; action: ModuleAction }) =>
       runAction(module.id, action),
     onSuccess: (_data, variables) => {
-      toast.success(t(TOAST_KEYS[variables.action], { name: variables.module.name }));
+      toast.success(
+        t(TOAST_KEYS[variables.action], {
+          name: moduleDisplayName(
+            i18n.language,
+            variables.module.id,
+            variables.module.name,
+          ),
+        }),
+      );
       refreshAll();
     },
     onError: (error) => {
@@ -132,7 +141,15 @@ export function ModulesWorkspace() {
       const key = variables.keepData
         ? "moduleUi.uninstall.doneKept"
         : "moduleUi.uninstall.doneDeleted";
-      toast.success(t(key, { name: variables.module.name }));
+      toast.success(
+        t(key, {
+          name: moduleDisplayName(
+            i18n.language,
+            variables.module.id,
+            variables.module.name,
+          ),
+        }),
+      );
       setUninstallTarget(null);
       if (detailId === variables.module.id) setDetailId(null);
       refreshAll();
@@ -206,7 +223,9 @@ export function ModulesWorkspace() {
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-sm font-medium">{item.name}</span>
+                      <span className="truncate text-sm font-medium">
+                        {moduleDisplayName(i18n.language, item.id, item.name)}
+                      </span>
                       <Badge className="font-normal">
                         {t("moduleUi.marketplace.updateBadge")}
                       </Badge>

@@ -321,7 +321,12 @@ interface WidgetViewProps {
 }
 
 export function WidgetView({ widget, data, locale }: WidgetViewProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // 模块返回的文案可能只有中文；英文界面下用通用占位，避免中英混排。
+  const localize = (text: string | null): string | null =>
+    text !== null && i18n.language.startsWith("en") && /[㐀-鿿]/.test(text)
+      ? t("moduleUi.widgets.noData")
+      : text;
   const view = widget.view as typeof widget.view & {
     seriesPath?: string;
     labelPath?: string;
@@ -476,7 +481,7 @@ export function WidgetView({ widget, data, locale }: WidgetViewProps) {
     }
 
     case "text": {
-      const text = primitiveText(value, locale);
+      const text = localize(primitiveText(value, locale));
       body =
         text !== null ? (
           <p className="text-sm leading-relaxed break-words whitespace-pre-line">

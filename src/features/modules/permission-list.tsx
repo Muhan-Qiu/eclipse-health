@@ -70,7 +70,9 @@ export function PermissionChecklist({
                     {t("moduleUi.installFlow.newBadge")}
                   </Badge>
                 ) : null}
-                <code className="eh-caption text-muted-foreground">{item.scope}</code>
+                <code className="eh-caption max-w-full break-all text-muted-foreground">
+                  {item.scope}
+                </code>
               </div>
               <p id={descriptionId} className="eh-caption mt-1 text-muted-foreground">
                 {permissionDescription(t, item)}
@@ -112,42 +114,64 @@ export function PermissionManager({
         const granted = item.granted === true;
         const busy = busyScope === item.scope;
         return (
-          <li key={item.scope} className="flex items-start gap-3 p-3">
-            <span
-              className={cn(
-                "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                granted
-                  ? "bg-primary/10 text-primary"
-                  : "bg-subtle text-muted-foreground",
-              )}
-              aria-hidden="true"
-            >
-              {granted ? <Check className="size-3" /> : <Minus className="size-3" />}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{permissionLabel(t, item)}</span>
-                <Badge variant={riskVariant(item.risk)} className="font-normal">
-                  {riskLabel(t, item.risk)}
-                </Badge>
-                <Badge variant="outline" className="font-normal text-muted-foreground">
-                  {granted
-                    ? t("moduleUi.permissions.granted")
-                    : t("moduleUi.permissions.notGranted")}
-                </Badge>
+          <li
+            key={item.scope}
+            className="flex flex-col gap-3 p-3 sm:flex-row sm:items-start"
+          >
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <span
+                className={cn(
+                  "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
+                  granted
+                    ? "bg-primary/10 text-primary"
+                    : "bg-subtle text-muted-foreground",
+                )}
+                aria-hidden="true"
+              >
+                {granted ? (
+                  <Check className="size-3" />
+                ) : (
+                  <Minus className="size-3" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {permissionLabel(t, item)}
+                  </span>
+                  <Badge
+                    variant={riskVariant(item.risk)}
+                    className="font-normal"
+                  >
+                    {riskLabel(t, item.risk)}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="font-normal text-muted-foreground"
+                  >
+                    {granted
+                      ? t("moduleUi.permissions.granted")
+                      : t("moduleUi.permissions.notGranted")}
+                  </Badge>
+                </div>
+                <p className="eh-caption mt-1 text-muted-foreground">
+                  {permissionDescription(t, item)}
+                </p>
               </div>
-              <p className="eh-caption mt-1 text-muted-foreground">
-                {permissionDescription(t, item)}
-              </p>
             </div>
             <Button
               type="button"
               variant={granted ? "destructive" : "outline"}
               size="sm"
+              className="shrink-0 self-start sm:self-auto"
               disabled={busy}
-              onClick={() => (granted ? onRevoke(item.scope) : onGrant(item.scope))}
+              onClick={() =>
+                granted ? onRevoke(item.scope) : onGrant(item.scope)
+              }
             >
-              {granted ? t("moduleUi.permissions.revoke") : t("moduleUi.permissions.grant")}
+              {granted
+                ? t("moduleUi.permissions.revoke")
+                : t("moduleUi.permissions.grant")}
             </Button>
           </li>
         );

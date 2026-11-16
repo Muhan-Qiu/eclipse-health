@@ -14,27 +14,38 @@ export function auditActionLabel(t: TFunction, action: string): string {
 interface AuditEventRowProps {
   event: AuditEvent;
   showModule?: boolean;
+  /** 全局审计列表中用于替代原始 moduleId 的本地化名称。 */
+  moduleName?: string;
 }
 
-export function AuditEventRow({ event, showModule = false }: AuditEventRowProps) {
+export function AuditEventRow({
+  event,
+  showModule = false,
+  moduleName,
+}: AuditEventRowProps) {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
   return (
-    <li className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm">
+    <li className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2.5 text-sm">
       <time
-        className="eh-caption tabular-nums text-muted-foreground"
+        className="eh-caption shrink-0 tabular-nums text-muted-foreground"
         dateTime={event.createdAt}
       >
         {formatDateTime(event.createdAt, locale)}
       </time>
       <span className="font-medium">{auditActionLabel(t, event.action)}</span>
       {event.scope ? (
-        <code className="eh-caption rounded bg-subtle px-1.5 py-0.5 text-muted-foreground">
+        <code className="eh-caption max-w-full truncate rounded bg-subtle px-1.5 py-0.5 text-muted-foreground">
           {event.scope}
         </code>
       ) : null}
       {showModule && event.moduleId ? (
-        <code className="eh-caption text-muted-foreground">{event.moduleId}</code>
+        <span
+          className="eh-caption min-w-0 max-w-[16rem] truncate text-muted-foreground"
+          title={event.moduleId}
+        >
+          {moduleName ?? event.moduleId}
+        </span>
       ) : null}
     </li>
   );
