@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1",
   "source": "official",
-  "generatedAt": "2026-11-01T15:44:44Z",
+  "generatedAt": "2026-11-16T15:06:14Z",
   "keyId": "dev-2026",
   "modules": [
     {
@@ -31,8 +31,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.aura-healthcare.hrv-analysis-0.1.0.ehmod",
-      "size": 28461,
-      "sha256": "f057bcc5c2793a6577478e49b30f2f596a9cf22d3037d44eee33e5ce6aa0b1b3"
+      "size": 23826,
+      "sha256": "882357ab636e1340d56a15f59021af0c0c684ec2f607b8b91b92bc92b0b085da"
     },
     {
       "id": "io.github.dogsheep.healthkit-to-sqlite",
@@ -54,8 +54,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.dogsheep.healthkit-to-sqlite-0.1.0.ehmod",
-      "size": 20166,
-      "sha256": "518d96c07bf6d4ea7477ed648b369de1c63537f04772e57777a427c5a6c1701d"
+      "size": 20242,
+      "sha256": "80d4636cd3d7a6dbc58682a4dc4b190161c7c1e1fe6918e9a92b9ea3a7b6c81d"
     },
     {
       "id": "io.github.holgern.pyedflib",
@@ -80,8 +80,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.holgern.pyedflib-0.1.0.ehmod",
-      "size": 21545,
-      "sha256": "86ec6135745c639bf4f240e9013c521b25339f4edde94415eb930a7c00a77f47"
+      "size": 21611,
+      "sha256": "144c5331cfdd55fe0c2c78f84dae0b39611c484120d683f662749ade5b268a89"
     },
     {
       "id": "io.github.mit-lcp.wfdb",
@@ -104,8 +104,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.mit-lcp.wfdb-0.1.0.ehmod",
-      "size": 20570,
-      "sha256": "94c042c2be543241954d9483991e54790b0310102db5860d7d819354fd1ce4c4"
+      "size": 20652,
+      "sha256": "72f329dea6f75b37455d795d648dab262fb407843e165d1eb183b1d95b1695bf"
     },
     {
       "id": "io.github.neuropsychology.neurokit2",
@@ -127,8 +127,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.neuropsychology.neurokit2-0.1.0.ehmod",
-      "size": 25026,
-      "sha256": "7065632196dd67d078f92639e0ca405fcb194e949763c768a497dc51cec0f7dd"
+      "size": 25279,
+      "sha256": "93276e834f8c6d8ee0592db870058a6063e5d89f94dcfa560b33714cf62a5af2"
     },
     {
       "id": "io.github.paulvangentcom.heartpy",
@@ -152,8 +152,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.paulvangentcom.heartpy-0.1.0.ehmod",
-      "size": 24618,
-      "sha256": "0b5aaf2733a48e99797179989088702a79b90860a6a6eeb3ed60ef0a9975897b"
+      "size": 24850,
+      "sha256": "b55cace133e43561af5e572aae4b1d5c5601ffbbe6468773de744816356ee389"
     },
     {
       "id": "io.github.scientisst.biosppy",
@@ -181,8 +181,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.scientisst.biosppy-0.1.0.ehmod",
-      "size": 24555,
-      "sha256": "234df45934431cc88fe00d82e62dc9e195ccbe3d6af6a5e091db26ddbfbf8ada"
+      "size": 24790,
+      "sha256": "bccf4b6c4d0afd8d023702969156d901d25e3cb890d210ab6c5e30db0cef847a"
     },
     {
       "id": "io.github.tkrajina.gpxpy",
@@ -207,8 +207,8 @@
       ],
       "verified": true,
       "file": "modules/io.github.tkrajina.gpxpy-0.1.0.ehmod",
-      "size": 27073,
-      "sha256": "39f8a33ed6f4512b3b738c0f17d85464019ae4e19a2b56342fe8218311da1fbc"
+      "size": 27113,
+      "sha256": "f0d47ae88af9f00af9e5665cc860ceb09de64b667be70974fc45c1ab6c246eed"
     },
     {
       "id": "org.eclipsehealth.relay-ecg",
@@ -222,19 +222,15 @@
       "permissions": [
         "records:read"
       ],
-      "dependencies": [
-        "numpy",
-        "onnxruntime",
-        "wfdb"
-      ],
+      "dependencies": [],
       "minCoreVersion": "1.0.0",
       "categories": [
         "analysis"
       ],
       "verified": true,
       "file": "modules/org.eclipsehealth.relay-ecg-0.1.0.ehmod",
-      "size": 27163078,
-      "sha256": "dc0f97a51f9afe02dd6b772a1766203ee0b414d9fa8a0fe18c4dd2885254fa0b"
+      "size": 27163211,
+      "sha256": "143b6d2a37aaeeb1ca49e0c4304362c37462a25377a7bb07f34790b8a6b7729d"
     },
     {
       "id": "org.eclipsehealth.relay-sleep",
@@ -248,19 +244,16 @@
       "permissions": [
         "records:read"
       ],
-      "dependencies": [
-        "numpy>=1.26,<3",
-        "onnxruntime>=1.17,<2"
-      ],
+      "dependencies": [],
       "minCoreVersion": "1.0.0",
       "categories": [
         "analysis"
       ],
       "verified": true,
       "file": "modules/org.eclipsehealth.relay-sleep-0.1.0.ehmod",
-      "size": 43862110,
-      "sha256": "abeb44597ad34681e0b433cb1d13fc1c049f767ab0167ce82aedf42c806a76ad"
+      "size": 43862130,
+      "sha256": "f27b3b4a5bf1931197675c722735a66c980adb07c085499ab9999931491ac537"
     }
   ],
-  "signature": "z4IxKiip0sF8Im5iQkGA1LS6MQlWi3A2q/7omdBQ91yJP/95iX+k3Txp+NQranxWAh+9RrDY5rw7vckgzGMhAw=="
+  "signature": "qUQXqilH9iO9ZosR5hGPCp9cZjrxHp8ShltSGk+4sXZYiXudUjil2QzbMpfAtHSNQP7NISfnEcA/RI13UwSMDg=="
 }

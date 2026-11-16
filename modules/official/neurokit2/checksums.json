@@ -1,13 +1,13 @@
 {
   "algorithm": "sha256",
   "files": {
-    "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
-    "LICENSES/neurokit2-upstream.txt": "89a0c90cb8331319e1baea34b004fd6121247e89d132c3fcd01c86353aac8733",
-    "NOTICE": "4c3e367b52914e480930b31552b9f1fc018f25097fbd8196637cf7d3922ad973",
-    "README.md": "93baf76675eb0964dfb85fe7e28fb5e767d077ca6eb01e2df6339e7e92c9cb72",
-    "module.json": "fc82221a0f8f499269d3fec039e70b179c71e6731d395bec814e0013b461fe31",
-    "src/__pycache__/adapter.cpython-312.pyc": "c2debec12a83488b6a3dfc3750df59cb9b929e1b187ca363f545d58ef6cda298",
-    "src/adapter.py": "4ee1a8a7bcfd8d70b0ae2dcd46719d79a52b3a4e9634f9d07a7a648e64fe437f",
-    "src/main.py": "c5153740d9ebcfe2d73a91b38fc273c75c1a4adcf04bd3585c727739c4c48bff"
+    "LICENSE": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+    "LICENSES/neurokit2-upstream.txt": "c433482bf39bec4f8c7af7759d80195303b733962b7824d09b1758eb4ad8a0da",
+    "NOTICE": "eb9d8614b11529cdc8a9f539d4d5aadcb3109cccbca779b91a21429d5d606e42",
+    "README.md": "c7d7da5eb55d47ec04f901b54655383f63961f750cb65021c3a0e44e48afdfe0",
+    "module.json": "429baa777151aa537f55304856a356bd4753001d1e29b461794b2964c3e6cd4f",
+    "src/__pycache__/adapter.cpython-312.pyc": "035b3069254053714e3eb084319c8a425c8ccdde38f816fcd2f01e782f1f8ba8",
+    "src/adapter.py": "49f3bbd08c004fd36b5094e1b8e414b62290e849cae2c30577d1380110b640cf",
+    "src/main.py": "5b483db03b26520c7a05312a62f06a0e705aaaeaeb934d0384e07c993a193b4d"
   }
 }

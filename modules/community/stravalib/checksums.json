@@ -1,13 +1,13 @@
 {
   "algorithm": "sha256",
   "files": {
-    "LICENSE": "262cc883ad00ad5755cd90d3b004c99aa58fc19eb32d3c1b46724fc9157bf60a",
-    "NOTICE": "c9bdc036bebea676790898bc027171a878e3c00c7c7ba8f293b8bd49105df539",
-    "README.md": "4d1870a0b0e2f09e9429fecfbb3e2a502faa45797bebb3c694c22e070cc7815b",
-    "module.json": "617223b9a49df6f8b40793fc17d97782d490fb3b5d3db346a7139a032d5d9cb7",
-    "src/__pycache__/adapter.cpython-312.pyc": "28e25c720d3afc2a6c11844c7fa7d0e2c853571b7484a00600ce0422b41aed97",
-    "src/__pycache__/main.cpython-312.pyc": "4dbdb4783ba33130246cfa9d0d6c574191a4a3dfe57e8219c2f341c6d3aa7a7d",
-    "src/adapter.py": "d2502acd1589669e31b68d039bfb8f85e2e426511d4fbfc6f3f73b2837e59210",
-    "src/main.py": "824436adfec3d095f327f31c2ca5ab1e6e7ed14ecb81f2fa1c11cfac81f9a85f"
+    "LICENSE": "cc8d2df731617d6ac49d05ca9f8b2d9e5dfe52b592e86bc61022fcd5e9a1b37b",
+    "NOTICE": "dfa9b25b1e373b4dc0b326a24ae16b903eca5742679dcd48caacf89fded60124",
+    "README.md": "42bc50e8c5ce62804336a5a11eaf44af58084c31a525dd2a1d42606deaabc3ff",
+    "module.json": "fcb08d0297dabb91957832c145bd9b6024fce57c77bb5c742f41b20e22dcbfc8",
+    "src/__pycache__/adapter.cpython-312.pyc": "1c2eee96dcefb3584ed16c26011343c1cf4ad0f89b116f3deea0c02ad4c535a3",
+    "src/__pycache__/main.cpython-312.pyc": "cbe7c182dc140d17e5cbbedfa365379e0aa397547f13b615d23400805d0a18f2",
+    "src/adapter.py": "638944205f4045a061c7e7f39524f91bf5fd70f206a50af1999046267c8eda51",
+    "src/main.py": "a9e6137ca69c59bb7727e3797cf2a788dddfd56d82a6ecb3fb3939f7dc3537d7"
   }
 }

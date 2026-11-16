@@ -2,7 +2,7 @@
 
 本地优先的桌面健康应用：导入 ECG、用 Cardia 模型做分析、把记录/趋势/报告放在一个离线可用的界面里。数据保存在本机，没有遥测。
 
-当前版本 `0.1.3`，面向 Windows 桌面端（Tauri 2 + React 19 + TypeScript，后端为本地 Python sidecar）。
+当前版本 `0.2.0`（V4.5），面向 Windows 桌面端（Tauri 2 + React 19 + TypeScript，后端为本地 Python sidecar）。本版重做了第 4–8 套主题与模块工作台，并修复了评分缺失项、Windows 大模块包安装、英文评分/建议本地化等问题；详细记录见 `docs/V4.5/`。
 
 ## 功能范围
 
@@ -22,12 +22,12 @@
 
 安装包（NSIS/MSI/免安装 ZIP）由发布轮统一构建；安装后直接启动 `eclipse health`，后端 sidecar 会自动在 `127.0.0.1:8765` 启动。
 
-### 从源码运行（V4.3）
+### 从源码运行（V4.5）
 
-本目录就是 V4.3 应用端。`node_modules`、`backend\.venv`、`src-tauri\binaries`、`src-tauri\target` 通过 Windows 目录联接共享 V4.2 的依赖/构建缓存，避免重复占用空间。共享 venv 里的 editable 路径仍指向 V4.2，所以**必须用下面的脚本启动后端**，确保加载的是 V4.3 的 `backend\src`。
+本目录就是 V4.5 应用端。`node_modules`、`backend\.venv`、`src-tauri\binaries`、`src-tauri\target` 通过 Windows 目录联接共享 V4.2 的依赖/构建缓存，避免重复占用空间。共享 venv 里的 editable 路径仍指向 V4.2，所以**必须用下面的脚本启动后端**，确保加载的是 V4.5 的 `backend\src`。
 
 ```powershell
-# 一键：新窗口启动 V4.3 后端 + 当前窗口启动前端
+# 一键：新窗口启动 V4.5 后端 + 当前窗口启动前端
 .\run-dev.cmd
 
 # 或分两个终端：
@@ -45,7 +45,7 @@ $env:VITE_API_BASE = "http://127.0.0.1:8766/api/v1"
 npm run dev
 ```
 
-`npm run tauri dev` 使用 `src-tauri\binaries` 里的 sidecar；该二进制目前仍是 V4.2 构建的。要测试 V4.3 的后端改动，请用上面的 Web 开发方式，或重新构建 sidecar。
+`npm run tauri dev` 使用 `src-tauri\binaries` 里的 sidecar；该二进制目前仍是 V4.2 构建的。要测试 V4.5 的后端改动，请用上面的 Web 开发方式，或重新构建 sidecar。
 
 ### 构建与检查
 
@@ -54,7 +54,7 @@ npm run build
 npm run check:modules
 npm run check:packages
 
-# 测试/ruff 也要把 V4.3 的 backend\src 放在最前
+# 测试/ruff 也要把 V4.5 的 backend\src 放在最前
 $env:PYTHONPATH = "$PWD\backend\src"
 backend\.venv\Scripts\python.exe -m pytest backend\tests -q
 backend\.venv\Scripts\python.exe -m ruff check backend

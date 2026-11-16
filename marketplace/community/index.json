@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1",
   "source": "community",
-  "generatedAt": "2026-11-01T15:44:44Z",
+  "generatedAt": "2026-11-16T15:06:14Z",
   "keyId": "dev-2026",
   "modules": [
     {
@@ -28,8 +28,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.alexandrebarachant.muselsl-0.1.0.ehmod",
-      "size": 18057,
-      "sha256": "0cda07687f4b49f001571b377ea33fc0eec0b12917a74b5a64174e00b6c32be8"
+      "size": 18099,
+      "sha256": "df4d4b52acafe529dd8811aa29989392035e9c08d1484e68e64c5b0cc7ebef87"
     },
     {
       "id": "io.github.apache.echarts",
@@ -50,8 +50,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.apache.echarts-0.1.0.ehmod",
-      "size": 15501,
-      "sha256": "1345343f2dd8fd179b6f014bdcc04883c8b08ab0902529bd5cff8bd6fe884175"
+      "size": 15574,
+      "sha256": "5e5be7c578896f988b6ab54af56436df32083f0804f8825123b1737a5d380761"
     },
     {
       "id": "io.github.blinry.habitctl",
@@ -73,8 +73,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.blinry.habitctl-0.1.0.ehmod",
-      "size": 18261,
-      "sha256": "69d8aa27ab19aa4e67945765c27ad96647ab5f1285bae0e58f7d8f668d326051"
+      "size": 18331,
+      "sha256": "feedccd078e2cd5f88831439788bf0d06365bc864db0ba5d7ad34dc23cf68d05"
     },
     {
       "id": "io.github.brainflow-dev.brainflow",
@@ -98,8 +98,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.brainflow-dev.brainflow-0.1.0.ehmod",
-      "size": 17857,
-      "sha256": "b4ebabce65de24462b55720c44e7c79dc301817004e013250e6840791d46294a"
+      "size": 17891,
+      "sha256": "1406a1b60ba0cd1f4ee0185009a68527181215c104dfbbbf7b1c907fa5cf902d"
     },
     {
       "id": "io.github.coddingtonbear.myfitnesspal",
@@ -125,8 +125,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.coddingtonbear.myfitnesspal-0.1.0.ehmod",
-      "size": 14150,
-      "sha256": "5760f36d2a169c57b1eb53272ecf65c826c718f588848853ffb4a902bb7654ea"
+      "size": 14190,
+      "sha256": "2ae629934bfd3a2559a2cab2c4d09ac4bdf917477c058cabc70cd9ce64cc370b"
     },
     {
       "id": "io.github.cyberjunky.garminconnect",
@@ -151,8 +151,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.cyberjunky.garminconnect-0.1.0.ehmod",
-      "size": 19744,
-      "sha256": "e698e13f498c9c185d4f10df1aad8f8fd03794a89eddc8fc55b2d8cfa7430cb3"
+      "size": 19827,
+      "sha256": "307c44dab49c7ea0443dc16a0c903077a3084ef4a16c4304a4bc25b61c3b8a17"
     },
     {
       "id": "io.github.dtcooper.fitparse",
@@ -176,8 +176,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.dtcooper.fitparse-0.1.0.ehmod",
-      "size": 17451,
-      "sha256": "f296d0c8ae7a95748c2d272108f583143eba1292a1c689f67f1e090d42b304b0"
+      "size": 17509,
+      "sha256": "16e901a27caedc9e80a7d95c5b057df48b38b2659ac0a6c5bb79e649219138f7"
     },
     {
       "id": "io.github.gagebenne.pydexcom",
@@ -201,8 +201,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.gagebenne.pydexcom-0.1.0.ehmod",
-      "size": 17905,
-      "sha256": "75dd93b0ad6c0d4851efd6e76de40a823324215ace3d6ed7f48d97cb23d989d7"
+      "size": 17943,
+      "sha256": "e61f9e61788d0920141f6fd9883fdd3d8d31b8fe2ddcc6b46835b82795b04b85"
     },
     {
       "id": "io.github.grubersjoe.activity-calendar",
@@ -223,8 +223,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.grubersjoe.activity-calendar-0.1.0.ehmod",
-      "size": 14295,
-      "sha256": "b70814913e92c0a36ed20f41035a5eed6af51f7e8bdf256b9f5d4e0fd44d2d4e"
+      "size": 14369,
+      "sha256": "e37b5736197856746aeb4427a92f8714c84215cbc9d2274c496088eabb9ee18d"
     },
     {
       "id": "io.github.hbldh.bleak",
@@ -248,8 +248,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.hbldh.bleak-0.1.0.ehmod",
-      "size": 19280,
-      "sha256": "3a42d56de2d89184580ed4d49d4eb38965553eeab59831bd7168f0454e253444"
+      "size": 19319,
+      "sha256": "31f8614e74b1cdc56c2d6b98f6a1c33e3e02a98e1412367406b0ec8c6fc4983f"
     },
     {
       "id": "io.github.jrnl-org.jrnl",
@@ -273,8 +273,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.jrnl-org.jrnl-0.1.0.ehmod",
-      "size": 19025,
-      "sha256": "6198789bc282eb8e329248c29059bc2196d1842b48d9f5120101b28b9dcaca02"
+      "size": 19104,
+      "sha256": "12c4c79c868073e1515d0df6394ac4952a8c2636a72a1c7f7dc288a7beb3ee05"
     },
     {
       "id": "io.github.leeoniya.uplot",
@@ -295,8 +295,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.leeoniya.uplot-0.1.0.ehmod",
-      "size": 13890,
-      "sha256": "ec3304e85f8816740087a381c88165ba105288b62b522b1717131716efcc90f3"
+      "size": 13961,
+      "sha256": "caaeec63a007dda4389162eabfab5048d0a562a4d0c0ccfe5c6587894c0508d2"
     },
     {
       "id": "io.github.observablehq.plot",
@@ -317,8 +317,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.observablehq.plot-0.1.0.ehmod",
-      "size": 14357,
-      "sha256": "0bde410b9624b9651bf516f164df1fcc6c5b2c222f0c614008b7920c7d63bd9a"
+      "size": 14423,
+      "sha256": "c25ddc5dc7c6eb0616000fcd1ed1ec0d6747af32385b10bdab90804e5ca4d650"
     },
     {
       "id": "io.github.openbci-archive.openbci",
@@ -342,8 +342,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.openbci-archive.openbci-0.1.0.ehmod",
-      "size": 16543,
-      "sha256": "f0a59806e83101127d922d8f95590d1fed09e4460921f08892f4da81641dffa4"
+      "size": 16579,
+      "sha256": "82ddf28ef85790c8a2c08f53a8dd0a5e2af2225fc7da633ed944e1ac22e466af"
     },
     {
       "id": "io.github.openfoodfacts.openfoodfacts",
@@ -368,8 +368,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.openfoodfacts.openfoodfacts-0.1.0.ehmod",
-      "size": 18411,
-      "sha256": "f3e211285ffe7220d540a8574f764db14a33695980d7da480587ed9c6c56505d"
+      "size": 18447,
+      "sha256": "30206c5c4aee7e737286af7654655bca004dc7980c5934d18fc4a6b7fd553cb7"
     },
     {
       "id": "io.github.orcasgit.fitbit",
@@ -395,8 +395,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.orcasgit.fitbit-0.1.0.ehmod",
-      "size": 18379,
-      "sha256": "b9c73daea0a90bf41acb0638045c789cc718b19e97e7d43b1adc14cad041959b"
+      "size": 18416,
+      "sha256": "4c1441bb13950116292c246120ee48a77520577fcb8a547b1cf1e429bd3dd295"
     },
     {
       "id": "io.github.pgomes92.pyhrv",
@@ -425,8 +425,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.pgomes92.pyhrv-0.1.0.ehmod",
-      "size": 23122,
-      "sha256": "dcf7ecffa0358374d11070156bab6c6372b3c572b7ea30306dd3e96d58e0bc55"
+      "size": 23355,
+      "sha256": "c787ceb60d9e03e0839f93340b43468ec8c273fe7d78ee5dc26db49f9be4b627"
     },
     {
       "id": "io.github.polyvertex.fitdecode",
@@ -450,8 +450,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.polyvertex.fitdecode-0.1.0.ehmod",
-      "size": 17008,
-      "sha256": "03ebcac454da3264f76190f182533e766a263290c612f575f59236c007fb891f"
+      "size": 17068,
+      "sha256": "87ac52ffd4723a73b93acebc558516585be8cfee696dc2abbc2f957e10433866"
     },
     {
       "id": "io.github.raphaelvallat.yasa",
@@ -480,8 +480,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.raphaelvallat.yasa-0.1.0.ehmod",
-      "size": 23771,
-      "sha256": "b2dc2bcc697b7fe9efaabf1bad1abb53a1bd61853da96ddce245b9f9ecfcca41"
+      "size": 24005,
+      "sha256": "aa826494c2a31fb7755355f8368605b61ba4bb1cda51bba97ec901fe7a8c60e8"
     },
     {
       "id": "io.github.stravalib.stravalib",
@@ -506,8 +506,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.stravalib.stravalib-0.1.0.ehmod",
-      "size": 18284,
-      "sha256": "2054a77c83e552574a0ccc4379d1846291b1d7f8198943d87f4c35570e967333"
+      "size": 18360,
+      "sha256": "bc3b9f22fb91a7591fda164af4d4e530c9a6dde3418c8eb292ddcfaf08a7cc0b"
     },
     {
       "id": "io.github.tremorlabs.tremor",
@@ -528,8 +528,8 @@
       ],
       "verified": false,
       "file": "modules/io.github.tremorlabs.tremor-0.1.0.ehmod",
-      "size": 13514,
-      "sha256": "830a9baf1040c9ab0778bed6b624f87dec6648024de7380f6bd9e673879797fb"
+      "size": 13580,
+      "sha256": "2df96da103f8b88d18464f719d974de7429d570c999f9a64221a6fc5b31bdcbe"
     },
     {
       "id": "io.github.vangorra.withings",
@@ -554,9 +554,9 @@
       ],
       "verified": false,
       "file": "modules/io.github.vangorra.withings-0.1.0.ehmod",
-      "size": 15585,
-      "sha256": "0afdf5495e9de35ee500574d65554b660eb1d86dea300195b793db5e1115d890"
+      "size": 15626,
+      "sha256": "12531c7efa2a7f99a05e2b1e5fa5de135454fd3c4ff17b66cd61a72809535a37"
     }
   ],
-  "signature": "Mne/FWd9Sm/lx3Y5ODy8LxmabL8XkvIZBAl6j2166cfgfYQgJiMjS1x788Oq03Vd6WGKpoZiJwlaldAxGY2hAA=="
+  "signature": "/rh6THOpyMo5wDIVYox4Wk9vcin5uwYw229lJxZ1BIYK+21t+PYUy4q8eYqxbvttdSlvNa3cyNnQhSGjOZhLDA=="
 }

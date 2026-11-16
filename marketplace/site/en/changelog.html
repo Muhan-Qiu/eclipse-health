@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Changelog · eclipse health</title>
-  <meta name="description" content="Full eclipse health changelog: what changed in V4, V4.1, V4.2 and V4.3.">
+  <meta name="description" content="Full eclipse health changelog: what changed in V4, V4.1, V4.2, V4.3 and V4.5.">
   <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/changelog.html">
   <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/changelog.html">
   <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/changelog.html">
@@ -60,7 +60,7 @@
           <p class="eyebrow">Changelog</p>
           <h1>What changed in each version</h1>
           <p>
-            Newest first, covering all V4, V4.1, V4.2 and V4.3 updates.
+            Newest first, covering all V4, V4.1, V4.2, V4.3 and V4.5 updates.
             Root-cause notes and verification records live under <code>docs/V4.x/</code> in the GitHub repository.
           </p>
         </div>
@@ -69,8 +69,29 @@
           <li>
             <details class="update-item" open>
               <summary class="update-head">
-                <span class="update-version">v4.3 · 0.1.3</span>
+                <span class="update-version">v4.5 · 0.2.0</span>
                 <span class="update-tag">Latest</span>
+                <time datetime="2026-11-16">2026-11-16</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>Fixed “Missing data: unknown” in the health score</strong>: missing categories now show as Sleep, Weight, Activity and Blood pressure, with dashed placeholder tiles for categories that have no data. Also fixed the <code>blood_pressure</code> / <code>blood-pressure</code> category id mismatch.</li>
+                <li><strong>Fixed module installs on Windows for packages with model weights</strong>: renaming a staging directory containing tens of megabytes of ONNX weights raised <code>WinError 5</code> for relay-ecg. The installer now moves files individually with retries; all 32 packages install, and relay-k2 completes a 30-minute ECG analysis.</li>
+                <li><strong>Full English localisation for scores and suggestions</strong>: <code>/scores</code> and <code>/suggestions</code> accept <code>lang=zh|en</code>; category labels, factors, missing items, disclaimer and suggestion text follow the requested language.</li>
+                <li><strong>All eight palettes rebuilt</strong>: The Starry Night, Sunflowers, The Great Wave, Morning Mist and Glaze are no longer just an accent swap. Each has complete light/dark tokens, ambient scenery (stars, warm glow, wave layers, mist, jade refraction) and a more convincing glass treatment, with WCAG AA contrast for body text and buttons.</li>
+                <li><strong>Layout and dashboard</strong>: clearer sidebar groups and active rail, breadcrumb topbar, consistent page header rhythm; compact empty-library shortcuts, five score tiles, a compact health-data empty state, equal-height cards and no horizontal overflow at 1024/1280/1440.</li>
+                <li><strong>Module center and workbench</strong>: compact status strip and a two-column workbench, with empty contributions shown as single-line hints instead of large empty cards; module search added; Cardia and Relay now have English and Chinese names, summaries, features, limits and widget titles.</li>
+                <li><strong>Record detail and waveform</strong>: the overview strip is now a 60 px dual-canvas with a symmetric envelope, centre baseline and drag handles; abnormal-beat labels avoid collisions with a minimum spacing and two-row layout; analysis metrics, warning list and beat list were reworked.</li>
+                <li><strong>Import and developer experience</strong>: added English and Chinese text for 23 vendor/SCP/EDF/WFDB warning codes; fixed the Geist font 403 in dev mode.</li>
+                <li><strong>Version unified at 0.2.0</strong> (app / Tauri / backend / UI), with all 32 module packages and the marketplace index rebuilt.</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.3 · 0.1.3</span>
+                <span class="update-tag">Released</span>
                 <time datetime="2026-11-08">2026-11-08</time>
               </summary>
               <ul class="update-points">

@@ -1,11 +1,11 @@
 {
   "algorithm": "sha256",
   "files": {
-    "LICENSE": "700f2f91dee11e98fcda793c22c4c52524a059f89c17047244ebbca42563e6c7",
-    "NOTICE": "58d987eb2d85340cf95320a251fa8067d3f68f35412ffc8aa26bfd7aeebfea1f",
-    "README.md": "26db6d6385efde8ae36084b2adccbe49993dfb8ff8abe08642d6085b0e6f53ce",
-    "module.json": "ec76c5e35bce00bf1b033677966260e92bd6e5be9380a51ee810c3917e09d1e2",
-    "src/__pycache__/adapter.cpython-312.pyc": "fda830ee5520f6c2034f39dd1bb0324c3b4ccf8244133e3a55c5a4e1d7e95518",
+    "LICENSE": "438bb5d7ade836534cb988100199c61a68cbdf6c0552e1420347d1e49bea83a4",
+    "NOTICE": "fa7df6e7ac151b7b6dad256a77fdb08620b99a6aa751dc4344fa40519df2015c",
+    "README.md": "f66c826c66cdedc250044e471944a6636982c145dbb3bfece2044b4b8e363379",
+    "module.json": "d7177af6852f496c98fa1b6629bde49ad455af2ba6628d1cb580b85f24fe8812",
+    "src/__pycache__/adapter.cpython-312.pyc": "4bd64612658ea6b93951cd3c13978a29a7057748c05ae0e3c184a6aa33477f72",
     "src/adapter.py": "13010f5e2835efc59c61049b19cdb103dd9e7a774882585e7134810b316f323b",
     "src/main.py": "bbf9882969dc77c903018f96065b1005148fd84fd0ff0553dcfa72990bad2ee1"
   }

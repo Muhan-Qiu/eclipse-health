@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>更新日志 · eclipse health</title>
-  <meta name="description" content="eclipse health 全部版本的更新日志：V4、V4.1、V4.2、V4.3 的新增、修复与已知限制。">
+  <meta name="description" content="eclipse health 全部版本的更新日志：V4、V4.1、V4.2、V4.3、V4.5 的新增、修复与已知限制。">
   <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/changelog.html">
   <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/changelog.html">
   <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/changelog.html">
@@ -60,7 +60,7 @@
           <p class="eyebrow">更新日志</p>
           <h1>每个版本改了什么</h1>
           <p>
-            按时间倒序，包含 V4、V4.1、V4.2、V4.3 的全部更新记录。
+            按时间倒序，包含 V4、V4.1、V4.2、V4.3、V4.5 的全部更新记录。
             更细的根因与验证记录在 GitHub 仓库的 <code>docs/V4.x/</code> 下。
           </p>
         </div>
@@ -69,8 +69,29 @@
           <li>
             <details class="update-item" open>
               <summary class="update-head">
-                <span class="update-version">v4.3 · 0.1.3</span>
+                <span class="update-version">v4.5 · 0.2.0</span>
                 <span class="update-tag">最新</span>
+                <time datetime="2026-11-16">2026-11-16</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>修复健康评分「缺数据：unknown」</strong>：按接口契约显示「睡眠、体重、活动、血压」，缺失分类显示虚线占位卡；同时修正 <code>blood_pressure</code> 与 <code>blood-pressure</code> 的分类 id 不一致。</li>
+                <li><strong>修复 Windows 上带模型权重的模块无法安装</strong>：relay-ecg 等包含数十 MB ONNX 权重时，目录整体重命名会触发 <code>WinError 5</code>；改为逐文件搬移并带重试。32 个模块包现已全部可安装，relay-k2 可正常分析 30 分钟记录。</li>
+                <li><strong>英文评分与建议完整本地化</strong>：<code>/scores</code>、<code>/suggestions</code> 支持 <code>lang=zh|en</code>，分类、因子、缺数据项、免责声明与建议文案随语言返回。</li>
+                <li><strong>8 套主题全部重做</strong>：星夜、向日葵、神奈川冲浪里、晨雾、琉璃不再只是换强调色；每套都有完整的亮/暗令牌、空间氛围（星点、暖光、浪层、雾面、青玉折光）与更真实的玻璃质感，正文与按钮对比度通过 WCAG AA。</li>
+                <li><strong>布局与仪表盘</strong>：侧栏分组与当前项指示条、顶栏面包屑、页面头部节奏统一；仪表盘空库快捷入口、5 个评分瓦片铺满、健康数据空状态压缩、同排卡片等高，1024/1280/1440 无横向溢出。</li>
+                <li><strong>模块中心与工作台</strong>：工作台改为紧凑状态条 + 左右两栏，空贡献点不再用大卡片占满；模块中心新增搜索；Cardia 与 Relay 模块补齐中英文名称、简介、功能、限制与卡片标题。</li>
+                <li><strong>记录详情与波形</strong>：节律条改为 60px 双层 canvas、对称包络、中心基线与拖动手柄；异常搏动标注按最小间距与两行错位避免重叠；分析面板指标卡、警告列表与心搏列表重排。</li>
+                <li><strong>导入与开发体验</strong>：补齐 23 个厂商/SCP/EDF/WFDB 警告码的中英文案；修复开发模式 Geist 字体 403。</li>
+                <li><strong>版本号统一为 0.2.0</strong>（应用 / Tauri / 后端 / 前端展示），32 个模块包与市场索引已重建。</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.3 · 0.1.3</span>
+                <span class="update-tag">已发布</span>
                 <time datetime="2026-11-08">2026-11-08</time>
               </summary>
               <ul class="update-points">
