@@ -1,6 +1,7 @@
 import "./i18n";
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowUpCircle, PackagePlus } from "lucide-react";
@@ -63,6 +64,7 @@ function runAction(moduleId: string, action: ModuleAction): Promise<ModuleSummar
 export function ModulesWorkspace() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [installOpen, setInstallOpen] = useState(false);
   const [installTab, setInstallTab] = useState<MarketplaceTab>("official");
@@ -236,6 +238,9 @@ export function ModulesWorkspace() {
         loading={modulesQuery.isLoading}
         busy={actionBusy}
         onAction={(module, action) => actionMutation.mutate({ module, action })}
+        onOpen={(module) =>
+          navigate(`/modules/${encodeURIComponent(module.id)}`)
+        }
         onDetails={(module) => setDetailId(module.id)}
         onUninstall={(module) => setUninstallTarget(module)}
         onRefresh={() => void modulesQuery.refetch()}

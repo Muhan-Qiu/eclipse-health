@@ -57,7 +57,7 @@ SYSTEM_PROMPT = """你是 eclipse health 的本地分析助手，帮助用户理
 6. 用简体中文回答；用户使用其他语言时跟随用户语言。
 7. 工具可以读取摘要与测量值，读不到波形、备注和成员信息，不要假装能看到；create_dashboard_card 只生成待确认的卡片草稿，不会直接保存，只有用户明确同意后才能调用 confirm_dashboard_card。
 8. 分析控制工具（start_analysis / cancel_analysis / retry_analysis / pause_analysis_queue / resume_analysis_queue / recover_stuck_analyses）会改变本机任务状态：只有用户明确要求时才调用；调用后如实说明结果，不要连续自动重试。用户反馈「分析卡住/一直 40%/不能分析」时，先用 get_analysis_queue 诊断，再按需取消、修复或重试。
-9. 以 m_ 开头的工具由已安装的第三方模块提供，结果仅供参考；与内置工具冲突时以内置结果为准。
+9. 以 m_ 开头的工具由已安装的第三方模块提供，结果仅供参考；与内置工具冲突时以内置结果为准。如果本轮用户选择了模块，优先调用这些模块的工具；其他已安装模块的工具仍然可用，但不要主动扩大范围。
 10. 免责声明由界面统一展示（仅供参考，不构成医学诊断），回答中不要重复；语气直接、务实，像一位懂数据的助手。"""
 
 COACH_SYSTEM_PROMPT = """你是 eclipse health 的本地健康教练，用数据与用户偏好帮助其建立可持续的生活方式。
@@ -346,6 +346,72 @@ def build_transparency(
     }
 
 
+SELECTED_MODULE_DESCRIPTION_LIMIT = 300
+SELECTED_MODULE_NAME_LIMIT = 120
+
+
+def _clip_prompt_value(value: Any, limit: int) -> str:
+    """压缩空白并按字符上限截断，避免第三方文案撑大提示词。"""
+    text = " ".join(str(value or "").split())
+    return text[:limit]
+
+
+def _render_selected_modules(selected_modules: list[dict[str, Any]] | None) -> str:
+    """渲染本轮用户选择的模块；没有有效条目时返回空串。"""
+    if not selected_modules:
+        return ""
+    lines = ["本轮用户选择的模块（优先调用它们的工具；其他已安装模块的工具仍可用）："]
+    for module in selected_modules:
+        if not isinstance(module, dict):
+            continue
+        module_id = _clip_prompt_value(module.get("id"), SELECTED_MODULE_NAME_LIMIT)
+        if not module_id:
+            continue
+        name = (
+            _clip_prompt_value(module.get("name"), SELECTED_MODULE_NAME_LIMIT) or module_id
+        )
+        module_type = _clip_prompt_value(module.get("type"), 60)
+        header = f"- {name} ({module_id})"
+        if module_type:
+            header += f" · {module_type}"
+        lines.append(header)
+
+        description = _clip_prompt_value(
+            module.get("description"), SELECTED_MODULE_DESCRIPTION_LIMIT
+        )
+        if description:
+            lines.append(f"  说明：{description}")
+
+        tools = [
+            item
+            for item in (module.get("tools") or [])
+            if isinstance(item, dict) and item.get("id")
+        ]
+        if tools:
+            rendered = "、".join(
+                f"{_clip_prompt_value(item.get('name') or item.get('id'), SELECTED_MODULE_NAME_LIMIT)}"
+                f" ({_clip_prompt_value(item.get('id'), SELECTED_MODULE_NAME_LIMIT)})"
+                for item in tools
+            )
+            lines.append(f"  工具：{rendered}")
+        else:
+            lines.append("  工具：该模块没有向 Agent 暴露工具，可在模块工作台使用")
+
+        pages = [
+            item
+            for item in (module.get("pages") or [])
+            if isinstance(item, dict) and item.get("id")
+        ]
+        if pages:
+            rendered = "、".join(
+                f"{_clip_prompt_value(item.get('title') or item.get('id'), SELECTED_MODULE_NAME_LIMIT)}"
+                f" ({_clip_prompt_value(item.get('id'), SELECTED_MODULE_NAME_LIMIT)})"
+                for item in pages
+            )
+            lines.append(f"  页面：{rendered}")
+    return "\n".join(lines) if len(lines) > 1 else ""
+
+
 def build_messages(
     *,
     context_text: str,
@@ -354,6 +420,7 @@ def build_messages(
     style: str,
     mode: str | None = None,
     coach_context: dict[str, Any] | None = None,
+    selected_modules: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     style_instruction = STYLE_INSTRUCTIONS.get(style, STYLE_INSTRUCTIONS["brief"])
     if mode == "coach":
@@ -371,6 +438,9 @@ def build_messages(
             f"{SYSTEM_PROMPT}\n\n回答风格：{style_instruction}\n\n"
             f"本地上下文（只读，可能为空）：\n{context_text}"
         )
+    selected_block = _render_selected_modules(selected_modules)
+    if selected_block:
+        system = f"{system}\n\n{selected_block}"
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     messages.extend(history[-MAX_HISTORY_MESSAGES:])
     messages.append({"role": "user", "content": content})

@@ -24,6 +24,27 @@ STATUS_COMPLETED = "completed"
 STATUS_ERROR = "error"
 STATUS_CANCELLED = "cancelled"
 
+MAX_MODULE_IDS = 32
+
+
+def normalize_module_ids(values: Any) -> list[str]:
+    """去重、去掉空串、保持用户顺序，最多 ``MAX_MODULE_IDS`` 个。"""
+    if not values or isinstance(values, str) or not isinstance(values, (list, tuple, set)):
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        cleaned = value.strip()
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        normalized.append(cleaned)
+        if len(normalized) >= MAX_MODULE_IDS:
+            break
+    return normalized
+
 
 def new_session_id() -> str:
     return f"lsn_{uuid7()}"
@@ -95,6 +116,7 @@ def session_to_dict(row: AssistantSessionTable, *, message_count: int = 0) -> di
         "createdAt": row.created_at.isoformat(),
         "updatedAt": row.updated_at.isoformat(),
         "hasNotes": bool(data.get("hasNotes", False)),
+        "moduleIds": data.get("moduleIds") or [],
     }
 
 
@@ -106,6 +128,7 @@ def create_session(
     provider_id: str | None = None,
     style: str = "brief",
     record_id: str | None = None,
+    module_ids: list[str] | None = None,
     session_id: str | None = None,
 ) -> AssistantSessionTable:
     now = utc_now()
@@ -116,7 +139,7 @@ def create_session(
         provider_id=provider_id,
         style=style,
         record_id=record_id,
-        data={},
+        data={"moduleIds": normalize_module_ids(module_ids)},
         created_at=to_storage_dt(now),
         updated_at=to_storage_dt(now),
     )
@@ -208,6 +231,7 @@ def touch_session(
     style: str | None = None,
     record_id: str | None = None,
     has_notes: bool | None = None,
+    module_ids: list[str] | None = None,
     commit: bool = True,
 ) -> AssistantSessionTable:
     if title is not None and title.strip():
@@ -218,9 +242,12 @@ def touch_session(
         row.style = style
     if record_id is not None:
         row.record_id = record_id
-    if has_notes is not None:
+    if has_notes is not None or module_ids is not None:
         data = dict(row.data or {})
-        data["hasNotes"] = bool(has_notes)
+        if has_notes is not None:
+            data["hasNotes"] = bool(has_notes)
+        if module_ids is not None:
+            data["moduleIds"] = normalize_module_ids(module_ids)
         row.data = data
     row.updated_at = to_storage_dt(utc_now())
     session.add(row)
@@ -269,6 +296,7 @@ def message_to_dict(
         "usage": data.get("usage"),
         "durationMs": data.get("durationMs"),
         "model": data.get("model"),
+        "moduleIds": data.get("moduleIds") or [],
         "createdAt": row.created_at.isoformat(),
     }
 
@@ -439,6 +467,7 @@ def history_for_prompt(
 
 
 __all__ = [
+    "MAX_MODULE_IDS",
     "ROLE_ASSISTANT",
     "ROLE_USER",
     "STATUS_CANCELLED",
@@ -463,6 +492,7 @@ __all__ = [
     "new_message_id",
     "new_session_id",
     "new_tool_call_id",
+    "normalize_module_ids",
     "rename_session",
     "search_session_rows",
     "session_to_dict",

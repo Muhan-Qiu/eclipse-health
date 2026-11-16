@@ -23,6 +23,8 @@ const zh = {
     permissionCount: "{{count}} 项权限",
     installedAt: "安装于 {{date}}",
     actions: {
+      open: "打开",
+      openWorkbench: "打开工作台",
       start: "启动",
       stop: "停止",
       enable: "启用",
@@ -369,6 +371,8 @@ const en = {
     permissionCount: "{{count}} permissions",
     installedAt: "Installed {{date}}",
     actions: {
+      open: "Open",
+      openWorkbench: "Open workbench",
       start: "Start",
       stop: "Stop",
       enable: "Enable",

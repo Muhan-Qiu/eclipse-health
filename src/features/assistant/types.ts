@@ -111,6 +111,8 @@ export interface AssistantSession {
   createdAt: string;
   updatedAt: string;
   hasNotes: boolean;
+  /** 会话上次选择的模块；旧后端可能不返回。 */
+  moduleIds?: string[];
 }
 
 export interface ToolCallTrace {
@@ -145,6 +147,9 @@ export interface Transparency {
   toolCalls: number;
   usage?: Usage | null;
   localOnly: boolean;
+  /** 后端补充：本轮优先使用的模块与工具。 */
+  selectedModules?: string[];
+  selectedModuleTools?: string[];
 }
 
 export interface ChatMessage {
@@ -162,6 +167,8 @@ export interface ChatMessage {
   usage?: Usage | null;
   durationMs?: number | null;
   model?: string | null;
+  /** 用户消息回显：本轮选择的模块。 */
+  moduleIds?: string[];
   /** 服务端消息 ID（流式开始时由 start 事件带回）。 */
   serverId?: string;
   createdAt: string;
@@ -185,6 +192,8 @@ export interface SendMessageBody {
   mode?: AssistantMode;
   /** 可选城市，仅教练模式用于天气。 */
   city?: string | null;
+  /** 优先使用的模块；不传时后端使用全量工具。 */
+  moduleIds?: string[];
 }
 
 export type StreamEvent =

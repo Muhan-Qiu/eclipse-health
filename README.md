@@ -2,7 +2,7 @@
 
 本地优先的桌面健康应用：导入 ECG、用 Cardia 模型做分析、把记录/趋势/报告放在一个离线可用的界面里。数据保存在本机，没有遥测。
 
-当前版本 `0.1.0`，面向 Windows 桌面端（Tauri 2 + React 19 + TypeScript，后端为本地 Python sidecar）。
+当前版本 `0.1.3`，面向 Windows 桌面端（Tauri 2 + React 19 + TypeScript，后端为本地 Python sidecar）。
 
 ## 功能范围
 
@@ -12,7 +12,8 @@
 - **趋势与对比**：按时间查看指标变化，记录之间对比。
 - **报告**：生成 PDF / PNG 报告并保存到本地。
 - **助手**：可选接 OpenAI、Anthropic 或本地 Ollama；API Key 以 Windows DPAPI 加密存储。只向模型发送摘要与测量，不发送波形、备注或成员姓名。
-- **模块**：安装/卸载 `.ehmod` 模块（含官方 Cardia 分析模块），查看权限与审计日志；模块通过 stdio JSON-RPC 在独立进程中运行。
+- **模块**：安装/卸载 `.ehmod` 模块（含官方 Cardia 分析模块），查看权限与审计日志；每个已安装模块都有独立工作台（`/modules/:id`），侧栏可直达，工作台内可查看声明式页面、仪表盘卡片、模型卡、试运行模块工具、管理权限与审计；模块通过 stdio JSON-RPC 在独立进程中运行。
+- **助手模块选择**：对话输入区「+」可选择本轮优先使用的模块；所选模块的工具会排在工具目录前面并写入系统提示词，其他已安装模块的工具仍然可用。
 - **数据管理**：ZIP / JSON / CSV 备份与恢复、隐私清理、诊断日志导出。
 
 ## 安装与运行
@@ -21,23 +22,40 @@
 
 安装包（NSIS/MSI/免安装 ZIP）由发布轮统一构建；安装后直接启动 `eclipse health`，后端 sidecar 会自动在 `127.0.0.1:8765` 启动。
 
-### 从源码运行
+### 从源码运行（V4.3）
+
+本目录就是 V4.3 应用端。`node_modules`、`backend\.venv`、`src-tauri\binaries`、`src-tauri\target` 通过 Windows 目录联接共享 V4.2 的依赖/构建缓存，避免重复占用空间。共享 venv 里的 editable 路径仍指向 V4.2，所以**必须用下面的脚本启动后端**，确保加载的是 V4.3 的 `backend\src`。
 
 ```powershell
-# 后端（项目根目录执行，依赖已在 backend/.venv）
-backend\.venv\Scripts\python.exe -m uvicorn eclipse_health_backend.app:app --host 127.0.0.1 --port 8765
+# 一键：新窗口启动 V4.3 后端 + 当前窗口启动前端
+.\run-dev.cmd
 
-# 前端 Web 预览（另一个终端）
-npm run dev                 # http://localhost:1420
-
-# 桌面端开发（Tauri 会自动拉起上面的后端命令）
-npm run tauri dev
+# 或分两个终端：
+.\run-backend.cmd          # 或 npm run backend
+npm run dev                # http://localhost:1420
 ```
+
+如果 8765 已被另一个后端占用（例如已安装的 V4.2 应用仍在运行），用 8766 测试：
+
+```powershell
+.\run-dev-8766.cmd
+# 或
+.\run-backend-8766.cmd
+$env:VITE_API_BASE = "http://127.0.0.1:8766/api/v1"
+npm run dev
+```
+
+`npm run tauri dev` 使用 `src-tauri\binaries` 里的 sidecar；该二进制目前仍是 V4.2 构建的。要测试 V4.3 的后端改动，请用上面的 Web 开发方式，或重新构建 sidecar。
 
 ### 构建与检查
 
 ```powershell
-npm run build                                        # tsc + vite build，产物在 dist/
+npm run build
+npm run check:modules
+npm run check:packages
+
+# 测试/ruff 也要把 V4.3 的 backend\src 放在最前
+$env:PYTHONPATH = "$PWD\backend\src"
 backend\.venv\Scripts\python.exe -m pytest backend\tests -q
 backend\.venv\Scripts\python.exe -m ruff check backend
 ```

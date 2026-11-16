@@ -131,6 +131,7 @@ export const assistantApi = {
       providerId?: string | null;
       style?: string;
       recordId?: string | null;
+      moduleIds?: string[];
     }): Promise<AssistantSession> =>
       requestJson<AssistantSession>("/assistant/sessions", "POST", input),
     rename: (id: string, title: string): Promise<AssistantSession> =>

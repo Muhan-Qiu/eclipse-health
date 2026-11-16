@@ -188,6 +188,8 @@ def test_summary_empty_and_with_analysis(
     record = create_ecg_record(
         client,
         default_member["id"],
+        # 固定日期会在 7 天窗口外导致测试随时间失效；这里显式落在窗口内。
+        captured_at=_iso(1),
         quality={"score": 0.9, "level": "good", "warnings": [], "segments": []},
     )
     seed_analysis(record["id"], hr=64.0, rmssd=45.0)

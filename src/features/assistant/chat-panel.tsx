@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
+  Check,
   ChevronUp,
   CircleAlert,
   CloudSun,
@@ -10,9 +11,11 @@ import {
   FileText,
   LoaderCircle,
   MessageSquare,
+  Plus,
   Send,
   ShieldCheck,
   Square,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +30,14 @@ import { EmptyState } from "@/components/common/empty-state";
 import { MarkdownText } from "@/components/common/markdown";
 import { Input } from "@/components/ui/input";
 import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,6 +48,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "cn";
 import { intlLocale } from "@/lib/i18n";
+import { moduleDisplayName } from "@/features/modules/copy";
+import { moduleTypeLabel } from "@/features/modules/format";
+import type { ModuleSummary } from "@/features/modules/types";
 import type { HealthRecord } from "@/lib/api/types";
 import { ToolTrace } from "./tool-trace";
 import type {
@@ -159,6 +173,173 @@ function CitationChips({ message }: { message: ChatMessage }) {
   );
 }
 
+interface ModulePickerProps {
+  modules: ModuleSummary[];
+  moduleTools: Record<string, number>;
+  loading: boolean;
+  selectedModuleIds: string[];
+  onToggle: (id: string) => void;
+  onClear: () => void;
+}
+
+function ModulePicker({
+  modules,
+  moduleTools,
+  loading,
+  selectedModuleIds,
+  onToggle,
+  onClear,
+}: ModulePickerProps) {
+  const { t, i18n } = useTranslation();
+  const [query, setQuery] = useState("");
+  const normalized = query.trim().toLowerCase();
+  const filtered = normalized
+    ? modules.filter(
+        (module) =>
+          module.id.toLowerCase().includes(normalized) ||
+          moduleDisplayName(i18n.language, module.id, module.name)
+            .toLowerCase()
+            .includes(normalized),
+      )
+    : modules;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label={t("assistant.chat.modules.add")}
+          title={t("assistant.chat.modules.add")}
+        >
+          <Plus aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80">
+        <PopoverHeader>
+          <PopoverTitle>{t("assistant.chat.modules.title")}</PopoverTitle>
+          <PopoverDescription className="eh-caption">
+            {t("assistant.chat.modules.description")}
+          </PopoverDescription>
+        </PopoverHeader>
+
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("assistant.chat.modules.searchPlaceholder")}
+          aria-label={t("assistant.chat.modules.searchPlaceholder")}
+          className="h-8"
+        />
+
+        <div className="max-h-64 overflow-y-auto">
+          {loading ? (
+            <p className="eh-caption flex items-center justify-center gap-1.5 px-2 py-3 text-muted-foreground">
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+              {t("assistant.chat.modules.loading")}
+            </p>
+          ) : filtered.length === 0 ? (
+            <p className="eh-caption px-2 py-3 text-center text-muted-foreground">
+              {modules.length === 0
+                ? t("assistant.chat.modules.empty")
+                : t("assistant.chat.modules.noMatch")}
+            </p>
+          ) : (
+            <ul className="space-y-0.5">
+              {filtered.map((module) => {
+                const selected = selectedModuleIds.includes(module.id);
+                const toolCount = moduleTools[module.id] ?? 0;
+                return (
+                  <li key={module.id}>
+                    <button
+                      type="button"
+                      onClick={() => onToggle(module.id)}
+                      aria-pressed={selected}
+                      className={cn(
+                        "flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted",
+                        selected && "bg-accent-soft",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border",
+                        )}
+                        aria-hidden="true"
+                      >
+                        {selected ? <Check className="size-3" /> : null}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-medium">
+                            {moduleDisplayName(i18n.language, module.id, module.name)}
+                          </span>
+                          <span className="shrink-0 rounded-full border border-border/70 px-1.5 text-[10px] text-muted-foreground">
+                            {moduleTypeLabel(t, module.type)}
+                          </span>
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {toolCount > 0
+                            ? t("assistant.chat.modules.toolCount", { count: toolCount })
+                            : t("assistant.chat.modules.noTools")}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {selectedModuleIds.length > 0 ? (
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
+            <span className="eh-caption text-muted-foreground">
+              {t("assistant.chat.modules.selected", {
+                count: selectedModuleIds.length,
+              })}
+            </span>
+            <Button variant="ghost" size="xs" onClick={onClear}>
+              {t("assistant.chat.modules.clear")}
+            </Button>
+          </div>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function MessageModuleChips({
+  moduleIds,
+  modules,
+}: {
+  moduleIds: string[];
+  modules: ModuleSummary[];
+}) {
+  const { t, i18n } = useTranslation();
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center justify-end gap-1">
+      <span className="eh-caption mr-0.5 text-muted-foreground">
+        {t("assistant.chat.modules.selectedBadge")}
+      </span>
+      {moduleIds.map((id) => {
+        const module = modules.find((item) => item.id === id);
+        return (
+          <Badge
+            key={id}
+            variant="outline"
+            className="font-normal text-muted-foreground"
+            title={id}
+          >
+            {module ? moduleDisplayName(i18n.language, id, module.name) : id}
+          </Badge>
+        );
+      })}
+    </div>
+  );
+}
+
 function MessageMeta({ message }: { message: ChatMessage }) {
   const { t } = useTranslation();
   const parts: string[] = [];
@@ -188,10 +369,11 @@ function MessageMeta({ message }: { message: ChatMessage }) {
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  modules: ModuleSummary[];
   onOpenTransparency: (message: ChatMessage) => void;
 }
 
-function MessageBubble({ message, onOpenTransparency }: MessageBubbleProps) {
+function MessageBubble({ message, modules, onOpenTransparency }: MessageBubbleProps) {
   const { t } = useTranslation();
   const isUser = message.role === "user";
 
@@ -200,6 +382,9 @@ function MessageBubble({ message, onOpenTransparency }: MessageBubbleProps) {
       <div className="flex justify-end">
         <div className="max-w-[88%] rounded-2xl rounded-br-md border border-primary/20 bg-accent-soft px-4 py-2.5">
           <p className="text-sm leading-6 whitespace-pre-wrap">{message.content}</p>
+          {message.moduleIds && message.moduleIds.length > 0 ? (
+            <MessageModuleChips moduleIds={message.moduleIds} modules={modules} />
+          ) : null}
         </div>
       </div>
     );
@@ -276,6 +461,7 @@ export interface ChatPanelProps {
     includeNotes: boolean;
     mode: AssistantMode;
     city?: string;
+    moduleIds?: string[];
   }) => void;
   onStop: () => void;
   onOpenTransparency: (message: ChatMessage) => void;
@@ -296,6 +482,12 @@ export interface ChatPanelProps {
   onCityChange: (city: string) => void;
   weather: CoachWeather | null;
   weatherLoading: boolean;
+  modules: ModuleSummary[];
+  moduleTools: Record<string, number>;
+  modulesLoading: boolean;
+  selectedModuleIds: string[];
+  onToggleModule: (id: string) => void;
+  onClearModules: () => void;
 }
 
 export function ChatPanel({
@@ -327,6 +519,12 @@ export function ChatPanel({
   onCityChange,
   weather,
   weatherLoading,
+  modules,
+  moduleTools,
+  modulesLoading,
+  selectedModuleIds,
+  onToggleModule,
+  onClearModules,
 }: ChatPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = intlLocale(i18n.language);
@@ -356,6 +554,7 @@ export function ChatPanel({
       includeNotes,
       mode,
       city: mode === "coach" && city.trim() ? city.trim() : undefined,
+      moduleIds: selectedModuleIds,
     });
     setContent("");
   };
@@ -477,6 +676,7 @@ export function ChatPanel({
                   <MessageBubble
                     key={message.id}
                     message={message}
+                    modules={modules}
                     onOpenTransparency={onOpenTransparency}
                   />
                 ))
@@ -512,6 +712,50 @@ export function ChatPanel({
                     {preset.label}
                   </button>
                 ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <ModulePicker
+                  modules={modules}
+                  moduleTools={moduleTools}
+                  loading={modulesLoading}
+                  selectedModuleIds={selectedModuleIds}
+                  onToggle={onToggleModule}
+                  onClear={onClearModules}
+                />
+                {selectedModuleIds.length > 0 ? (
+                  <>
+                    <span className="eh-caption text-muted-foreground">
+                      {t("assistant.chat.modules.selected", {
+                        count: selectedModuleIds.length,
+                      })}
+                    </span>
+                    {selectedModuleIds.map((id) => {
+                      const module = modules.find((item) => item.id === id);
+                      const label = module
+                        ? moduleDisplayName(i18n.language, id, module.name)
+                        : id;
+                      return (
+                        <Badge
+                          key={id}
+                          variant="secondary"
+                          className="gap-0.5 pr-1 font-normal"
+                          title={id}
+                        >
+                          <span className="max-w-40 truncate">{label}</span>
+                          <button
+                            type="button"
+                            onClick={() => onToggleModule(id)}
+                            aria-label={`${t("assistant.chat.modules.remove")}: ${label}`}
+                            className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+                          >
+                            <X className="size-3" aria-hidden="true" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </>
+                ) : null}
               </div>
 
               <Textarea

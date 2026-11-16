@@ -33,6 +33,7 @@ export interface AssistantData {
     providerId?: string | null;
     style?: string;
     recordId?: string | null;
+    moduleIds?: string[];
   }) => Promise<AssistantSession | null>;
   renameSession: (id: string, title: string) => Promise<boolean>;
   deleteSession: (id: string) => Promise<void>;
@@ -198,6 +199,7 @@ export function useAssistantData(): AssistantData {
       providerId?: string | null;
       style?: string;
       recordId?: string | null;
+      moduleIds?: string[];
     }) => {
       try {
         const created = await assistantApi.sessions.create(input);

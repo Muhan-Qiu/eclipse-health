@@ -82,6 +82,7 @@ class SessionIn(BaseModel):
     providerId: str | None = Field(default=None, max_length=64)
     style: StyleName = "brief"
     recordId: str | None = Field(default=None, max_length=64)
+    moduleIds: list[str] = Field(default_factory=list, max_length=32)
 
 
 class SessionPatch(BaseModel):
@@ -94,6 +95,7 @@ class MessageIn(BaseModel):
     providerId: str = Field(min_length=1, max_length=64)
     recordId: str | None = Field(default=None, max_length=64)
     includeNotes: bool = False
+    moduleIds: list[str] = Field(default_factory=list, max_length=32)
 
 
 class MessageListOut(BaseModel):
@@ -152,6 +154,105 @@ def _message_payload(row: Any, calls: list[Any]) -> dict[str, Any]:
     data = row.data or {}
     payload["transparency"] = data.get("transparency")
     return payload
+
+
+def _resolve_module_ids(module_ids: list[str]) -> list[str]:
+    """校验本轮所选模块：未知/禁用返回 422；模块系统不可用时降级为空列表。"""
+    normalized = assistant_repo.normalize_module_ids(module_ids)
+    if not normalized:
+        return []
+    try:
+        from ..modules.api import get_manager
+
+        summaries = get_manager().list_modules()
+    except Exception:  # 模块系统缺失不应让整轮对话 500
+        logger.warning("module registry unavailable; ignoring moduleIds", exc_info=True)
+        return []
+    if not isinstance(summaries, list):
+        logger.warning("module registry returned unexpected payload")
+        return []
+
+    known = {
+        item.get("id"): item
+        for item in summaries
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    resolved: list[str] = []
+    for module_id in normalized:
+        summary = known.get(module_id)
+        if summary is None:
+            raise InvalidInputError("module not found", code="module_not_found")
+        if summary.get("enabled") is False:
+            raise InvalidInputError("module is disabled", code="module_disabled")
+        resolved.append(module_id)
+    return resolved
+
+
+def _selected_module_briefs(module_ids: list[str]) -> list[dict[str, Any]]:
+    """汇总所选模块的名称、工具与页面，供提示词与透明面板使用。"""
+    if not module_ids:
+        return []
+    try:
+        from ..modules.api import get_manager
+        from ..modules.contributions import collect_contributions
+
+        manager = get_manager()
+        summaries = manager.list_modules()
+        tools_payload = collect_contributions(manager, kind="tools")
+        pages_payload = collect_contributions(manager, kind="pages")
+    except Exception:  # 模块系统不可用时对话照常进行
+        logger.warning("selected module briefs unavailable", exc_info=True)
+        return []
+
+    if not isinstance(summaries, list):
+        return []
+    tools = tools_payload.get("items") if isinstance(tools_payload, dict) else []
+    pages = pages_payload.get("items") if isinstance(pages_payload, dict) else []
+    tools = tools if isinstance(tools, list) else []
+    pages = pages if isinstance(pages, list) else []
+    known = {
+        item.get("id"): item
+        for item in summaries
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+
+    briefs: list[dict[str, Any]] = []
+    for module_id in module_ids:
+        summary = known.get(module_id)
+        if summary is None:
+            continue
+        module_tools = [
+            {
+                "id": str(item.get("id")),
+                "name": str(item.get("name") or item.get("id")),
+                "description": str(item.get("description") or ""),
+            }
+            for item in tools
+            if isinstance(item, dict)
+            and item.get("moduleId") == module_id
+            and item.get("id")
+        ]
+        module_pages = [
+            {
+                "id": str(item.get("id")),
+                "title": str(item.get("title") or item.get("id")),
+            }
+            for item in pages
+            if isinstance(item, dict)
+            and item.get("moduleId") == module_id
+            and item.get("id")
+        ]
+        briefs.append(
+            {
+                "id": module_id,
+                "name": str(summary.get("name") or module_id),
+                "description": str(summary.get("description") or ""),
+                "type": str(summary.get("type") or ""),
+                "tools": module_tools,
+                "pages": module_pages,
+            }
+        )
+    return briefs
 
 
 # --------------------------------------------------------------------------- #
@@ -472,6 +573,7 @@ def create_session(payload: SessionIn, session: SessionDep) -> dict[str, Any]:
     member_id = _current_member_id(session)
     if payload.recordId:
         _require_record(session, payload.recordId, member_id)
+    module_ids = _resolve_module_ids(payload.moduleIds)
     row = assistant_repo.create_session(
         session,
         member_id=member_id,
@@ -479,6 +581,7 @@ def create_session(payload: SessionIn, session: SessionDep) -> dict[str, Any]:
         provider_id=payload.providerId,
         style=payload.style,
         record_id=payload.recordId,
+        module_ids=module_ids,
     )
     return assistant_repo.session_to_dict(row)
 
@@ -663,6 +766,8 @@ async def send_message(
     if payload.recordId:
         _require_record(session, payload.recordId, member_id)
 
+    module_ids = _resolve_module_ids(payload.moduleIds)
+    selected_modules = _selected_module_briefs(module_ids)
     style = payload.style if payload.style in STYLES else "brief"
     history = assistant_repo.history_for_prompt(session, session_id)
     is_first_user_message = not any(item["role"] == "user" for item in history)
@@ -677,7 +782,7 @@ async def send_message(
         role=assistant_repo.ROLE_USER,
         content=payload.content.strip(),
         status=assistant_repo.STATUS_COMPLETED,
-        data={"style": style, "providerId": provider.id},
+        data={"style": style, "providerId": provider.id, "moduleIds": module_ids},
     )
     assistant_row = assistant_repo.add_message(
         session,
@@ -690,6 +795,7 @@ async def send_message(
             "providerId": provider.id,
             "providerLabel": provider.label,
             "model": provider.model,
+            "moduleIds": module_ids,
         },
     )
     assistant_repo.touch_session(
@@ -700,6 +806,7 @@ async def send_message(
         style=style,
         record_id=payload.recordId or session_row.record_id,
         has_notes=payload.includeNotes or None,
+        module_ids=module_ids,
         commit=True,
     )
     assistant_id = assistant_row.id
@@ -717,6 +824,8 @@ async def send_message(
             payload=payload,
             style=style,
             history=history,
+            module_ids=module_ids,
+            selected_modules=selected_modules,
             cancel=cancel,
         ),
         media_type="text/event-stream",
@@ -740,6 +849,8 @@ async def _sse_events(
     payload: MessageIn,
     style: str,
     history: list[dict[str, Any]],
+    module_ids: list[str],
+    selected_modules: list[dict[str, Any]],
     cancel: asyncio.Event,
 ) -> AsyncIterator[str]:
     watcher = asyncio.create_task(_watch_disconnect(request, cancel))
@@ -780,12 +891,23 @@ async def _sse_events(
                 history=[item for item in history if item["role"] in {"user", "assistant"}],
                 content=payload.content.strip(),
                 style=style,
+                selected_modules=selected_modules,
             )
             transparency = agent.build_transparency(
                 provider, context=context, messages=messages
             )
+            transparency["selectedModules"] = list(module_ids)
+            transparency["selectedModuleTools"] = [
+                tool["id"]
+                for brief in selected_modules
+                for tool in brief.get("tools") or []
+            ]
             adapter = agent.adapter_for(provider, _resolve_key(provider))
-            toolbox = ToolBox(tool_session, member_id)
+            toolbox = ToolBox(
+                tool_session,
+                member_id,
+                preferred_module_ids=module_ids,
+            )
 
             def persist_tool(call: dict[str, Any]) -> None:
                 with session_scope() as db:

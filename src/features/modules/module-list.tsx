@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   BadgeCheck,
   Blocks,
+  ExternalLink,
   Loader2,
   Power,
   PowerOff,
@@ -40,6 +41,7 @@ interface ModuleListProps {
   loading: boolean;
   busy: { moduleId: string; action: string } | null;
   onAction: (module: ModuleSummary, action: ModuleAction) => void;
+  onOpen: (module: ModuleSummary) => void;
   onDetails: (module: ModuleSummary) => void;
   onUninstall: (module: ModuleSummary) => void;
   onRefresh: () => void;
@@ -56,6 +58,7 @@ export function ModuleList({
   loading,
   busy,
   onAction,
+  onOpen,
   onDetails,
   onUninstall,
   onRefresh,
@@ -157,6 +160,15 @@ export function ModuleList({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 md:justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onOpen(module)}
+                    >
+                      <ExternalLink aria-hidden="true" />
+                      {t("moduleUi.actions.open")}
+                    </Button>
+
                     <Button
                       type="button"
                       variant="ghost"

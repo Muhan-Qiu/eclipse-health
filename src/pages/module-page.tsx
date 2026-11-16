@@ -42,11 +42,17 @@ function ModulePageSkeleton() {
   );
 }
 
-function BackToModules() {
+function BackToModules({ moduleId }: { moduleId?: string }) {
   const { t } = useTranslation();
   return (
     <Button variant="outline" size="sm" asChild>
-      <Link to="/modules">
+      <Link
+        to={
+          moduleId
+            ? `/modules/${encodeURIComponent(moduleId)}`
+            : "/modules"
+        }
+      >
         <ArrowLeft aria-hidden="true" />
         {t("modulePage.backToModules")}
       </Link>
@@ -58,14 +64,16 @@ function UnavailablePage({
   icon,
   title,
   description,
+  moduleId,
 }: {
   icon: typeof FileQuestion;
   title: string;
   description: string;
+  moduleId?: string;
 }) {
   return (
     <EmptyState icon={icon} title={title} description={description}>
-      <BackToModules />
+      <BackToModules moduleId={moduleId} />
     </EmptyState>
   );
 }
@@ -110,7 +118,7 @@ export function ModulePage() {
           eyebrow={t("modulePage.eyebrow")}
           title={t("modulePage.loadError")}
           description={t("modulePage.loadErrorDesc")}
-          actions={<BackToModules />}
+          actions={<BackToModules moduleId={moduleId} />}
         />
         <Alert variant="destructive">
           <AlertCircle aria-hidden="true" />
@@ -135,6 +143,7 @@ export function ModulePage() {
           icon={FileQuestion}
           title={t("modulePage.missingModuleTitle")}
           description={t("modulePage.missingModuleDesc")}
+          moduleId={moduleId}
         />
       );
     }
@@ -144,6 +153,7 @@ export function ModulePage() {
           icon={PowerOff}
           title={t("modulePage.disabledTitle")}
           description={t("modulePage.disabledDesc")}
+          moduleId={moduleId}
         />
       );
     }
@@ -152,6 +162,7 @@ export function ModulePage() {
         icon={FileQuestion}
         title={t("modulePage.notFoundTitle")}
         description={t("modulePage.notFoundDesc")}
+        moduleId={moduleId}
       />
     );
   }
@@ -163,7 +174,7 @@ export function ModulePage() {
         title={page.title}
         actions={
           <>
-            <BackToModules />
+            <BackToModules moduleId={moduleId} />
             <Button
               variant="outline"
               size="sm"

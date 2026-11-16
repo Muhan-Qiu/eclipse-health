@@ -147,6 +147,24 @@ export function TransparencySheet({
 
             <Separator />
 
+            {transparency.selectedModules && transparency.selectedModules.length > 0 ? (
+              <section className="space-y-2">
+                <h3 className="eh-caption text-muted-foreground">
+                  {t("assistant.transparency.selectedModules")}
+                </h3>
+                <FieldChips items={transparency.selectedModules} />
+                {transparency.selectedModuleTools &&
+                transparency.selectedModuleTools.length > 0 ? (
+                  <>
+                    <h3 className="eh-caption pt-1 text-muted-foreground">
+                      {t("assistant.transparency.selectedModuleTools")}
+                    </h3>
+                    <FieldChips items={transparency.selectedModuleTools} />
+                  </>
+                ) : null}
+              </section>
+            ) : null}
+
             <section className="space-y-2">
               <h3 className="eh-caption text-muted-foreground">
                 {t("assistant.transparency.sentTitle")}

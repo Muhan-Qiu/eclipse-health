@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { Bot, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/common/page-header";
 import { errorMessage } from "@/lib/api/error";
+import {
+  MODULE_CONTRIBUTIONS_KEY,
+  MODULE_QUERY_KEY,
+  listContributions,
+  listModules,
+} from "@/features/modules/api";
+import type { ModuleSummary } from "@/features/modules/types";
 import { assistantApi } from "./api";
 import { ChatPanel } from "./chat-panel";
 import { PrivacyDialog } from "./privacy-dialog";
@@ -136,6 +144,7 @@ export function AssistantWorkspace({
   const [pendingSend, setPendingSend] = useState<SendMessageBody | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [transparency, setTransparency] = useState<Transparency | null>(null);
+  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const abortFallbackRef = useRef<number | null>(null);
   const activeServerIdRef = useRef<string | null>(null);
@@ -143,6 +152,48 @@ export function AssistantWorkspace({
   const startNewAppliedRef = useRef(false);
 
   const { providers, sessions, records, messages, activeSessionId } = data;
+
+  // 模块选择器只读复用 modules 的查询键；失败时静默降级为空列表。
+  const modulesQuery = useQuery({
+    queryKey: MODULE_QUERY_KEY,
+    queryFn: listModules,
+  });
+  const contributionsQuery = useQuery({
+    queryKey: MODULE_CONTRIBUTIONS_KEY,
+    queryFn: () => listContributions(),
+  });
+  const modules = useMemo<ModuleSummary[]>(
+    () => (modulesQuery.data ?? []).filter((module) => module.enabled),
+    [modulesQuery.data],
+  );
+  const moduleTools = useMemo<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    for (const tool of contributionsQuery.data?.tools ?? []) {
+      counts[tool.moduleId] = (counts[tool.moduleId] ?? 0) + 1;
+    }
+    return counts;
+  }, [contributionsQuery.data]);
+
+  const toggleModule = useCallback((id: string) => {
+    setSelectedModuleIds((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
+    );
+  }, []);
+  const clearModules = useCallback(() => setSelectedModuleIds([]), []);
+
+  // 模块被卸载或禁用后自动从本轮选择中移除，避免发送时后端返回 module_disabled。
+  useEffect(() => {
+    if (modules.length === 0) return;
+    setSelectedModuleIds((current) => {
+      const next = current.filter((id) =>
+        modules.some((module) => module.id === id),
+      );
+      return next.length === current.length ? current : next;
+    });
+  }, [modules]);
+
   const activeProvider = useMemo(
     () => providers.find((provider) => provider.id === activeProviderId) ?? null,
     [providers, activeProviderId],
@@ -212,6 +263,11 @@ export function AssistantWorkspace({
     setStyle(session.style);
     setRecordId(session.recordId);
     setIncludeNotes(session.hasNotes);
+    setSelectedModuleIds(
+      Array.isArray(session.moduleIds)
+        ? session.moduleIds.filter((id): id is string => typeof id === "string")
+        : [],
+    );
     if (
       session.providerId &&
       providers.some((item) => item.id === session.providerId && item.enabled)
@@ -229,6 +285,11 @@ export function AssistantWorkspace({
         setStyle(session.style);
         setRecordId(session.recordId);
         setIncludeNotes(session.hasNotes);
+        setSelectedModuleIds(
+          Array.isArray(session.moduleIds)
+            ? session.moduleIds.filter((id): id is string => typeof id === "string")
+            : [],
+        );
         if (session.providerId) setActiveProviderId(session.providerId);
       }
     },
@@ -240,12 +301,13 @@ export function AssistantWorkspace({
       providerId: activeProviderId,
       style,
       recordId,
+      moduleIds: selectedModuleIds,
     });
     if (created) {
       appliedSessionRef.current = created.id;
       setRecordId(created.recordId);
     }
-  }, [activeProviderId, data, recordId, style]);
+  }, [activeProviderId, data, recordId, selectedModuleIds, style]);
 
   const openTransparency = useCallback(async (message: ChatMessage) => {
     if (message.transparency) {
@@ -271,8 +333,11 @@ export function AssistantWorkspace({
           providerId: body.providerId,
           style: body.style,
           recordId: body.recordId ?? null,
+          moduleIds: body.moduleIds,
         });
         if (!created) return;
+        // 已把当前选择写进新会话，避免随后的会话套用逻辑把旧后端的空值覆盖回来。
+        appliedSessionRef.current = created.id;
         sessionId = created.id;
       }
 
@@ -285,6 +350,7 @@ export function AssistantWorkspace({
         status: "completed",
         citations: [],
         toolCalls: [],
+        moduleIds: body.moduleIds,
         createdAt: timestamp,
       };
       const assistantId = localId("assistant");
@@ -365,6 +431,7 @@ export function AssistantWorkspace({
       includeNotes: boolean;
       mode: AssistantMode;
       city?: string;
+      moduleIds?: string[];
     }) => {
       if (!activeProvider) return;
       const body: SendMessageBody = {
@@ -374,6 +441,10 @@ export function AssistantWorkspace({
         includeNotes: input.includeNotes,
       };
       if (input.recordId) body.recordId = input.recordId;
+      // 仅在有选择时带 moduleIds，保持旧后端请求形状不变。
+      if (input.moduleIds && input.moduleIds.length > 0) {
+        body.moduleIds = input.moduleIds;
+      }
       // 普通对话保持旧请求形状；只有教练模式才带 mode/city。
       if (input.mode === "coach") {
         body.mode = "coach";
@@ -520,6 +591,12 @@ export function AssistantWorkspace({
             onCityChange={setCity}
             weather={weather}
             weatherLoading={weatherLoading}
+            modules={modules}
+            moduleTools={moduleTools}
+            modulesLoading={modulesQuery.isLoading}
+            selectedModuleIds={selectedModuleIds}
+            onToggleModule={toggleModule}
+            onClearModules={clearModules}
           />
         </div>
       </div>

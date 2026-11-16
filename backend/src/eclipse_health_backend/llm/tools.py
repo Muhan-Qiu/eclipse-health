@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
@@ -456,9 +457,13 @@ class ModuleTool:
         }
 
 
-def module_tool_catalog(manager: Any | None = None) -> list[ModuleTool]:
+def module_tool_catalog(
+    manager: Any | None = None,
+    module_ids: Collection[str] | None = None,
+) -> list[ModuleTool]:
     """读取贡献注册表（已过滤 enabled + llm）并编译为工具目录。
 
+    ``module_ids`` 为 ``None`` 时返回全量；否则只保留这些模块的工具。
     每次调用都重新读库：安装、启用与授权随时可能变化，不做跨请求缓存。
     """
     try:
@@ -474,6 +479,7 @@ def module_tool_catalog(manager: Any | None = None) -> list[ModuleTool]:
     if not isinstance(items, list):
         return []
 
+    allowed = None if module_ids is None else {item for item in module_ids if item}
     tools: list[ModuleTool] = []
     claimed: set[str] = set()
     for item in items:
@@ -482,6 +488,8 @@ def module_tool_catalog(manager: Any | None = None) -> list[ModuleTool]:
         module_id = item.get("moduleId")
         tool_id = item.get("id")
         if not isinstance(module_id, str) or not module_id:
+            continue
+        if allowed is not None and module_id not in allowed:
             continue
         if not isinstance(tool_id, str) or not tool_id:
             continue
@@ -503,6 +511,14 @@ def module_tool_catalog(manager: Any | None = None) -> list[ModuleTool]:
             )
         )
     return tools
+
+
+def module_tool_sort_key(
+    tool: ModuleTool, preferred_ids: Collection[str]
+) -> tuple[int]:
+    """优先模块排在前面；未命中的模块保持原顺序（调用方用稳定排序）。"""
+    order = {module_id: index for index, module_id in enumerate(preferred_ids)}
+    return (order.get(tool.module_id, len(order)),)
 
 
 def _sanitize_module_result(value: Any, *, depth: int = 0) -> Any:
@@ -578,16 +594,31 @@ class ToolBox:
         member_id: str,
         *,
         manager: Any | None = None,
+        preferred_module_ids: list[str] | None = None,
     ) -> None:
         self._session = session
         self._member_id = member_id
         # 模块工具走独立内核；测试可显式注入，生产由 get_manager() 单例提供。
         self._manager = manager
+        # 用户本轮选择的模块：只影响排序，不影响可用范围。
+        self._preferred_module_ids = tuple(
+            dict.fromkeys(
+                item.strip()
+                for item in (preferred_module_ids or [])
+                if isinstance(item, str) and item.strip()
+            )
+        )
 
     # ------------------------------------------------------------------ 入口
     def tool_specs(self) -> list[dict[str, Any]]:
         """内置工具 + 当前安装状态下的模块工具；每个对话轮次重建一次。"""
-        return [*TOOL_SPECS, *(tool.spec() for tool in module_tool_catalog(self._manager))]
+        catalog = module_tool_catalog(self._manager)
+        if self._preferred_module_ids:
+            catalog = sorted(
+                catalog,
+                key=lambda tool: module_tool_sort_key(tool, self._preferred_module_ids),
+            )
+        return [*TOOL_SPECS, *(tool.spec() for tool in catalog)]
 
     @staticmethod
     def is_module_tool(name: str) -> bool:
@@ -1234,6 +1265,7 @@ __all__ = [
     "ToolError",
     "module_tool_alias",
     "module_tool_catalog",
+    "module_tool_sort_key",
     "new_tool_call_id",
     "trim_module_result",
 ]

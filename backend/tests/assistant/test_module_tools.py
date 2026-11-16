@@ -20,12 +20,16 @@ from fastapi.testclient import TestClient
 
 from eclipse_health_backend.db.base import session_scope
 from eclipse_health_backend.llm import agent
+from eclipse_health_backend.llm import tools as tools_module
 from eclipse_health_backend.llm.providers import Provider
 from eclipse_health_backend.llm.tools import (
     MAX_TOOL_RESULT_JSON,
     TOOL_NAMES,
+    ModuleTool,
     ToolBox,
     module_tool_alias,
+    module_tool_catalog,
+    module_tool_sort_key,
 )
 from eclipse_health_backend.modules.manager import ModuleManager
 from eclipse_health_backend.modules.package import pack_directory, write_checksums
@@ -195,3 +199,54 @@ def test_agent_uses_dynamic_tool_table(tool_manager: ModuleManager) -> None:
     names = [spec["function"]["name"] for spec in adapter.tools]
     assert next(iter(TOOL_NAMES)) in names
     assert _alias("echo.text") in names
+
+
+def _module_tool(module_id: str, alias: str, tool_id: str) -> ModuleTool:
+    return ModuleTool(
+        alias=alias,
+        module_id=module_id,
+        module_name=module_id,
+        tool_id=tool_id,
+        tool_name=tool_id,
+        description="",
+        parameters={"type": "object", "properties": {}, "additionalProperties": False},
+    )
+
+
+def test_preferred_module_tools_sort_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    catalog = [
+        _module_tool("io.example.second", "m_bbbbbbbb_second", "second"),
+        _module_tool("io.example.first", "m_aaaaaaaa_first", "first"),
+    ]
+    monkeypatch.setattr(
+        tools_module,
+        "module_tool_catalog",
+        lambda manager=None, module_ids=None: list(catalog),
+    )
+
+    preferred = ["io.example.first"]
+    assert module_tool_sort_key(catalog[1], preferred) < module_tool_sort_key(
+        catalog[0], preferred
+    )
+
+    with session_scope() as session:
+        names = [
+            spec["function"]["name"]
+            for spec in ToolBox(
+                session, "mem_test", preferred_module_ids=preferred
+            ).tool_specs()
+        ]
+    assert names[: len(TOOL_NAMES)] == list(TOOL_NAMES)
+    assert names[len(TOOL_NAMES) :] == ["m_aaaaaaaa_first", "m_bbbbbbbb_second"]
+    # 未选择的模块工具仍然可用，只是排在后面。
+    assert "m_bbbbbbbb_second" in names
+
+
+def test_module_tool_catalog_filters_by_module_ids(tool_manager: ModuleManager) -> None:
+    all_tools = module_tool_catalog(tool_manager)
+    assert all_tools
+
+    selected = module_tool_catalog(tool_manager, module_ids={MODULE_ID})
+    assert [tool.alias for tool in selected] == [tool.alias for tool in all_tools]
+    assert module_tool_catalog(tool_manager, module_ids={"io.example.other"}) == []
+    assert module_tool_catalog(tool_manager, module_ids=set()) == []

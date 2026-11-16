@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { EclipseMark } from "@/components/common/eclipse-mark";
 import { primaryNav, secondaryNav, type NavItem } from "@/lib/nav";
+import { ModuleNav } from "./module-nav";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -31,7 +32,7 @@ function NavEntry({
   const link = (
     <NavLink
       to={item.path}
-      end={item.end}
+      end={item.end ?? item.path === "/modules"}
       className={cn(
         "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-[background-color,color] duration-200",
         "hover:bg-accent hover:text-foreground",
@@ -97,6 +98,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </li>
           ))}
         </ul>
+        <ModuleNav collapsed={collapsed} />
       </nav>
 
       <div className={cn("border-t border-border p-2", collapsed && "px-2")}>

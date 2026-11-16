@@ -224,6 +224,16 @@ export function ModuleDetail({
               </>
             ) : null}
 
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                to={`/modules/${encodeURIComponent(moduleId)}`}
+                onClick={onClose}
+              >
+                <ExternalLink aria-hidden="true" />
+                {t("moduleUi.actions.openWorkbench")}
+              </Link>
+            </Button>
+
             {modulePages.length > 0 ? (
               <section>
                 <h4 className="eh-caption mb-2 flex items-center gap-1.5 text-muted-foreground">

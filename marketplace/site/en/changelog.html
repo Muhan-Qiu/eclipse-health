@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Changelog · eclipse health</title>
+  <meta name="description" content="Full eclipse health changelog: what changed in V4, V4.1, V4.2 and V4.3.">
+  <link rel="alternate" hreflang="zh-CN" href="https://eclipse-health.fit/changelog.html">
+  <link rel="alternate" hreflang="en" href="https://eclipse-health.fit/en/changelog.html">
+  <link rel="alternate" hreflang="x-default" href="https://eclipse-health.fit/changelog.html">
+  <link rel="icon" href="../brand/favicon.svg?v=2">
+  <link rel="stylesheet" href="../styles.css">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("eh-theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* storage may be unavailable; fall back to system theme */
+      }
+    })();
+  </script>
+</head>
+<body data-page="changelog" data-depth="2">
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="eclipse health home">
+        <img class="brand-mark" src="../brand/favicon.svg?v=2" alt="" aria-hidden="true" />
+        <span class="brand-name">eclipse health</span>
+        <span class="brand-sub">marketplace</span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="index.html" data-nav="home">Home</a>
+        <a href="modules.html" data-nav="modules">Modules</a>
+        <a href="developers.html" data-nav="developers">Developers</a>
+        <a href="changelog.html" data-nav="changelog">Changelog</a>
+        <a class="lang-switch" href="../changelog.html" hreflang="zh-CN" lang="zh-CN" aria-label="切换到中文">中文</a>
+        <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch light or dark theme" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section">
+      <div class="container">
+        <div class="page-head">
+          <p class="eyebrow">Changelog</p>
+          <h1>What changed in each version</h1>
+          <p>
+            Newest first, covering all V4, V4.1, V4.2 and V4.3 updates.
+            Root-cause notes and verification records live under <code>docs/V4.x/</code> in the GitHub repository.
+          </p>
+        </div>
+
+        <ul class="update-list">
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.3 · 0.1.3</span>
+                <span class="update-tag">Latest</span>
+                <time datetime="2026-11-08">2026-11-08</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>Every module gets its own workbench</strong>: after install, open a module from the sidebar or the module center's “Open” button to reach <code>/modules/:id</code>. The workbench shows status, version, author, license, resource limits, declarative pages, dashboard cards, tool runner, model card, record types, permissions and recent audit.</li>
+                <li><strong>Modules without declared pages are usable too</strong>: Cardia, relay and import/tool modules get the same workbench; without <code>ui.pages</code> it shows status, model card, tools, permissions and audit instead of stopping at the module list.</li>
+                <li><strong>Sidebar module shortcuts</strong>: installed modules are listed directly in the sidebar; the module center adds an “Open” button and the module detail sheet adds “Open workbench”.</li>
+                <li><strong>Assistant “+” module picker</strong>: choose priority modules for the turn. Selected modules appear as chips and are sent as <code>moduleIds</code>; switching conversations restores the last selection, and user messages plus the transparency panel show the modules used for the turn.</li>
+                <li><strong>Agent prioritizes selected modules</strong>: their tools are sorted first and listed in the system prompt with names, tools and pages; other installed and enabled module tools remain available — it is a priority, not a whitelist.</li>
+                <li><strong>Module encoding and package checks</strong>: new Node scripts validate <code>module.json</code> BOM / mojibake / structure and <code>.ehmod</code> ZIP contents plus SHA-256; run <code>npm run check:modules</code> and <code>npm run check:packages</code> before release.</li>
+                <li><strong>Declarative pages return to the workbench</strong>: “Back to modules” on a module page now returns to that module's workbench, not the module list.</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.2 · 0.1.2</span>
+                <span class="update-tag">Released</span>
+                <time datetime="2026-11-07">2026-11-07</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>Other analysis engines now work on ECG</strong>: fixed input-shape mismatches and “cannot reshape” errors in relay-ecg and other non-Cardia engines; all seven beat-classification models complete.</li>
+                <li><strong>Single-lead adaptation</strong>: single-lead watch ECGs are duplicated to the model's two leads and resampled to 360 Hz automatically.</li>
+                <li><strong>Readable errors</strong>: insufficient beats and R-peak detection failures now show actionable messages instead of raw Python exceptions.</li>
+                <li><strong>No more sleep models in ECG analysis</strong>: relay-sleep sleep-staging models are no longer offered as ECG analysis engines.</li>
+                <li><strong>Heart-rate and quality metrics</strong>: relay analyses now also report mean/min/max heart rate, SDNN, RMSSD, pNN50, N/SVEB/VEB/F ratios and a signal-quality score.</li>
+                <li><strong>Wearable result notice</strong>: single-lead / non-MLII / non-360 Hz records show a “wearable results are for reference only” notice, explaining that SVEB ratios may be inflated.</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4.1 · 0.1.1</span>
+                <span class="update-tag">Released</span>
+                <time datetime="2026-11-06">2026-11-06</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>Markdown replies</strong>: headings, bold text, lists, tables, code blocks and links render properly instead of showing raw symbols; streaming keeps the trailing cursor, in-app links navigate and external links open in a new window.</li>
+                <li><strong>Less defensive answers</strong>: replies lead with conclusions and actionable advice; the fixed per-answer disclaimer is gone and shown once by the UI. A seek-care recommendation appears only for diagnosis, medication, dosage or acute symptoms.</li>
+                <li><strong>Advice despite missing data</strong>: the assistant says which data is missing and how to fill it in, instead of answering “I don't know / cannot judge”; coach mode also leads with 1–3 actionable steps.</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v4 · 0.1.0</span>
+                <span class="update-tag">Released</span>
+                <time datetime="2026-11-06">2026-11-06</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>Module install no longer depends on the user's network</strong>: the installer bundles an offline wheelhouse for official module dependencies; functional modules install offline first and only fall back to the network on failure.</li>
+                <li><strong>Diagnosable dependency errors</strong>: failures return the actual mode and missing package names, plus a new <code>offline-wheel-missing</code> reason.</li>
+                <li><strong>Module environments rebuild after a Python upgrade</strong>: old venvs and dependencies are no longer reused.</li>
+                <li><strong>Leaner dependencies</strong>: relay-ecg / relay-sleep no longer reinstall numpy / onnxruntime / wfdb that the core already bundles.</li>
+              </ul>
+            </details>
+          </li>
+
+          <li>
+            <details class="update-item" open>
+              <summary class="update-head">
+                <span class="update-version">v0.1.0-alpha</span>
+                <span class="update-tag">Released</span>
+                <time datetime="2026-11-02">2026-11-02</time>
+              </summary>
+              <ul class="update-points">
+                <li><strong>First public release</strong>: ECG and Apple / Xiaomi / Samsung health-data import, Cardia 2.0 analysis, records, trends and reports.</li>
+                <li><strong>Module ecosystem</strong>: a module marketplace with 30+ optional modules, permissions, audit log and SHA-256 verification.</li>
+                <li><strong>AI assistant</strong>: optional multi-vendor models and local Ollama, with DPAPI-encrypted keys and summaries only.</li>
+                <li><strong>Stability</strong>: fixed long-record beat-analysis stalls (O(n²) → O(n log n)), plus cancel, retry, pause and stall watchdog.</li>
+              </ul>
+            </details>
+          </li>
+        </ul>
+
+        <p class="fine-print" style="margin-top:1.2rem">
+          All module output and assistant answers are not medical advice; this is not a medical device and is not intended for diagnosis, treatment or replacing professional medical judgement.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="disclaimer">
+        <p><strong>eclipse health</strong> · The overlooked health. Core licensed under GPL-3.0-only.</p>
+        <p>This software and all module output are not medical advice; this is not a medical device and is not intended for diagnosis, treatment or replacing professional medical judgement.</p>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="modules.html">Modules</a>
+          <a href="developers.html">Developers</a>
+          <a href="changelog.html">Changelog</a>
+          <a href="../changelog.html" hreflang="zh-CN" lang="zh-CN">中文</a>
+          <a href="https://github.com/Muhan-Qiu/eclipse-health" rel="noopener">GitHub</a>
+        </div>
+        <p style="margin-top:.7rem">© 2026 eclipse health contributors</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../app.js" defer></script>
+</body>
+</html>
