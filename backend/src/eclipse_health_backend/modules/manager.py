@@ -64,6 +64,38 @@ _MISSING = object()
 
 logger = logging.getLogger(__name__)
 
+
+def _move_file(src: Path, dest: Path) -> None:
+    """移动单个文件；Windows 上杀毒/索引服务偶尔短暂占用，重试几次。"""
+    last: OSError | None = None
+    for attempt in range(5):
+        try:
+            os.replace(src, dest)
+            return
+        except PermissionError as exc:
+            last = exc
+            time.sleep(0.12 * (attempt + 1))
+    assert last is not None
+    raise last
+
+
+def _move_tree(source: Path, target: Path) -> None:
+    """把解压好的模块目录搬进最终版本目录。
+
+    Windows 上不能可靠地 ``os.replace`` 一个刚写入大量权重文件的目录：
+    目录重命名会返回 WinError 5（占用/扫描中），而逐文件移动是稳定的。
+    因此这里递归建目录、逐个移动文件，最后删除空的 staging 目录。
+    """
+    target.mkdir(parents=True, exist_ok=True)
+    for item in list(source.iterdir()):
+        dest = target / item.name
+        if item.is_dir():
+            _move_tree(item, dest)
+        else:
+            _move_file(item, dest)
+    source.rmdir()
+
+
 # 模块可回调的核心数据方法；权限映射见 permissions.CORE_RPC_SCOPES。
 _DATA_METHODS = frozenset(
     {
@@ -399,7 +431,7 @@ class ModuleManager:
             try:
                 if target.exists():
                     shutil.rmtree(target, ignore_errors=True)
-                staging.replace(target)
+                _move_tree(staging, target)
                 file_count = len([p for p in target.rglob("*") if p.is_file()])
                 # 依赖装进新版本目录的 venv；失败会抛 MODULE_INSTALL_FAILED 并按需回滚目录。
                 package.install_module_venv(
