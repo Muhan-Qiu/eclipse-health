@@ -439,20 +439,17 @@ export interface ScoreCategory {
   score: number;
   grade: ScoreGrade;
   factors: string[];
-  missing: string | null;
+  /** 分类内部缺失子项的文案（已按请求语言本地化）。 */
+  missing: string[];
   evidenceCount: number;
-}
-
-export interface MissingScore {
-  id: string;
-  reason: string;
 }
 
 export interface HealthScores {
   overall: number | null;
   generatedAt: string;
   categories: ScoreCategory[];
-  missing: MissingScore[];
+  /** 无数据分类的显示名（如「睡眠」/「Sleep」），由后端按语言返回。 */
+  missing: string[];
 }
 
 export type SuggestionSeverity = "info" | "attention";

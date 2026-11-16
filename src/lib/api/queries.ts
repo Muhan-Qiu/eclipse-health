@@ -4,8 +4,16 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api, fetchRecordCompare, fetchScores, fetchSuggestions, fetchTrends } from "./client";
-import type { TrendsParams } from "./client";
+import { useTranslation } from "react-i18next";
+import {
+  api,
+  apiLang,
+  fetchRecordCompare,
+  fetchScores,
+  fetchSuggestions,
+  fetchTrends,
+} from "./client";
+import type { ApiLang, TrendsParams } from "./client";
 import { isRetryableNetworkError } from "./error";
 import { toRecordSummary } from "./adapters";
 import type { RecordListParams } from "./contract";
@@ -30,8 +38,8 @@ export const queryKeys = {
   members: ["members"] as const,
   trends: (params: TrendsParams) => ["trends", params] as const,
   compare: (ids: string[]) => ["compare", ids] as const,
-  scores: ["scores"] as const,
-  suggestions: ["suggestions"] as const,
+  scores: (lang: ApiLang = "zh") => ["scores", lang] as const,
+  suggestions: (lang: ApiLang = "zh") => ["suggestions", lang] as const,
 };
 
 const retryNetwork = (failureCount: number, error: unknown) =>
@@ -290,18 +298,22 @@ export function useRecentAnalyses(records: RecordSummary[] | undefined) {
  * 页面据此隐藏或显示轻量的「数据不足」，而不是红屏。
  */
 export function useHealthScores() {
+  const { i18n } = useTranslation();
+  const lang = apiLang(i18n.language);
   return useQuery({
-    queryKey: queryKeys.scores,
-    queryFn: () => fetchScores(),
+    queryKey: queryKeys.scores(lang),
+    queryFn: () => fetchScores(lang),
     staleTime: 60_000,
     retry: retryNetwork,
   });
 }
 
 export function useHealthSuggestions() {
+  const { i18n } = useTranslation();
+  const lang = apiLang(i18n.language);
   return useQuery({
-    queryKey: queryKeys.suggestions,
-    queryFn: () => fetchSuggestions(),
+    queryKey: queryKeys.suggestions(lang),
+    queryFn: () => fetchSuggestions(lang),
     staleTime: 60_000,
     retry: retryNetwork,
   });

@@ -57,6 +57,92 @@ CATEGORY_LABELS: dict[CategoryId, str] = {
     "blood_pressure": "血压",
 }
 
+CATEGORY_LABELS_BY_LANG: dict[str, dict[CategoryId, str]] = {
+    "zh": CATEGORY_LABELS,
+    "en": {
+        "heart": "Heart",
+        "sleep": "Sleep",
+        "weight": "Weight",
+        "activity": "Activity",
+        "blood_pressure": "Blood pressure",
+    },
+}
+
+DISCLAIMERS: dict[str, str] = {
+    "zh": DISCLAIMER,
+    "en": "Reference score based on public range guidelines, not a medical diagnosis",
+}
+
+DEFAULT_LANG = "zh"
+
+
+def normalize_lang(lang: str | None) -> str:
+    """`en`/`en-US` → en，其余（含 None）统一为默认中文。"""
+    return "en" if (lang or "").lower().startswith("en") else DEFAULT_LANG
+
+
+def _labels(lang: str | None) -> dict[CategoryId, str]:
+    return CATEGORY_LABELS_BY_LANG[normalize_lang(lang)]
+
+
+def _text(lang: str | None) -> dict[str, str]:
+    return _TEXT[normalize_lang(lang)]
+
+
+_TEXT: dict[str, dict[str, str]] = {
+    "zh": {
+        "resting_hr": "静息心率",
+        "resting_hr_approx": "静息心率约",
+        "resting_hr_factor": "{detail} {value:.0f} bpm（近 30 天）",
+        "ecg_hr_factor": "最近心电图平均心率 {value:.0f} bpm",
+        "missing_hr": "缺少静息心率或心电图平均心率",
+        "hrv_factor": "HRV（RMSSD）{value:.0f} ms",
+        "missing_hrv": "缺少可用的 HRV（RMSSD）分析结果",
+        "abnormal_factor": "异常搏动占比 {value:.1f}%",
+        "missing_abnormal": "缺少心电图搏动分类结果",
+        "quality_factor": "最近心电图信号质量 {value:.2f}",
+        "missing_quality": "缺少信号质量数据",
+        "missing_heart_all": "缺少心率与心电图数据",
+        "missing_sleep": "缺少睡眠记录",
+        "sleep_avg_factor": "近 7 天平均睡眠 {hours:.1f} h（{nights} 晚）",
+        "sleep_ratio_factor": "深睡/REM 占比 {ratio:.0f}%",
+        "missing_sleep_stages": "缺少深睡/REM 分期数据",
+        "missing_height": "缺少身高",
+        "missing_weight": "缺少体重",
+        "bmi_factor": "BMI {bmi:.1f}（身高 {height:.0f} cm，体重 {weight:.1f} kg）",
+        "missing_steps": "缺少步数记录",
+        "steps_factor": "近 7 天日均 {average:.0f} 步（目标 {target} 步）",
+        "missing_blood_pressure": "缺少血压记录",
+        "blood_pressure_factor": "最近血压 {systolic:.0f}/{diastolic:.0f} mmHg",
+    },
+    "en": {
+        "resting_hr": "Resting heart rate",
+        "resting_hr_approx": "Resting heart rate approx.",
+        "resting_hr_factor": "{detail} {value:.0f} bpm (last 30 days)",
+        "ecg_hr_factor": "Recent ECG average heart rate {value:.0f} bpm",
+        "missing_hr": "No resting heart rate or ECG average heart rate",
+        "hrv_factor": "HRV (RMSSD) {value:.0f} ms",
+        "missing_hrv": "No usable HRV (RMSSD) analysis result",
+        "abnormal_factor": "Abnormal beat ratio {value:.1f}%",
+        "missing_abnormal": "No ECG beat classification result",
+        "quality_factor": "Recent ECG signal quality {value:.2f}",
+        "missing_quality": "No signal quality data",
+        "missing_heart_all": "No heart rate or ECG data",
+        "missing_sleep": "No sleep records",
+        "sleep_avg_factor": "Average sleep over the last 7 days {hours:.1f} h ({nights} nights)",
+        "sleep_ratio_factor": "Deep/REM sleep ratio {ratio:.0f}%",
+        "missing_sleep_stages": "No deep/REM sleep stage data",
+        "missing_height": "Missing height",
+        "missing_weight": "Missing weight",
+        "bmi_factor": "BMI {bmi:.1f} (height {height:.0f} cm, weight {weight:.1f} kg)",
+        "missing_steps": "No step records",
+        "steps_factor": "Daily average over the last 7 days {average:.0f} steps "
+        "(target {target} steps)",
+        "missing_blood_pressure": "No blood pressure records",
+        "blood_pressure_factor": "Latest blood pressure {systolic:.0f}/{diastolic:.0f} mmHg",
+    },
+}
+
 SLEEP_STAGE_DEEP = "deep"
 SLEEP_STAGE_REM = "rem"
 SLEEP_STAGE_LIGHT = "light"
@@ -72,10 +158,10 @@ class _Category:
     missing: list[str] = field(default_factory=list)
     evidence_count: int = 0
 
-    def to_model(self) -> ScoreCategory:
+    def to_model(self, lang: str | None = DEFAULT_LANG) -> ScoreCategory:
         return ScoreCategory(
             id=self.id,
-            label=CATEGORY_LABELS[self.id],
+            label=_labels(lang)[self.id],
             score=self.score,
             grade=grade_for(self.score),
             factors=self.factors,
@@ -318,9 +404,12 @@ def _heart_analysis_metrics(
     return heart_rate, rmssd, abnormal, quality
 
 
-def _build_heart(session: Session, member: Member, now: datetime) -> _Category:
+def _build_heart(
+    session: Session, member: Member, now: datetime, lang: str = DEFAULT_LANG
+) -> _Category:
     since = now - timedelta(days=WINDOW_DAYS)
     category = _Category(id="heart")
+    text = _text(lang)
     parts: list[tuple[int, float]] = []
 
     resting_hr, is_resting = _heart_rate_from_health(session, member.id, since)
@@ -329,36 +418,38 @@ def _build_heart(session: Session, member: Member, now: datetime) -> _Category:
 
     if heart_rate is not None:
         if resting_hr is not None:
-            detail = "静息心率" if is_resting else "静息心率约"
-            category.factors.append(f"{detail} {heart_rate:.0f} bpm（近 30 天）")
+            detail = text["resting_hr"] if is_resting else text["resting_hr_approx"]
+            category.factors.append(
+                text["resting_hr_factor"].format(detail=detail, value=heart_rate)
+            )
         else:
-            category.factors.append(f"最近心电图平均心率 {heart_rate:.0f} bpm")
+            category.factors.append(text["ecg_hr_factor"].format(value=heart_rate))
         parts.append((_score_resting_hr(heart_rate), 0.40))
     else:
-        category.missing.append("缺少静息心率或心电图平均心率")
+        category.missing.append(text["missing_hr"])
 
     if rmssd is not None:
-        category.factors.append(f"HRV（RMSSD）{rmssd:.0f} ms")
+        category.factors.append(text["hrv_factor"].format(value=rmssd))
         parts.append((_score_hrv(rmssd), 0.25))
     else:
-        category.missing.append("缺少可用的 HRV（RMSSD）分析结果")
+        category.missing.append(text["missing_hrv"])
 
     if abnormal is not None:
-        category.factors.append(f"异常搏动占比 {abnormal:.1f}%")
+        category.factors.append(text["abnormal_factor"].format(value=abnormal))
         parts.append((_score_abnormal(abnormal), 0.20))
     else:
-        category.missing.append("缺少心电图搏动分类结果")
+        category.missing.append(text["missing_abnormal"])
 
     if quality is not None:
-        category.factors.append(f"最近心电图信号质量 {quality:.2f}")
+        category.factors.append(text["quality_factor"].format(value=quality))
         parts.append((round(quality * 100), 0.15))
     else:
-        category.missing.append("缺少信号质量数据")
+        category.missing.append(text["missing_quality"])
 
     category.score = _weights(parts)
     category.evidence_count = len(parts)
     if category.score is None:
-        category.missing = ["缺少心率与心电图数据"]
+        category.missing = [text["missing_heart_all"]]
     return category
 
 
@@ -410,8 +501,11 @@ def _score_sleep_ratio(ratio: float) -> int:
     return 40
 
 
-def _build_sleep(session: Session, member: Member, now: datetime) -> _Category:
+def _build_sleep(
+    session: Session, member: Member, now: datetime, lang: str = DEFAULT_LANG
+) -> _Category:
     category = _Category(id="sleep")
+    text = _text(lang)
     rows = _member_records(
         session, member.id, SLEEP_RECORD_TYPE, now - timedelta(days=SLEEP_WINDOW_DAYS)
     )
@@ -430,12 +524,14 @@ def _build_sleep(session: Session, member: Member, now: datetime) -> _Category:
 
     nights = len(nightly)
     if nights == 0:
-        category.missing = ["缺少睡眠记录"]
+        category.missing = [text["missing_sleep"]]
         return category
 
     average_hours = sum(nightly.values()) / nights / 3600.0
     category.evidence_count = nights
-    category.factors.append(f"近 7 天平均睡眠 {average_hours:.1f} h（{nights} 晚）")
+    category.factors.append(
+        text["sleep_avg_factor"].format(hours=average_hours, nights=nights)
+    )
     parts: list[tuple[int, float]] = [(_score_sleep_hours(average_hours), 0.70)]
 
     deep = stages.get(SLEEP_STAGE_DEEP, 0.0)
@@ -444,10 +540,10 @@ def _build_sleep(session: Session, member: Member, now: datetime) -> _Category:
     total = deep + rem + light
     if deep + rem > 0 and light > 0 and total > 0:
         ratio = (deep + rem) / total * 100.0
-        category.factors.append(f"深睡/REM 占比 {ratio:.0f}%")
+        category.factors.append(text["sleep_ratio_factor"].format(ratio=ratio))
         parts.append((_score_sleep_ratio(ratio), 0.30))
     else:
-        category.missing.append("缺少深睡/REM 分期数据")
+        category.missing.append(text["missing_sleep_stages"])
 
     category.score = _weights(parts)
     return category
@@ -489,8 +585,11 @@ def _latest_metric_weight(
     return None
 
 
-def _build_weight(session: Session, member: Member, now: datetime) -> _Category:
+def _build_weight(
+    session: Session, member: Member, now: datetime, lang: str = DEFAULT_LANG
+) -> _Category:
     category = _Category(id="weight")
+    text = _text(lang)
     since = now - timedelta(days=WINDOW_DAYS)
     candidates = [
         item
@@ -504,16 +603,18 @@ def _build_weight(session: Session, member: Member, now: datetime) -> _Category:
     height = member.heightCm
 
     if height is None:
-        category.missing.append("缺少身高")
+        category.missing.append(text["missing_height"])
     if weight is None:
-        category.missing.append("缺少体重")
+        category.missing.append(text["missing_weight"])
     if height is None or weight is None:
         return category
 
     bmi = weight / ((height / 100.0) ** 2)
     category.score = _score_bmi(bmi)
     category.evidence_count = 1
-    category.factors.append(f"BMI {bmi:.1f}（身高 {height:.0f} cm，体重 {weight:.1f} kg）")
+    category.factors.append(
+        text["bmi_factor"].format(bmi=bmi, height=height, weight=weight)
+    )
     return category
 
 
@@ -522,8 +623,11 @@ def _score_steps(steps: float) -> int:
     return max(0, min(100, round(steps / ACTIVITY_TARGET_STEPS * 100)))
 
 
-def _build_activity(session: Session, member: Member, now: datetime) -> _Category:
+def _build_activity(
+    session: Session, member: Member, now: datetime, lang: str = DEFAULT_LANG
+) -> _Category:
     category = _Category(id="activity")
+    text = _text(lang)
     rows = _member_records(
         session, member.id, STEPS_RECORD_TYPE, now - timedelta(days=ACTIVITY_WINDOW_DAYS)
     )
@@ -536,14 +640,14 @@ def _build_activity(session: Session, member: Member, now: datetime) -> _Categor
         daily[day] = daily.get(day, 0.0) + value
 
     if not daily:
-        category.missing = ["缺少步数记录"]
+        category.missing = [text["missing_steps"]]
         return category
 
     average = sum(daily.values()) / len(daily)
     category.score = _score_steps(average)
     category.evidence_count = len(daily)
     category.factors.append(
-        f"近 7 天日均 {average:.0f} 步（目标 {ACTIVITY_TARGET_STEPS} 步）"
+        text["steps_factor"].format(average=average, target=ACTIVITY_TARGET_STEPS)
     )
     return category
 
@@ -592,27 +696,38 @@ def _latest_blood_pressure(
     return found
 
 
-def _build_blood_pressure(session: Session, member: Member, now: datetime) -> _Category:
+def _build_blood_pressure(
+    session: Session, member: Member, now: datetime, lang: str = DEFAULT_LANG
+) -> _Category:
     category = _Category(id="blood_pressure")
+    text = _text(lang)
     found = _latest_blood_pressure(session, member.id, now - timedelta(days=WINDOW_DAYS))
     if found is None:
-        category.missing = ["缺少血压记录"]
+        category.missing = [text["missing_blood_pressure"]]
         return category
     systolic, diastolic, _captured_at = found
     category.score = _score_blood_pressure(systolic, diastolic)
     category.evidence_count = 1
-    category.factors.append(f"最近血压 {systolic:.0f}/{diastolic:.0f} mmHg")
+    category.factors.append(
+        text["blood_pressure_factor"].format(systolic=systolic, diastolic=diastolic)
+    )
     return category
 
 
 # ---------------------------------------------------------------------- report
-def empty_report(now: datetime | None = None, member_id: str | None = None) -> ScoreReport:
+def empty_report(
+    now: datetime | None = None,
+    member_id: str | None = None,
+    lang: str | None = DEFAULT_LANG,
+) -> ScoreReport:
+    normalized = normalize_lang(lang)
+    labels = _labels(normalized)
     return ScoreReport(
         overall=None,
         grade="unknown",
         categories=[],
-        missing=[CATEGORY_LABELS[item] for item in CATEGORY_ORDER],
-        disclaimer=DISCLAIMER,
+        missing=[labels[item] for item in CATEGORY_ORDER],
+        disclaimer=DISCLAIMERS[normalized],
         generatedAt=now or utc_now(),
         memberId=member_id,
         windowDays=WINDOW_DAYS,
@@ -624,18 +739,21 @@ def build_score_report(
     *,
     member_id: str | None = None,
     now: datetime | None = None,
+    lang: str | None = DEFAULT_LANG,
 ) -> ScoreReport:
     moment = now or utc_now()
+    normalized = normalize_lang(lang)
+    labels = _labels(normalized)
     member = _resolve_member(session, member_id)
     if member is None:
-        return empty_report(moment, member_id)
+        return empty_report(moment, member_id, lang=normalized)
 
     built = [
-        _build_heart(session, member, moment),
-        _build_sleep(session, member, moment),
-        _build_weight(session, member, moment),
-        _build_activity(session, member, moment),
-        _build_blood_pressure(session, member, moment),
+        _build_heart(session, member, moment, normalized),
+        _build_sleep(session, member, moment, normalized),
+        _build_weight(session, member, moment, normalized),
+        _build_activity(session, member, moment, normalized),
+        _build_blood_pressure(session, member, moment, normalized),
     ]
     available = [item for item in built if item.score is not None]
     overall: int | None = None
@@ -645,9 +763,9 @@ def build_score_report(
     return ScoreReport(
         overall=overall,
         grade=grade_for(overall),
-        categories=[item.to_model() for item in available],
-        missing=[CATEGORY_LABELS[item.id] for item in built if item.score is None],
-        disclaimer=DISCLAIMER,
+        categories=[item.to_model(normalized) for item in available],
+        missing=[labels[item.id] for item in built if item.score is None],
+        disclaimer=DISCLAIMERS[normalized],
         generatedAt=moment,
         memberId=member.id,
         windowDays=WINDOW_DAYS,
@@ -657,8 +775,12 @@ def build_score_report(
 __all__ = [
     "ACTIVITY_TARGET_STEPS",
     "CATEGORY_LABELS",
+    "CATEGORY_LABELS_BY_LANG",
     "CATEGORY_ORDER",
+    "DEFAULT_LANG",
+    "DISCLAIMERS",
     "SLEEP_WINDOW_DAYS",
     "build_score_report",
     "empty_report",
+    "normalize_lang",
 ]

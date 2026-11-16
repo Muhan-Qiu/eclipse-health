@@ -425,12 +425,23 @@ export async function fetchRecordCompare(
  * 调用方静默降级，不影响首页其他内容。
  * ------------------------------------------------------------------ */
 
-export async function fetchScores(): Promise<HealthScores> {
-  if (useMock) return mockScores();
-  return normalizeScores(await requestJson<unknown>("/scores"));
+/** 后端评分/建议文案语言；`zh` 为默认，`en` 时后端返回英文文案。 */
+export type ApiLang = "zh" | "en";
+
+export function apiLang(language: string | undefined): ApiLang {
+  return language && language.toLowerCase().startsWith("en") ? "en" : "zh";
 }
 
-export async function fetchSuggestions(): Promise<SuggestionList> {
+export async function fetchScores(lang: ApiLang = "zh"): Promise<HealthScores> {
+  if (useMock) return mockScores();
+  const query = buildQuery({ lang });
+  return normalizeScores(await requestJson<unknown>(`/scores${query}`));
+}
+
+export async function fetchSuggestions(
+  lang: ApiLang = "zh",
+): Promise<SuggestionList> {
   if (useMock) return mockSuggestions();
-  return normalizeSuggestions(await requestJson<unknown>("/suggestions"));
+  const query = buildQuery({ lang });
+  return normalizeSuggestions(await requestJson<unknown>(`/suggestions${query}`));
 }

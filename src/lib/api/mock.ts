@@ -1047,7 +1047,7 @@ export function mockScores(): HealthScores {
         score: 82,
         grade: "excellent",
         factors: ["静息心率 62 bpm", "心率变异性正常"],
-        missing: null,
+        missing: [],
         evidenceCount: 3,
       },
       {
@@ -1056,7 +1056,7 @@ export function mockScores(): HealthScores {
         score: 74,
         grade: "good",
         factors: ["昨夜睡眠 7 小时 30 分"],
-        missing: null,
+        missing: [],
         evidenceCount: 5,
       },
       {
@@ -1065,7 +1065,7 @@ export function mockScores(): HealthScores {
         score: 68,
         grade: "fair",
         factors: ["日均 6800 步"],
-        missing: null,
+        missing: [],
         evidenceCount: 4,
       },
       {
@@ -1074,11 +1074,11 @@ export function mockScores(): HealthScores {
         score: 88,
         grade: "excellent",
         factors: ["118/76 mmHg"],
-        missing: null,
+        missing: [],
         evidenceCount: 2,
       },
     ],
-    missing: [{ id: "weight", reason: "缺少身高或体重" }],
+    missing: ["weight"],
   };
 }
 

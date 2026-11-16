@@ -48,6 +48,37 @@ function CategoryTile({ category }: { category: ScoreCategory }) {
   );
 }
 
+function MissingCategoryTile({ id }: { id: string }) {
+  const { t } = useTranslation();
+  const Icon = CATEGORY_ICON[id] ?? HeartPulse;
+  const label = t(`dashboard.scores.categories.${id}`, { defaultValue: id });
+  return (
+    <div
+      className="rounded-xl border border-dashed border-border/80 bg-transparent p-3"
+      aria-label={`${label}: ${t("dashboard.scores.grades.unknown")}`}
+    >
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        <Icon className="size-3.5" aria-hidden="true" />
+        <span className="eh-caption truncate">{label}</span>
+      </div>
+      <p className="eh-num mt-1.5 text-2xl leading-7 font-medium text-muted-foreground/60">
+        —
+      </p>
+      <p className="eh-caption mt-0.5 text-muted-foreground">
+        {t("dashboard.scores.grades.unknown")}
+      </p>
+    </div>
+  );
+}
+
+const ALL_SCORE_CATEGORIES = [
+  "heart",
+  "sleep",
+  "weight",
+  "activity",
+  "blood-pressure",
+] as const;
+
 export function HealthScoreGrid({
   scores,
   loading,
@@ -68,11 +99,8 @@ export function HealthScoreGrid({
   const hasScores = scores !== undefined && scores.overall !== null;
   const insufficient = error || (!loading && (!hasScores || categories.length === 0));
 
-  const missingText = (scores?.missing ?? [])
-    .map((item) =>
-      t(`dashboard.scores.categories.${item.id}`, { defaultValue: item.id }),
-    )
-    .join(t("dashboard.scores.missingSeparator"));
+  const shownIds = new Set(categories.map((category) => category.id));
+  const missingIds = ALL_SCORE_CATEGORIES.filter((id) => !shownIds.has(id));
 
   return (
     <Card className={cn("eh-lift", className)}>
@@ -128,13 +156,10 @@ export function HealthScoreGrid({
               {categories.map((category) => (
                 <CategoryTile key={category.id} category={category} />
               ))}
+              {missingIds.map((id) => (
+                <MissingCategoryTile key={id} id={id} />
+              ))}
             </div>
-
-            {missingText ? (
-              <p className="eh-caption text-muted-foreground">
-                {t("dashboard.scores.missing", { items: missingText })}
-              </p>
-            ) : null}
           </div>
         )}
       </CardContent>

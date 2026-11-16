@@ -16,7 +16,6 @@ import type {
   ImportRequires,
   LatestAnalysisStatus,
   Measurement,
-  MissingScore,
   Quality,
   QualitySegment,
   QualityWarning,
@@ -455,26 +454,56 @@ function normalizeGrade(value: unknown): ScoreGrade {
     : "unknown";
 }
 
-function normalizeScoreCategory(value: unknown): ScoreCategory {
-  const item = asObject(value);
-  return {
-    id: str(item.id, "unknown"),
-    label: str(item.label, str(item.id, "—")),
-    score: num(item.score, 0),
-    grade: normalizeGrade(item.grade),
-    factors: Array.isArray(item.factors)
-      ? item.factors.filter((factor): factor is string => typeof factor === "string")
-      : [],
-    missing: typeof item.missing === "string" ? item.missing : null,
-    evidenceCount: Math.trunc(num(item.evidenceCount, 0)),
-  };
+/**
+ * 后端分类 id 为 snake_case（`blood_pressure`），前端 i18n / 图标用 kebab-case。
+ * `missing` 里是显示名（中文「睡眠」或英文「Sleep」），这里一并映射回分类 id，
+ * 便于界面按当前语言翻译；未知文案原样保留。
+ */
+const CATEGORY_ID_ALIASES: Record<string, string> = {
+  heart: "heart",
+  sleep: "sleep",
+  weight: "weight",
+  activity: "activity",
+  blood_pressure: "blood-pressure",
+  "blood-pressure": "blood-pressure",
+  "blood pressure": "blood-pressure",
+  "心脏": "heart",
+  "睡眠": "sleep",
+  "体重": "weight",
+  "活动": "activity",
+  "血压": "blood-pressure",
+};
+
+function normalizeCategoryId(value: unknown): string {
+  const text = str(value).trim();
+  if (!text) return "unknown";
+  return (
+    CATEGORY_ID_ALIASES[text.toLowerCase()] ??
+    CATEGORY_ID_ALIASES[text] ??
+    text.replace(/_/g, "-")
+  );
 }
 
-function normalizeMissingScore(value: unknown): MissingScore {
+function normalizeStringList(value: unknown): string[] {
+  if (typeof value === "string") return value ? [value] : [];
+  return Array.isArray(value)
+    ? value.filter(
+        (entry): entry is string => typeof entry === "string" && entry !== "",
+      )
+    : [];
+}
+
+function normalizeScoreCategory(value: unknown): ScoreCategory {
   const item = asObject(value);
+  const id = normalizeCategoryId(item.id);
   return {
-    id: str(item.id, "unknown"),
-    reason: str(item.reason),
+    id,
+    label: str(item.label, id === "unknown" ? "—" : id),
+    score: num(item.score, 0),
+    grade: normalizeGrade(item.grade),
+    factors: normalizeStringList(item.factors),
+    missing: normalizeStringList(item.missing),
+    evidenceCount: Math.trunc(num(pick(item, "evidenceCount", "evidence_count"), 0)),
   };
 }
 
@@ -486,7 +515,7 @@ export function normalizeScores(value: unknown): HealthScores {
     categories: arr(item.categories, normalizeScoreCategory).filter(
       (category) => category.id !== "unknown",
     ),
-    missing: arr(item.missing, normalizeMissingScore),
+    missing: normalizeStringList(item.missing).map(normalizeCategoryId),
   };
 }
 

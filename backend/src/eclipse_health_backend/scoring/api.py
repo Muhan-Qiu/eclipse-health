@@ -2,11 +2,13 @@
 
 路径为 ``/scores`` 与 ``/suggestions``，由指挥官在 ``api/__init__.py`` 统一挂载到
 ``/api/v1``；本模块不直接修改路由汇总文件。
+
+``lang`` 为可选查询参数（``zh`` 默认 / ``en``），只影响文案，不改变响应字段结构。
 """
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 
@@ -17,22 +19,26 @@ from .suggestions import build_suggestions
 
 router = APIRouter(tags=["scores"])
 
+Lang = Literal["zh", "en"]
+
 
 @router.get("/scores", response_model=ScoreReport, summary="规则健康评分（非诊断）")
 def get_scores(
     session: SessionDep,
     member_id: Annotated[str | None, Query(alias="memberId")] = None,
+    lang: Annotated[Lang, Query(description="zh（默认）或 en")] = "zh",
 ) -> ScoreReport:
-    return build_score_report(session, member_id=member_id)
+    return build_score_report(session, member_id=member_id, lang=lang)
 
 
 @router.get("/suggestions", response_model=SuggestionList, summary="规则健康建议")
 def get_suggestions(
     session: SessionDep,
     member_id: Annotated[str | None, Query(alias="memberId")] = None,
+    lang: Annotated[Lang, Query(description="zh（默认）或 en")] = "zh",
 ) -> SuggestionList:
-    report = build_score_report(session, member_id=member_id)
-    return SuggestionList(items=build_suggestions(report))
+    report = build_score_report(session, member_id=member_id, lang=lang)
+    return SuggestionList(items=build_suggestions(report, lang=lang))
 
 
 __all__ = ["router"]
